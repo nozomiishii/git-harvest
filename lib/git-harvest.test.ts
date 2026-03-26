@@ -60,7 +60,7 @@ let repo: string;
 // テストごとに origin 付きリポジトリを作成
 beforeEach(() => {
   bare = mkdtempSync(join(tmpdir(), 'git-harvest-bare-'));
-  execSync(`git init --bare ${bare}`);
+  execSync(`git init --bare -b main ${bare}`);
   repo = mkdtempSync(join(tmpdir(), 'git-harvest-work-'));
   execSync(`git clone ${bare} ${repo}`);
   git(repo, 'config user.email "test@test.com"');
