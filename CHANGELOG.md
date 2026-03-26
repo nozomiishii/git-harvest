@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.2](https://github.com/nozomiishii/git-harvest/compare/v0.1.1...v0.1.2) (2026-03-26)
+
+
+### Bug Fixes
+
+* remove .sh extension from bin entry and add files field ([980f57f](https://github.com/nozomiishii/git-harvest/commit/980f57f6b67edb192d343d6d262cfa861f84d135))
+* remove .sh extension from bin entry and add files field ([e3ceae5](https://github.com/nozomiishii/git-harvest/commit/e3ceae519cc80f46e58f6f0f3d3f68ce95f3a3c2))
+
 ## [0.1.1](https://github.com/nozomiishii/git-harvest/compare/v0.1.0...v0.1.1) (2026-03-26)
 
 
