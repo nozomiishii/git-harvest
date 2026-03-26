@@ -4,7 +4,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-const SCRIPT = join(import.meta.dir, 'git-harvest.sh');
+const SCRIPT = join(import.meta.dir, 'git-harvest');
 
 // ヘルパー: スクリプト実行
 function run(cwd: string, args = ''): string {
