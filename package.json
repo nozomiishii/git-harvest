@@ -4,11 +4,10 @@
   "description": "Clean up merged branches and worktrees (supports squash merges)",
   "keywords": [
     "git",
+    "cli",
     "cleanup",
-    "branches",
-    "worktree",
-    "squash-merge",
-    "harvest"
+    "branch",
+    "worktree"
   ],
   "homepage": "https://github.com/nozomiishii/git-harvest",
   "repository": {
