@@ -1,2 +1,27 @@
-node_modules/
-bun.lock
+# System Files
+.DS_Store
+
+# Node
+node_modules
+
+# lefthook
+lefthook-local.yaml
+
+# act
+.actrc
+
+# pnpm
+.pnpm-store
+
+# claude
+**/.claude/settings.local.json
+**/CLAUDE.local.md
+**/.claude/worktrees/
+
+# Build output
+dist
+
+# Logs
+*.log
+*.log.*
+
