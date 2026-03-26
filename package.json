@@ -18,8 +18,11 @@
   "license": "MIT",
   "author": "Nozomi Ishii",
   "bin": {
-    "git-harvest": "./lib/git-harvest.sh"
+    "git-harvest": "./lib/git-harvest"
   },
+  "files": [
+    "lib/git-harvest"
+  ],
   "scripts": {
     "test": "bun test"
   },
