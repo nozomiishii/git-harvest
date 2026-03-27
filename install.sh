@@ -84,7 +84,11 @@ main() {
   echo ""
   echo "Set up aliases for quicker access."
   echo "You can use both or just the one you prefer:"
-  echo "  alias ghv='git-harvest'"
+  echo ""
+  echo "  # Shell alias"
+  echo "  echo \"alias ghv='git-harvest'\" >> ~/.zshrc"
+  echo ""
+  echo "  # Git subcommand — run as 'git harvest'"
   echo "  git config --global alias.harvest '!git-harvest'"
 }
 

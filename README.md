@@ -60,9 +60,9 @@ Set up aliases for quicker access. You can use both or just the one you prefer:
 
 ```sh
 # Shell alias
-alias ghv='bunx git-harvest@latest'
+echo "alias ghv='bunx git-harvest@latest'" >> ~/.zshrc
 
-# Git subcommand alias — run as `git harvest`
+# Git subcommand — run as `git harvest`
 git config --global alias.harvest '!bunx git-harvest@latest'
 ```
 

@@ -60,9 +60,9 @@ git-harvest --version  # バージョンを表示
 
 ```sh
 # シェルエイリアス
-alias ghv='bunx git-harvest@latest'
+echo "alias ghv='bunx git-harvest@latest'" >> ~/.zshrc
 
-# Git サブコマンドとして登録 — `git harvest` で実行可能
+# Git サブコマンド — `git harvest` で実行可能
 git config --global alias.harvest '!bunx git-harvest@latest'
 ```
 
