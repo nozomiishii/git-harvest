@@ -7,13 +7,14 @@
 ## 使い方
 
 ```sh
-pnpx git-harvest
-```
+# bun
+bunx git-harvest@latest
 
-npm の場合:
+# pnpm
+pnpx git-harvest@latest
 
-```sh
-npx git-harvest
+# npm
+npx -y git-harvest@latest
 ```
 
 ### オプション
@@ -42,5 +43,7 @@ git-harvest --version  # バージョンを表示
 post-merge:
   commands:
     cleanup-merged:
-      run: pnpx git-harvest
+      run: pnpx git-harvest@latest
+      # or: bunx git-harvest@latest
+      # or: npx -y git-harvest@latest
 ```
