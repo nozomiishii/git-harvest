@@ -5,13 +5,11 @@
 
 ### Bug Fixes
 
-* remove .sh extension from bin entry and add files field ([980f57f](https://github.com/nozomiishii/git-harvest/commit/980f57f6b67edb192d343d6d262cfa861f84d135))
-* remove .sh extension from bin entry and add files field ([e3ceae5](https://github.com/nozomiishii/git-harvest/commit/e3ceae519cc80f46e58f6f0f3d3f68ce95f3a3c2))
+* remove .sh extension from bin entry and add files field ([476654b](https://github.com/nozomiishii/git-harvest/commit/476654bfe51d875273600887a373b9cac4efc16b))
 
 ## [0.1.1](https://github.com/nozomiishii/git-harvest/compare/v0.1.0...v0.1.1) (2026-03-26)
 
 
 ### Bug Fixes
 
-* use explicit default branch in test setup for CI compatibility ([a917ae1](https://github.com/nozomiishii/git-harvest/commit/a917ae1219955b77268da8c9fb3a3cfeec190622))
-* use explicit default branch in test setup for CI compatibility ([09e8929](https://github.com/nozomiishii/git-harvest/commit/09e8929668ea3dfc5b440be4b97a191762b90534))
+* use explicit default branch in test setup for CI compatibility ([c44f447](https://github.com/nozomiishii/git-harvest/commit/c44f447f3c6ff5dd6d8183c3328fe9d65e7c45f6))
