@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/nozomiishii/git-harvest/compare/v0.1.3...v0.1.4) (2026-03-27)
+
+
+### Features
+
+* show alias setup hints after install completes ([#18](https://github.com/nozomiishii/git-harvest/issues/18)) ([1ff7809](https://github.com/nozomiishii/git-harvest/commit/1ff7809131f1bdde4fd76b13fc3c69cd6d0837da))
+
 ## [0.1.3](https://github.com/nozomiishii/git-harvest/compare/v0.1.2...v0.1.3) (2026-03-27)
 
 
