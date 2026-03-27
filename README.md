@@ -7,13 +7,14 @@ Clean up merged branches and worktrees (supports squash merges).
 ## Usage
 
 ```sh
-pnpx git-harvest
-```
+# bun
+bunx git-harvest@latest
 
-With npm:
+# pnpm
+pnpx git-harvest@latest
 
-```sh
-npx git-harvest
+# npm
+npx -y git-harvest@latest
 ```
 
 ### Options
@@ -42,5 +43,7 @@ Uses `git commit-tree` to create a virtual squash commit and `git cherry` to che
 post-merge:
   commands:
     cleanup-merged:
-      run: pnpx git-harvest
+      run: pnpx git-harvest@latest
+      # or: bunx git-harvest@latest
+      # or: npx -y git-harvest@latest
 ```
