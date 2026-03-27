@@ -36,6 +36,18 @@ git-harvest --version  # Show version
 
 Uses `git commit-tree` to create a virtual squash commit and `git cherry` to check if the result is already included in the default branch. This correctly detects squash merges, which `git branch --merged` cannot.
 
+## Aliases
+
+Set up aliases for quicker access. You can use both or just the one you prefer:
+
+```sh
+# Shell alias
+alias ghv='bunx git-harvest@latest'
+
+# Git subcommand alias — run as `git harvest`
+git config --global alias.harvest '!bunx git-harvest@latest'
+```
+
 ## With lefthook
 
 ```yaml

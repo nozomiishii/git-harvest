@@ -36,6 +36,18 @@ git-harvest --version  # バージョンを表示
 
 `git commit-tree` で仮想 squash コミットを作成し、`git cherry` でデフォルトブランチに含まれているかを判定します。`git branch --merged` では検出できない squash merge を正しく検出できます。
 
+## エイリアス設定
+
+お好みでエイリアスを設定すると、より手軽に実行できます。両方設定しても問題ありませんし、好きな片方だけでも OK です:
+
+```sh
+# シェルエイリアス
+alias ghv='bunx git-harvest@latest'
+
+# Git サブコマンドとして登録 — `git harvest` で実行可能
+git config --global alias.harvest '!bunx git-harvest@latest'
+```
+
 ## lefthook との連携
 
 ```yaml
