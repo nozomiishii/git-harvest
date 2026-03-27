@@ -6,23 +6,33 @@
 
 ## インストール
 
+### Shell (macOS/Linux)
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
 ```
 
-### アンインストール
+ターミナルを再起動するか `source ~/.zshrc` を実行すると git-harvest が使えるようになります。
+
+エイリアスを設定するとより手軽に実行できます。両方設定しても片方だけでも OK です:
+
+```sh
+# シェルエイリアス
+echo "alias ghv='git-harvest'" >> ~/.zshrc
+
+# Git サブコマンド — `git harvest` で実行可能
+git config --global alias.harvest '!git-harvest'
+```
+
+#### アンインストール
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
 ```
 
-## 使い方
+### npm
 
-```sh
-git-harvest
-```
-
-インストールせずに直接実行する場合:
+インストールせずに直接実行:
 
 ```sh
 # bun
@@ -33,6 +43,12 @@ pnpx git-harvest@latest
 
 # npm
 npx -y git-harvest@latest
+```
+
+## 使い方
+
+```sh
+git-harvest
 ```
 
 ### オプション
@@ -53,18 +69,6 @@ git-harvest --version  # バージョンを表示
 ### Squash merge の検出方法
 
 `git commit-tree` で仮想 squash コミットを作成し、`git cherry` でデフォルトブランチに含まれているかを判定します。`git branch --merged` では検出できない squash merge を正しく検出できます。
-
-## エイリアス設定
-
-お好みでエイリアスを設定すると、より手軽に実行できます。両方設定しても問題ありませんし、好きな片方だけでも OK です:
-
-```sh
-# シェルエイリアス
-echo "alias ghv='bunx git-harvest@latest'" >> ~/.zshrc
-
-# Git サブコマンド — `git harvest` で実行可能
-git config --global alias.harvest '!bunx git-harvest@latest'
-```
 
 ## lefthook との連携
 
