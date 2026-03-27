@@ -6,23 +6,33 @@ Clean up merged branches and worktrees (supports squash merges).
 
 ## Install
 
+### Shell (macOS/Linux)
+
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
 ```
 
-### Uninstall
+Restart your terminal or run `source ~/.zshrc` to start using git-harvest.
+
+Set up aliases for quicker access. You can use both or just the one you prefer:
+
+```sh
+# Shell alias
+echo "alias ghv='git-harvest'" >> ~/.zshrc
+
+# Git subcommand — run as `git harvest`
+git config --global alias.harvest '!git-harvest'
+```
+
+#### Uninstall
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
 ```
 
-## Usage
+### npm
 
-```sh
-git-harvest
-```
-
-Or run directly without installing:
+Run directly without installing:
 
 ```sh
 # bun
@@ -33,6 +43,12 @@ pnpx git-harvest@latest
 
 # npm
 npx -y git-harvest@latest
+```
+
+## Usage
+
+```sh
+git-harvest
 ```
 
 ### Options
@@ -53,18 +69,6 @@ git-harvest --version  # Show version
 ### Squash merge detection
 
 Uses `git commit-tree` to create a virtual squash commit and `git cherry` to check if the result is already included in the default branch. This correctly detects squash merges, which `git branch --merged` cannot.
-
-## Aliases
-
-Set up aliases for quicker access. You can use both or just the one you prefer:
-
-```sh
-# Shell alias
-echo "alias ghv='bunx git-harvest@latest'" >> ~/.zshrc
-
-# Git subcommand — run as `git harvest`
-git config --global alias.harvest '!bunx git-harvest@latest'
-```
 
 ## With lefthook
 
