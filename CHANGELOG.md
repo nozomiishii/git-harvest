@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.3](https://github.com/nozomiishii/git-harvest/compare/v0.1.2...v0.1.3) (2026-03-27)
+
+
+### Features
+
+* add curl-based install and uninstall scripts ([db290d6](https://github.com/nozomiishii/git-harvest/commit/db290d6b511d52b0de90303bf9c419e709033a77))
+
+
+### Bug Fixes
+
+* remove duplicate entries from CHANGELOG ([#17](https://github.com/nozomiishii/git-harvest/issues/17)) ([d77d1f3](https://github.com/nozomiishii/git-harvest/commit/d77d1f38493845237945510718f1e616ba6de5d3))
+* update bootstrap-sha after history linearization ([#15](https://github.com/nozomiishii/git-harvest/issues/15)) ([5a61aae](https://github.com/nozomiishii/git-harvest/commit/5a61aae0c7026358e9cb0ff4331fe4843f84a82e))
+
 ## [0.1.2](https://github.com/nozomiishii/git-harvest/compare/v0.1.1...v0.1.2) (2026-03-26)
 
 
