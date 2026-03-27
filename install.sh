@@ -81,6 +81,11 @@ main() {
   echo ""
   echo "Restart your terminal or run:"
   echo "  source ~/.zshrc"
+  echo ""
+  echo "Set up aliases for quicker access."
+  echo "You can use both or just the one you prefer:"
+  echo "  alias ghv='git-harvest'"
+  echo "  git config --global alias.harvest '!git-harvest'"
 }
 
 main
