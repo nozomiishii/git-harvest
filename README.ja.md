@@ -4,7 +4,25 @@
 
 マージ済みブランチと worktree を自動で整理するツール（squash merge 対応）。
 
+## インストール
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
+```
+
+### アンインストール
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
+```
+
 ## 使い方
+
+```sh
+git-harvest
+```
+
+インストールせずに直接実行する場合:
 
 ```sh
 # bun

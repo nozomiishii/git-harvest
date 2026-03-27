@@ -4,7 +4,25 @@ English | [日本語](./README.ja.md)
 
 Clean up merged branches and worktrees (supports squash merges).
 
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
+```
+
+### Uninstall
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
+```
+
 ## Usage
+
+```sh
+git-harvest
+```
+
+Or run directly without installing:
 
 ```sh
 # bun
