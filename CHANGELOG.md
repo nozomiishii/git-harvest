@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.3](https://github.com/nozomiishii/git-harvest/compare/v0.1.2...v0.1.3) (2026-03-27)
+
+
+### Features
+
+* add curl-based install and uninstall scripts ([60accf6](https://github.com/nozomiishii/git-harvest/commit/60accf64950eb8515a972059f34878472c365658))
+* add curl-based install and uninstall scripts ([51c3fbc](https://github.com/nozomiishii/git-harvest/commit/51c3fbc88219e66e3b4bedeb0d30c00700654a73))
+
 ## [0.1.2](https://github.com/nozomiishii/git-harvest/compare/v0.1.1...v0.1.2) (2026-03-26)
 
 
