@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/nozomiishii/git-harvest/compare/v0.1.5...v0.1.6) (2026-03-28)
+
+
+### Bug Fixes
+
+* disable pull request creation in homebrew formula update ([#25](https://github.com/nozomiishii/git-harvest/issues/25)) ([bce727e](https://github.com/nozomiishii/git-harvest/commit/bce727ec547b335df6e730b8498aac9a72b273a0))
+
 ## [0.1.5](https://github.com/nozomiishii/git-harvest/compare/v0.1.4...v0.1.5) (2026-03-28)
 
 
