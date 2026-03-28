@@ -90,9 +90,8 @@ jobs:
           export-env: true
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          APP_ID: op://vault-name/github-app/app-id
-          APP_PRIVATE_KEY: op://vault-name/github-app/private-key
-          # ↑ 実際の 1Password の Secret Reference に置き換える
+          APP_ID: op://homebrew-tap/nozomiishii-homebrew-bot/username
+          APP_PRIVATE_KEY: op://homebrew-tap/nozomiishii-homebrew-bot/credential
 
       - name: Generate GitHub App token
         id: app-token
