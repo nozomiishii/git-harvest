@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="0.1.6" # x-release-please-version
+VERSION="0.1.7" # x-release-please-version
 
 case "${1:-}" in
   -v | --version)

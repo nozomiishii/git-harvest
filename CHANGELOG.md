@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/nozomiishii/git-harvest/compare/v0.1.6...v0.1.7) (2026-03-28)
+
+
+### Bug Fixes
+
+* add push-to parameter to skip fork creation ([#27](https://github.com/nozomiishii/git-harvest/issues/27)) ([d9bcf6a](https://github.com/nozomiishii/git-harvest/commit/d9bcf6ae5cc56a844924e506612570f9a8adec50))
+
 ## [0.1.6](https://github.com/nozomiishii/git-harvest/compare/v0.1.5...v0.1.6) (2026-03-28)
 
 
