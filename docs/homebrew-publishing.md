@@ -326,6 +326,9 @@ Service Account を分けても、漏洩時の**被害範囲と対処は同じ**
 5. ページ下部の Private keys セクションで **Generate a private key** → `.pem` ファイルがダウンロードされる
 6. 左メニューの **Install App** → 自分のアカウント → **Only select repositories** → `homebrew-tap` を選択
 
+> **重要**: ステップ 6 を忘れると CI で `Resource not accessible by integration` エラーになる。
+> App を作成しただけではリポジトリにアクセスできない。必ず Install App でリポジトリを指定すること。
+
 > GitHub CLI (`gh`) では App の作成・秘密鍵生成はできない。UI での手動操作が必須（1 回のみ）。
 > 将来新しいツールを追加する場合、Install App の設定で `homebrew-tap` が既に選択済みなので再設定不要。
 
@@ -391,11 +394,15 @@ gh secret set OP_SERVICE_ACCOUNT_TOKEN -R nozomiishii/git-harvest
           formula-name: git-harvest
           homebrew-tap: nozomiishii/homebrew-tap
           tag-name: ${{ needs.release-please.outputs.tag_name }}
+          create-pullrequest: false
           commit-message: |
             {{formulaName}} {{version}}
         env:
           COMMITTER_TOKEN: ${{ steps.app-token.outputs.token }}
 ```
+
+> `create-pullrequest: false` を明示しないと、アクションが fork → PR のフローを試みて
+> `Resource not accessible by integration` エラーになる（GitHub App には fork 作成権限がないため）。
 
 リリースの自動化フロー:
 
