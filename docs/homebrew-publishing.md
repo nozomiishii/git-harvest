@@ -124,7 +124,7 @@ brew install nozomiishii/git-harvest/git-harvest
 
 git-harvest は既存リポジトリ名を変更せず、今後のツール追加も想定しているため**パターン A** を採用。
 
-## 公開の流れ（手動）
+## 公開の流れ
 
 ### 1. homebrew-tap リポジトリの作成
 
@@ -137,27 +137,28 @@ gh repo create nozomiishii/homebrew-tap --public --description "Homebrew formula
 SHA256 を計算:
 
 ```bash
-curl -sL https://github.com/nozomiishii/git-harvest/archive/refs/tags/v0.1.4.tar.gz | shasum -a 256
+curl -sL https://github.com/<owner>/<repo>/archive/refs/tags/<tag>.tar.gz | shasum -a 256
 ```
 
-`Formula/git-harvest.rb` を作成（内容は「Homebrew の基本構造 > Formula」セクションを参照）。
+`Formula/<tool>.rb` を作成（内容は「Homebrew の基本構造 > Formula」セクションを参照）。
 
-### 3. インストール確認
+> ステップ 1〜2 は `gh api` で自動化可能。手動でやる必要はない。
+
+### 3. インストール確認（手動）
 
 ```bash
-brew tap nozomiishii/tap
-brew install git-harvest
-git-harvest --version  # v0.1.4 が表示されること
+brew tap <owner>/tap
+brew install <tool>
+<tool> --version
 ```
 
-### 4. brew audit による品質チェック
+### 4. brew audit による品質チェック（手動）
 
 ```bash
-brew audit --new nozomiishii/tap/git-harvest
+brew audit --new <owner>/tap/<tool>
 ```
 
-> ここまでが手動公開。CI なしでも Homebrew での配布は可能。
-> リリースのたびに手動で Formula の `url` と `sha256` を更新する運用になる。
+> ステップ 3〜4 はローカルに Homebrew が必要なため手動で実施する。
 
 ## CI による自動更新
 
@@ -337,23 +338,25 @@ mislav/bump-homebrew-formula-action が以下を自動実行:
 
 ## 段階的な導入フロー
 
-### Phase 1: 手動で Formula を公開
+### Phase 1: Formula を公開
 
-1. `homebrew-tap` リポジトリを作成
-2. `Formula/git-harvest.rb` を手動で作成・push
-3. `brew install nozomiishii/tap/git-harvest` でインストール確認
-4. README に Homebrew インストール方法を追加
+| ステップ | 実行者 | 内容 |
+|---|---|---|
+| 1. リポジトリ作成 | 自動化可能 | `gh repo create` で `homebrew-tap` を作成 |
+| 2. Formula 作成 | 自動化可能 | SHA256 計算 + `gh api` で Formula を push |
+| 3. インストール確認 | **手動** | `brew install` でローカルで動作確認 |
+| 4. 品質チェック | **手動** | `brew audit` でローカルで確認 |
 
 この段階では CI 不要。リリース時に手動で `url` と `sha256` を更新する。
 
 ### Phase 2: CI 自動化を追加
 
-リリース頻度が上がって手動更新が負担になったら:
-
-1. GitHub App を作成
-2. 1Password にシークレットを保存
-3. GitHub Secret / Variable を登録
-4. `release.yaml` に `homebrew-update` ジョブを追加
+| ステップ | 実行者 | 内容 |
+|---|---|---|
+| 1. GitHub App 作成 | **手動** | GitHub UI でのみ可能（API/CLI 非対応） |
+| 2. 1Password 設定 | **手動** | Vault 作成、シークレット保存、Service Account 作成 |
+| 3. Secret/Variable 登録 | 自動化可能 | `gh secret set` / `gh variable set` で登録 |
+| 4. release.yaml 更新 | 自動化可能 | `homebrew-update` ジョブを追加 |
 
 以降はリリースのたびに Formula が自動更新される。
 
