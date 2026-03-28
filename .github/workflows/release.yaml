@@ -108,6 +108,7 @@ jobs:
           formula-name: git-harvest
           homebrew-tap: nozomiishii/homebrew-tap
           tag-name: ${{ needs.release-please.outputs.tag_name }}
+          create-pullrequest: false
           commit-message: |
             {{formulaName}} {{version}}
         env:
