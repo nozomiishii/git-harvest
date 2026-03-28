@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/nozomiishii/git-harvest/compare/v0.1.4...v0.1.5) (2026-03-28)
+
+
+### Features
+
+* add Homebrew publishing support ([#22](https://github.com/nozomiishii/git-harvest/issues/22)) ([65deeb0](https://github.com/nozomiishii/git-harvest/commit/65deeb05db1d53f666c512d371acd4f606864662))
+
 ## [0.1.4](https://github.com/nozomiishii/git-harvest/compare/v0.1.3...v0.1.4) (2026-03-27)
 
 
