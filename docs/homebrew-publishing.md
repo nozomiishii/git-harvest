@@ -190,10 +190,11 @@ GitHub Secret (1つだけ)
 
 1Password Vault (シークレット一元管理)
   ├── GitHub App Private Key (.pem)
-  └── GitHub App ID
+  └── GitHub App ID                ← 秘密ではないが 1Password に集約して管理を一元化
 ```
 
-- GitHub Secret に直接 Private Key を置く場合と比べ、ローテーション時に 1Password 側のみ変更すればよい
+- App ID と秘密鍵を 1Password に集約することで、変更時に 1Password 側のみ対応すれば済む
+- GitHub 側に登録するのは `OP_SERVICE_ACCOUNT_TOKEN`（1つだけ）
 - 1Password Service Account トークンはデフォルト無期限（`--expires-in` を明示しない限り）
 - 手動ローテーション・即時取消も可能
 
@@ -234,11 +235,8 @@ GitHub Secret (1つだけ)
 #### GitHub Secret の登録
 
 ```bash
-# 1Password Service Account Token を git-harvest の Secret に登録
+# 1Password Service Account Token を git-harvest の Secret に登録（これだけ）
 gh secret set OP_SERVICE_ACCOUNT_TOKEN -R nozomiishii/git-harvest
-
-# App ID を Variable に登録（シークレットではないので Variable で OK）
-gh variable set APP_ID -R nozomiishii/git-harvest
 ```
 
 ### Formula 自動更新ツールの比較
@@ -286,6 +284,7 @@ Formula の `url` / `sha256` を自動更新する方法はいくつかある:
           export-env: true
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          APP_ID: op://vault-name/github-app/app-id
           APP_PRIVATE_KEY: op://vault-name/github-app/private-key
           # ↑ 実際の 1Password の Secret Reference に置き換える
 
@@ -293,7 +292,7 @@ Formula の `url` / `sha256` を自動更新する方法はいくつかある:
         id: app-token
         uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
         with:
-          app-id: ${{ vars.APP_ID }}
+          app-id: ${{ env.APP_ID }}
           private-key: ${{ env.APP_PRIVATE_KEY }}
           owner: nozomiishii
           repositories: homebrew-tap
@@ -355,7 +354,7 @@ mislav/bump-homebrew-formula-action が以下を自動実行:
 |---|---|---|
 | 1. GitHub App 作成 | **手動** | GitHub UI でのみ可能（API/CLI 非対応） |
 | 2. 1Password 設定 | **手動** | Vault 作成、シークレット保存、Service Account 作成 |
-| 3. Secret/Variable 登録 | 自動化可能 | `gh secret set` / `gh variable set` で登録 |
+| 3. Secret 登録 | 自動化可能 | `gh secret set` で `OP_SERVICE_ACCOUNT_TOKEN` を登録 |
 | 4. release.yaml 更新 | 自動化可能 | `homebrew-update` ジョブを追加 |
 
 以降はリリースのたびに Formula が自動更新される。
