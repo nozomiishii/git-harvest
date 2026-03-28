@@ -393,6 +393,7 @@ gh secret set OP_SERVICE_ACCOUNT_TOKEN -R nozomiishii/git-harvest
         with:
           formula-name: git-harvest
           homebrew-tap: nozomiishii/homebrew-tap
+          push-to: nozomiishii/homebrew-tap
           tag-name: ${{ needs.release-please.outputs.tag_name }}
           create-pullrequest: false
           commit-message: |
@@ -401,8 +402,10 @@ gh secret set OP_SERVICE_ACCOUNT_TOKEN -R nozomiishii/git-harvest
           COMMITTER_TOKEN: ${{ steps.app-token.outputs.token }}
 ```
 
-> `create-pullrequest: false` を明示しないと、アクションが fork → PR のフローを試みて
-> `Resource not accessible by integration` エラーになる（GitHub App には fork 作成権限がないため）。
+> GitHub App トークンを使う場合、`push-to` と `create-pullrequest: false` の両方が必要。
+> `push-to` を指定しないと、アクションが権限チェックで fork を作ろうとし
+> `Resource not accessible by integration` エラーになる
+> （GitHub App トークンでは `GET /user` API が 403 になるため）。
 
 リリースの自動化フロー:
 
