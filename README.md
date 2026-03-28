@@ -6,7 +6,7 @@ Clean up merged branches and worktrees (supports squash merges).
 
 ## Install
 
-### Shell (macOS/Linux)
+### Shell (macOS/Linux) (recommended)
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
@@ -22,6 +22,12 @@ echo "alias ghv='git-harvest'" >> ~/.zshrc
 
 # Git subcommand — run as `git harvest`
 git config --global alias.harvest '!git-harvest'
+```
+
+### Homebrew
+
+```sh
+brew install nozomiishii/tap/git-harvest
 ```
 
 #### Uninstall
