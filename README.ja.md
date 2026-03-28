@@ -20,7 +20,7 @@ curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/instal
 brew install nozomiishii/tap/git-harvest
 ```
 
-### エイリアスを設定
+### (任意) エイリアスを設定
 
 エイリアスを設定するとより手軽に実行できます。両方設定しても片方だけでも設定できます:
 

@@ -20,7 +20,7 @@ Restart your terminal or run `source ~/.zshrc` to start using git-harvest.
 brew install nozomiishii/tap/git-harvest
 ```
 
-### Set up aliases
+### (Optional) Set up aliases
 
 Set up aliases for quicker access. You can use both or just the one you prefer:
 
