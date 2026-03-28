@@ -2,7 +2,7 @@
 
 [English](./README.md) | 日本語
 
-マージ済みブランチと worktree を自動で整理するツール（squash merge 対応）。
+merge 済み branch と worktree を自動で整理するツール
 
 ## インストール
 
@@ -14,31 +14,36 @@ curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/instal
 
 ターミナルを再起動するか `source ~/.zshrc` を実行すると git-harvest が使えるようになります。
 
-エイリアスを設定するとより手軽に実行できます。両方設定しても片方だけでも OK です:
-
-```sh
-# シェルエイリアス
-echo "alias ghv='git-harvest'" >> ~/.zshrc
-
-# Git サブコマンド — `git harvest` で実行可能
-git config --global alias.harvest '!git-harvest'
-```
-
 ### Homebrew
 
 ```sh
 brew install nozomiishii/tap/git-harvest
 ```
 
-#### アンインストール
+### エイリアスを設定
+
+エイリアスを設定するとより手軽に実行できます。両方設定しても片方だけでも設定できます:
+
+`ghv`
+```sh
+# シェルエイリアス
+echo "alias ghv='git-harvest'" >> ~/.zshrc
+```
+
+`git harvest`
+```sh
+# Git サブコマンド — `git harvest` で実行可能
+git config --global alias.harvest '!git-harvest'
+```
+
+
+## アンインストール
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
 ```
 
-### npm
-
-インストールせずに直接実行:
+## インストールせずに直接実行
 
 ```sh
 # bun
@@ -64,6 +69,26 @@ git-harvest --help     # ヘルプを表示
 git-harvest --version  # バージョンを表示
 ```
 
+## おすすめの運用法
+
+Git hooksのpost-mergeコマンドと合わせることで、Mergeやpullした際に自動で収穫もできます。
+
+### [lefthook](https://github.com/evilmartians/lefthook)との連携
+
+Git Hooks にはhusky、pre-commit、simple-git-hooks など様々なツールがありますが、Lefthook が言語に依存せず monorepo にも組み込みやすいのでおすすめです。さらに lefthook-local.yaml を使えば、チーム開発で他のメンバーに影響を与えず自分だけ実行する運用も可能です。
+
+
+```yaml
+# lefthook-local.yaml
+post-merge:
+  commands:
+    git-harvest:
+      run: npx -y git-harvest@latest
+      # or: bunx git-harvest@latest
+      # or: pnpx git-harvest@latest
+```
+
+
 ## 動作内容
 
 1. `origin/HEAD` からデフォルトブランチ（main/master）を検出
@@ -76,14 +101,3 @@ git-harvest --version  # バージョンを表示
 
 `git commit-tree` で仮想 squash コミットを作成し、`git cherry` でデフォルトブランチに含まれているかを判定します。`git branch --merged` では検出できない squash merge を正しく検出できます。
 
-## lefthook との連携
-
-```yaml
-# lefthook.yaml
-post-merge:
-  commands:
-    cleanup-merged:
-      run: pnpx git-harvest@latest
-      # or: bunx git-harvest@latest
-      # or: npx -y git-harvest@latest
-```
