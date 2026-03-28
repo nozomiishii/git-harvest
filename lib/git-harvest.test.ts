@@ -366,7 +366,10 @@ describe('combined scenarios', () => {
     expect(worktrees(repo).length).toBeGreaterThan(1);
     // 出力にはサマリーが表示される
     expect(output).toContain('Dry run mode');
-    expect(output).toContain('[WILL DELETE] dry-run-branch');
+    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('dry-run-wt-dir');
+    // worktree にチェックアウト中のブランチは削除できないので表示されない
+    expect(output).not.toContain('[WILL DELETE] dry-run-branch');
     expect(output).toContain('Harvested!');
 
     // cleanup
@@ -404,8 +407,8 @@ describe('combined scenarios', () => {
     const output = run(repo, '--dry-run');
     // dirty な worktree は Worktrees セクションに表示されない
     expect(output).not.toContain(`[WILL DELETE] ${wtDir}`);
-    // ブランチは表示される（ブランチ自体は削除可能）
-    expect(output).toContain('[WILL DELETE] drywt-dirty');
+    // worktree にチェックアウト中のブランチも削除できないので表示されない
+    expect(output).not.toContain('[WILL DELETE] drywt-dirty');
 
     // cleanup
     git(repo, `worktree remove --force ${wtDir}`);
