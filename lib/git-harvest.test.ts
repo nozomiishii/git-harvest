@@ -6,12 +6,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 const SCRIPT = join(import.meta.dir, 'git-harvest');
 
-// ヘルパー: スクリプト実行
+// ヘルパー: スクリプト実行（NO_COLOR=1 で ANSI エスケープを無効化）
 function run(cwd: string, args = ''): string {
   return execSync(`bash ${SCRIPT} ${args}`, {
     cwd,
     encoding: 'utf-8',
     stdio: 'pipe',
+    env: { ...process.env, NO_COLOR: '1' },
   });
 }
 
@@ -144,9 +145,11 @@ describe('merge detection', () => {
     git(repo, "merge feature-regular --no-ff -m 'merge feature'");
     git(repo, 'push');
 
-    run(repo);
+    const output = run(repo);
     expect(branches(repo)).not.toContain('feature-regular');
     expect(branches(repo)).toContain('main');
+    expect(output).toContain('[DELETED] feature-regular');
+    expect(output).toContain('Harvested!');
   });
 
   // squash マージ済み
@@ -159,9 +162,11 @@ describe('merge detection', () => {
     git(repo, 'commit -m "squash merge feature"');
     git(repo, 'push');
 
-    run(repo);
+    const output = run(repo);
     expect(branches(repo)).not.toContain('feature-squash');
     expect(branches(repo)).toContain('main');
+    expect(output).toContain('[DELETED] feature-squash');
+    expect(output).toContain('Harvested!');
   });
 
   // 未マージは保持
@@ -174,10 +179,11 @@ describe('merge detection', () => {
     expect(branches(repo)).toContain('feature-wip');
   });
 
-  // マージ済みなし → 何もしない
-  test('exits with 0 when no merged branches exist', () => {
-    run(repo);
+  // マージ済みなし → Nothing to harvest メッセージ
+  test('exits with 0 and shows nothing-to-harvest message when no merged branches exist', () => {
+    const output = run(repo);
     expect(branches(repo)).toEqual(['main']);
+    expect(output).toContain('Nothing to harvest. All clean!');
   });
 
   // 孤立ブランチはスキップ
@@ -205,9 +211,11 @@ describe('worktree cleanup', () => {
     git(repo, `worktree add ${wtDir} wt-merged`);
     expect(worktrees(repo).length).toBeGreaterThan(1);
 
-    run(repo);
+    const output = run(repo);
     expect(branches(repo)).not.toContain('wt-merged');
     expect(worktrees(repo)).toHaveLength(1);
+    expect(output).toContain('[DELETED]');
+    expect(output).toContain('Harvested!');
   });
 
   // default branch の worktree は保持
@@ -287,9 +295,11 @@ describe('combined scenarios', () => {
     const wtDir = join(repo, '..', 'combo-wt-dir');
     git(repo, `worktree add ${wtDir} combo-merged`);
 
-    run(repo);
+    const output = run(repo);
     expect(branches(repo)).not.toContain('combo-merged');
     expect(worktrees(repo)).toHaveLength(1);
+    expect(output).toContain('[DELETED]');
+    expect(output).toContain('Harvested!');
   });
 
   // マージ済みと未マージの混在
@@ -336,6 +346,72 @@ describe('combined scenarios', () => {
       rmSync(masterBare, { recursive: true, force: true });
       rmSync(masterRepo, { recursive: true, force: true });
     }
+  });
+
+  // dry-run ではブランチも worktree も削除されない
+  test('dry-run does not delete anything', () => {
+    git(repo, 'checkout -b dry-run-branch');
+    commitFile(repo, 'dry.txt', 'dry work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash dry-run-branch');
+    git(repo, 'commit -m "squash dry"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'dry-run-wt-dir');
+    git(repo, `worktree add ${wtDir} dry-run-branch`);
+
+    const output = run(repo, '--dry-run');
+    // ブランチも worktree も残っている
+    expect(branches(repo)).toContain('dry-run-branch');
+    expect(worktrees(repo).length).toBeGreaterThan(1);
+    // 出力にはサマリーが表示される
+    expect(output).toContain('Dry run mode');
+    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('dry-run-wt-dir');
+    // worktree にチェックアウト中のブランチは削除できないので表示されない
+    expect(output).not.toContain('[WILL DELETE] dry-run-branch');
+    expect(output).toContain('Harvested!');
+
+    // cleanup
+    git(repo, `worktree remove ${wtDir}`);
+  });
+
+  // dry-run でメインワーキングツリーは表示しない
+  test('dry-run skips main working tree', () => {
+    git(repo, 'checkout -b drywt-main-check');
+    commitFile(repo, 'drywt.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash drywt-main-check');
+    git(repo, 'commit -m "squash drywt"');
+    git(repo, 'push');
+
+    const output = run(repo, '--dry-run');
+    // メインワーキングツリー (repo 自体) は Worktrees セクションに含まれない
+    expect(output).not.toContain(`[WILL DELETE] ${repo}`);
+  });
+
+  // dry-run で未コミット変更のある worktree は表示しない
+  test('dry-run skips dirty worktrees', () => {
+    git(repo, 'checkout -b drywt-dirty');
+    commitFile(repo, 'dirty-base.txt', 'base');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash drywt-dirty');
+    git(repo, 'commit -m "squash dirty"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'drywt-dirty-dir');
+    git(repo, `worktree add ${wtDir} drywt-dirty`);
+    // worktree に未コミットの変更を追加
+    writeFileSync(join(wtDir, 'uncommitted.txt'), 'dirty\n');
+
+    const output = run(repo, '--dry-run');
+    // dirty な worktree は Worktrees セクションに表示されない
+    expect(output).not.toContain(`[WILL DELETE] ${wtDir}`);
+    // worktree にチェックアウト中のブランチも削除できないので表示されない
+    expect(output).not.toContain('[WILL DELETE] drywt-dirty');
+
+    // cleanup
+    git(repo, `worktree remove --force ${wtDir}`);
   });
 
   // exit code 0
