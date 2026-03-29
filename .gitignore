@@ -13,10 +13,11 @@ lefthook-local.yaml
 # pnpm
 .pnpm-store
 
-# claude
+# Claude Code
 **/.claude/settings.local.json
 **/CLAUDE.local.md
 **/.claude/worktrees/
+**/.claude/debug/
 
 # Build output
 dist
