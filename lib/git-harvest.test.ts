@@ -186,6 +186,27 @@ describe('merge detection', () => {
     expect(output).toContain('Nothing to harvest. All clean!');
   });
 
+  // 独自コミットなしのブランチは保持（作成直後の worktree 用ブランチ等）
+  test('preserves branches with no unique commits', () => {
+    git(repo, 'checkout -b no-commits-yet');
+    git(repo, 'checkout main');
+
+    run(repo);
+    expect(branches(repo)).toContain('no-commits-yet');
+  });
+
+  // main より古いコミットを指す独自コミットなしブランチも保持
+  test('preserves branches pointing to older commits with no unique work', () => {
+    git(repo, 'checkout -b old-branch');
+    git(repo, 'checkout main');
+    // main を先に進める
+    commitFile(repo, 'advance.txt', 'advance main');
+    git(repo, 'push');
+
+    run(repo);
+    expect(branches(repo)).toContain('old-branch');
+  });
+
   // 孤立ブランチはスキップ
   test('skips orphan branches without common ancestor', () => {
     git(repo, 'checkout --orphan isolated');
@@ -245,6 +266,19 @@ describe('worktree cleanup', () => {
 
     run(repo);
     expect(branches(repo)).toContain('wt-unmerged');
+    expect(worktrees(repo).length).toBeGreaterThan(1);
+
+    // cleanup
+    git(repo, `worktree remove ${wtDir}`);
+  });
+
+  // 独自コミットなしの worktree は保持
+  test('preserves worktrees for branches with no unique commits', () => {
+    const wtDir = join(repo, '..', 'wt-no-commits-dir');
+    git(repo, `worktree add -b wt-no-commits ${wtDir}`);
+
+    run(repo);
+    expect(branches(repo)).toContain('wt-no-commits');
     expect(worktrees(repo).length).toBeGreaterThan(1);
 
     // cleanup
