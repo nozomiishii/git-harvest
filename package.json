@@ -1,6 +1,6 @@
 {
   "name": "git-harvest",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Clean up merged branches and worktrees (supports squash merges)",
   "keywords": [
     "git",
