@@ -79,9 +79,6 @@ main() {
   echo "git-harvest was installed successfully!"
   echo "  Binary: $BIN_DIR/git-harvest"
   echo ""
-  echo "Restart your terminal or run:"
-  echo "  source ~/.zshrc"
-  echo ""
   echo "Set up aliases for quicker access."
   echo "You can use both or just the one you prefer:"
   echo ""
@@ -90,6 +87,10 @@ main() {
   echo ""
   echo "  # Git subcommand — run as 'git harvest'"
   echo "  git config --global alias.harvest '!git-harvest'"
+  echo ""
+  echo "Restart your terminal or run:"
+  echo "  source ~/.zshrc"
+  echo ""
 }
 
 main
