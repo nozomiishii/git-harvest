@@ -191,6 +191,27 @@ describe('merge detection', () => {
     expect(output).toContain('Nothing to harvest. All clean!');
   });
 
+  // 独自コミットなしのブランチは保持（作成直後の worktree 用ブランチ等）
+  test('preserves branches with no unique commits', () => {
+    git(repo, 'checkout -b no-commits-yet');
+    git(repo, 'checkout main');
+
+    run(repo);
+    expect(branches(repo)).toContain('no-commits-yet');
+  });
+
+  // main より古いコミットを指す独自コミットなしブランチも保持
+  test('preserves branches pointing to older commits with no unique work', () => {
+    git(repo, 'checkout -b old-branch');
+    git(repo, 'checkout main');
+    // main を先に進める
+    commitFile(repo, 'advance.txt', 'advance main');
+    git(repo, 'push');
+
+    run(repo);
+    expect(branches(repo)).toContain('old-branch');
+  });
+
   // 孤立ブランチはスキップ
   test('skips orphan branches without common ancestor', () => {
     git(repo, 'checkout --orphan isolated');
@@ -250,6 +271,19 @@ describe('worktree cleanup', () => {
 
     run(repo);
     expect(branches(repo)).toContain('wt-unmerged');
+    expect(worktrees(repo).length).toBeGreaterThan(1);
+
+    // cleanup
+    git(repo, `worktree remove ${wtDir}`);
+  });
+
+  // 独自コミットなしの worktree は保持
+  test('preserves worktrees for branches with no unique commits', () => {
+    const wtDir = join(repo, '..', 'wt-no-commits-dir');
+    git(repo, `worktree add -b wt-no-commits ${wtDir}`);
+
+    run(repo);
+    expect(branches(repo)).toContain('wt-no-commits');
     expect(worktrees(repo).length).toBeGreaterThan(1);
 
     // cleanup
@@ -379,6 +413,56 @@ describe('combined scenarios', () => {
 
     // cleanup
     git(repo, `worktree remove ${wtDir}`);
+  });
+
+  // ブランチ名がマージ済みブランチのプレフィックスでも誤マッチしない
+  test('does not delete worktree whose branch name is a prefix of a merged branch', () => {
+    // feature-login をマージ済みにする
+    git(repo, 'checkout -b feature-login');
+    commitFile(repo, 'login.txt', 'login');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash feature-login');
+    git(repo, 'commit -m "squash feature-login"');
+    git(repo, 'push');
+
+    // feature は未マージのまま worktree を作成
+    git(repo, 'checkout -b feature');
+    commitFile(repo, 'feature.txt', 'feature work');
+    git(repo, 'checkout main');
+
+    const wtDir = join(repo, '..', 'wt-feature-dir');
+    git(repo, `worktree add ${wtDir} feature`);
+
+    run(repo);
+    // feature-login は削除されるが、feature の worktree とブランチは残る
+    expect(branches(repo)).not.toContain('feature-login');
+    expect(branches(repo)).toContain('feature');
+    expect(worktrees(repo).length).toBeGreaterThan(1);
+
+    // cleanup
+    git(repo, `worktree remove ${wtDir}`);
+  });
+
+  // dry-run でステージ済み変更のある worktree は表示しない
+  test('dry-run skips worktrees with staged-only changes', () => {
+    git(repo, 'checkout -b drywt-staged');
+    commitFile(repo, 'staged-base.txt', 'base');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash drywt-staged');
+    git(repo, 'commit -m "squash staged"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'drywt-staged-dir');
+    git(repo, `worktree add ${wtDir} drywt-staged`);
+    // worktree でファイルをステージだけして、コミットはしない
+    writeFileSync(join(wtDir, 'staged-only.txt'), 'staged\n');
+    git(wtDir, 'add staged-only.txt');
+
+    const output = run(repo, '--dry-run');
+    expect(output).not.toContain(`[WILL DELETE] ${wtDir}`);
+
+    // cleanup
+    git(repo, `worktree remove --force ${wtDir}`);
   });
 
   // dry-run でメインワーキングツリーは表示しない
