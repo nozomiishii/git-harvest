@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.9](https://github.com/nozomiishii/git-harvest/compare/v0.1.8...v0.1.9) (2026-03-30)
+
+
+### Features
+
+* add auto-update check and --update self-update command ([#34](https://github.com/nozomiishii/git-harvest/issues/34)) ([b457362](https://github.com/nozomiishii/git-harvest/commit/b45736208a1ea009a0b449bcc64a929946277e4e))
+
+
+### Bug Fixes
+
+* align branch output indentation with worktree section ([#39](https://github.com/nozomiishii/git-harvest/issues/39)) ([c876b79](https://github.com/nozomiishii/git-harvest/commit/c876b79405a2e818a3eed2187774c1394d94e53e))
+* harden worktree and branch deletion safety checks ([#42](https://github.com/nozomiishii/git-harvest/issues/42)) ([a4e8def](https://github.com/nozomiishii/git-harvest/commit/a4e8defbdd6dfd614f6c48eb4ef857dde121f2d7))
+* skip branches with no unique commits in merge detection ([#41](https://github.com/nozomiishii/git-harvest/issues/41)) ([5f47d11](https://github.com/nozomiishii/git-harvest/commit/5f47d11f220747e2c6cbe0a288e6da6d94be5f2f))
+
 ## [0.1.8](https://github.com/nozomiishii/git-harvest/compare/v0.1.7...v0.1.8) (2026-03-30)
 
 
