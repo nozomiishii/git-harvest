@@ -97,6 +97,31 @@ post-merge:
 4. Deletes the merged branches
 5. Prunes stale remote-tracking references (`git fetch --prune`)
 
+### Status display
+
+git-harvest shows the status of all worktrees and branches.
+
+#### Worktrees
+
+| State | Display | Description | Action |
+|---|---|---|---|
+| Merged + clean | `[DELETED]` / `[WILL DELETE]` | Ready to harvest | Remove |
+| Merged + uncommitted changes | `[GROWING] (uncommitted changes)` | Has unsaved work, skipped | Keep |
+| Not merged | `[GROWING] (not merged)` | Not yet merged | Keep |
+| No unique commits | `[GROWING] (no unique commits)` | Just created, no work started yet | Keep |
+| Main working tree | *(not shown)* | Always excluded | Keep |
+| Default branch | *(not shown)* | Always excluded | Keep |
+
+#### Branches
+
+| State | Display | Description | Action |
+|---|---|---|---|
+| Merged + deletable | `[DELETED]` / `[WILL DELETE]` | Ready to harvest | Remove |
+| Merged + currently checked out | `[GROWING] (currently checked out)` | Currently in use, skipped | Keep |
+| Not merged | `[GROWING] (not merged)` | Not yet merged | Keep |
+| No unique commits | `[GROWING] (no unique commits)` | Just created, no work started yet | Keep |
+| Default branch | *(not shown)* | Always excluded | Keep |
+
 ### Squash merge detection
 
 Uses `git commit-tree` to create a virtual squash commit and `git cherry` to check if the result is already included in the default branch. This correctly detects squash merges, which `git branch --merged` cannot.

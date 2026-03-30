@@ -153,7 +153,8 @@ describe('merge detection', () => {
     const output = run(repo);
     expect(branches(repo)).not.toContain('feature-regular');
     expect(branches(repo)).toContain('main');
-    expect(output).toContain('[DELETED] feature-regular');
+    expect(output).toContain('[DELETED]');
+    expect(output).toContain('feature-regular');
     expect(output).toContain('Harvested!');
   });
 
@@ -170,18 +171,22 @@ describe('merge detection', () => {
     const output = run(repo);
     expect(branches(repo)).not.toContain('feature-squash');
     expect(branches(repo)).toContain('main');
-    expect(output).toContain('[DELETED] feature-squash');
+    expect(output).toContain('[DELETED]');
+    expect(output).toContain('feature-squash');
     expect(output).toContain('Harvested!');
   });
 
-  // 未マージは保持
-  test('preserves unmerged branches', () => {
+  // 未マージは保持し [GROWING] (not merged) を表示
+  test('preserves unmerged branches and shows GROWING status', () => {
     git(repo, 'checkout -b feature-wip');
     commitFile(repo, 'wip.txt', 'wip');
     git(repo, 'checkout main');
 
-    run(repo);
+    const output = run(repo);
     expect(branches(repo)).toContain('feature-wip');
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('feature-wip');
+    expect(output).toContain('(not merged)');
   });
 
   // マージ済みなし → Nothing to harvest メッセージ
@@ -191,13 +196,16 @@ describe('merge detection', () => {
     expect(output).toContain('Nothing to harvest. All clean!');
   });
 
-  // 独自コミットなしのブランチは保持（作成直後の worktree 用ブランチ等）
-  test('preserves branches with no unique commits', () => {
+  // 独自コミットなしのブランチは保持し [GROWING] (no unique commits) を表示
+  test('preserves branches with no unique commits and shows GROWING status', () => {
     git(repo, 'checkout -b no-commits-yet');
     git(repo, 'checkout main');
 
-    run(repo);
+    const output = run(repo);
     expect(branches(repo)).toContain('no-commits-yet');
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('no-commits-yet');
+    expect(output).toContain('(no unique commits)');
   });
 
   // main より古いコミットを指す独自コミットなしブランチも保持
@@ -260,8 +268,8 @@ describe('worktree cleanup', () => {
     git(repo, `worktree remove ${wtDir}`);
   });
 
-  // 未マージ worktree は保持
-  test('preserves worktrees for unmerged branches', () => {
+  // 未マージ worktree は保持し [GROWING] (not merged) を表示
+  test('preserves worktrees for unmerged branches and shows GROWING status', () => {
     git(repo, 'checkout -b wt-unmerged');
     commitFile(repo, 'wt-unmerged.txt', 'unmerged work');
     git(repo, 'checkout main');
@@ -269,22 +277,26 @@ describe('worktree cleanup', () => {
     const wtDir = join(repo, '..', 'wt-unmerged-dir');
     git(repo, `worktree add ${wtDir} wt-unmerged`);
 
-    run(repo);
+    const output = run(repo);
     expect(branches(repo)).toContain('wt-unmerged');
     expect(worktrees(repo).length).toBeGreaterThan(1);
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('(not merged)');
 
     // cleanup
     git(repo, `worktree remove ${wtDir}`);
   });
 
-  // 独自コミットなしの worktree は保持
-  test('preserves worktrees for branches with no unique commits', () => {
+  // 独自コミットなしの worktree は保持し [GROWING] (no unique commits) を表示
+  test('preserves worktrees for branches with no unique commits and shows GROWING status', () => {
     const wtDir = join(repo, '..', 'wt-no-commits-dir');
     git(repo, `worktree add -b wt-no-commits ${wtDir}`);
 
-    run(repo);
+    const output = run(repo);
     expect(branches(repo)).toContain('wt-no-commits');
     expect(worktrees(repo).length).toBeGreaterThan(1);
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('(no unique commits)');
 
     // cleanup
     git(repo, `worktree remove ${wtDir}`);
@@ -407,8 +419,9 @@ describe('combined scenarios', () => {
     expect(output).toContain('Dry run mode');
     expect(output).toContain('[WILL DELETE]');
     expect(output).toContain('dry-run-wt-dir');
-    // worktree にチェックアウト中のブランチは削除できないので表示されない
-    expect(output).not.toContain('[WILL DELETE] dry-run-branch');
+    // worktree にチェックアウト中のブランチは [GROWING] (currently checked out) として表示
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('(currently checked out)');
     expect(output).toContain('Harvested!');
 
     // cleanup
@@ -443,8 +456,8 @@ describe('combined scenarios', () => {
     git(repo, `worktree remove ${wtDir}`);
   });
 
-  // dry-run でステージ済み変更のある worktree は表示しない
-  test('dry-run skips worktrees with staged-only changes', () => {
+  // dry-run でステージ済み変更のある worktree は [GROWING] (uncommitted changes) を表示
+  test('dry-run shows GROWING for worktrees with staged-only changes', () => {
     git(repo, 'checkout -b drywt-staged');
     commitFile(repo, 'staged-base.txt', 'base');
     git(repo, 'checkout main');
@@ -459,7 +472,9 @@ describe('combined scenarios', () => {
     git(wtDir, 'add staged-only.txt');
 
     const output = run(repo, '--dry-run');
-    expect(output).not.toContain(`[WILL DELETE] ${wtDir}`);
+    expect(output).not.toContain(`[WILL DELETE]`);
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('(uncommitted changes)');
 
     // cleanup
     git(repo, `worktree remove --force ${wtDir}`);
@@ -479,8 +494,8 @@ describe('combined scenarios', () => {
     expect(output).not.toContain(`[WILL DELETE] ${repo}`);
   });
 
-  // dry-run で未コミット変更のある worktree は表示しない
-  test('dry-run skips dirty worktrees', () => {
+  // dry-run で未コミット変更のある worktree は [GROWING] (uncommitted changes) を表示
+  test('dry-run shows GROWING for dirty worktrees', () => {
     git(repo, 'checkout -b drywt-dirty');
     commitFile(repo, 'dirty-base.txt', 'base');
     git(repo, 'checkout main');
@@ -494,13 +509,72 @@ describe('combined scenarios', () => {
     writeFileSync(join(wtDir, 'uncommitted.txt'), 'dirty\n');
 
     const output = run(repo, '--dry-run');
-    // dirty な worktree は Worktrees セクションに表示されない
-    expect(output).not.toContain(`[WILL DELETE] ${wtDir}`);
-    // worktree にチェックアウト中のブランチも削除できないので表示されない
-    expect(output).not.toContain('[WILL DELETE] drywt-dirty');
+    // dirty な worktree は [GROWING] として表示
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('(uncommitted changes)');
+    // worktree にチェックアウト中のブランチも削除できない
+    expect(output).toContain('(currently checked out)');
 
     // cleanup
     git(repo, `worktree remove --force ${wtDir}`);
+  });
+
+  // マージ済みブランチをチェックアウト中に実行 → [GROWING] (currently checked out) を表示
+  test('shows GROWING for merged branch that is currently checked out', () => {
+    git(repo, 'checkout -b checked-out-merged');
+    commitFile(repo, 'co.txt', 'checked out work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash checked-out-merged');
+    git(repo, 'commit -m "squash co"');
+    git(repo, 'push');
+
+    // マージ済みブランチに戻って実行
+    git(repo, 'checkout checked-out-merged');
+    const output = run(repo);
+    // ブランチは削除されず [GROWING] (currently checked out) を表示
+    expect(branches(repo)).toContain('checked-out-merged');
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('checked-out-merged');
+    expect(output).toContain('(currently checked out)');
+    expect(output).not.toContain('[DELETED]');
+  });
+
+  // 実行時: マージ済み + dirty worktree → [GROWING] (uncommitted changes) を表示
+  test('shows GROWING for dirty worktree during actual run', () => {
+    git(repo, 'checkout -b dirty-wt-run');
+    commitFile(repo, 'dirty-run.txt', 'dirty run work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash dirty-wt-run');
+    git(repo, 'commit -m "squash dirty-run"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'dirty-wt-run-dir');
+    git(repo, `worktree add ${wtDir} dirty-wt-run`);
+    // worktree に未コミットの変更を追加
+    writeFileSync(join(wtDir, 'uncommitted.txt'), 'dirty\n');
+
+    const output = run(repo);
+    // worktree もブランチも残る
+    expect(worktrees(repo).length).toBeGreaterThan(1);
+    expect(branches(repo)).toContain('dirty-wt-run');
+    // [GROWING] (uncommitted changes) が表示される
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('(uncommitted changes)');
+    expect(output).not.toContain('[DELETED]');
+
+    // cleanup
+    git(repo, `worktree remove --force ${wtDir}`);
+  });
+
+  // 全てのブランチが GROWING の場合 → "Nothing to harvest. All growing!" を表示
+  test('shows "All growing" when nothing is deleted', () => {
+    git(repo, 'checkout -b only-growing');
+    commitFile(repo, 'growing.txt', 'growing work');
+    git(repo, 'checkout main');
+
+    const output = run(repo);
+    expect(output).toContain('Nothing to harvest. All growing!');
+    expect(output).not.toContain('Harvested!');
   });
 
   // exit code 0

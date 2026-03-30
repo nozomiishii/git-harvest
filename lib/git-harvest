@@ -296,43 +296,57 @@ default_branch() {
   echo "$branch"
 }
 
-# worktree が削除可能かチェックする
-can_remove_worktree() {
+# worktree に未コミットの変更があるかチェックする (0=あり, 1=なし)
+has_uncommitted_changes() {
   local wt="$1"
-  # メインワーキングツリーは削除不可
-  local main_wt
-  main_wt=$(git worktree list --porcelain | grep -m1 '^worktree ' | sed 's/^worktree //')
-  if [ "$wt" = "$main_wt" ]; then return 1; fi
-  # 未コミットの変更がある場合は削除不可
-  if ! git -C "$wt" diff --quiet HEAD 2>/dev/null; then return 1; fi
-  if ! git -C "$wt" diff --quiet --cached 2>/dev/null; then return 1; fi
-  if [ -n "$(git -C "$wt" ls-files --others --exclude-standard 2>/dev/null)" ]; then return 1; fi
-  return 0
+  if ! git -C "$wt" diff --quiet HEAD 2>/dev/null; then return 0; fi
+  if ! git -C "$wt" diff --quiet --cached 2>/dev/null; then return 0; fi
+  if [ -n "$(git -C "$wt" ls-files --others --exclude-standard 2>/dev/null)" ]; then return 0; fi
+  return 1
 }
 
-# マージ済みブランチに紐づく worktree を削除する
+# worktree の状態を表示・削除する (DELETED_COUNT をインクリメント)
 cleanup_worktrees() {
   local base="$1"
   local merged_branches="$2"
+  local no_unique_branches="$3"
   local found=false
+
+  # メインワーキングツリーのパスを取得
+  local main_wt
+  main_wt=$(git worktree list --porcelain | grep --color=never -m1 '^worktree ' | sed 's/^worktree //')
 
   # 全 worktree のパスを取得してループ
   while read -r wt; do
+    # メインワーキングツリーは表示しない
+    [ "$wt" = "$main_wt" ] && continue
     # その worktree が指しているブランチ名を取得
+    local branch
     branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null) || continue
+    # デフォルトブランチの worktree は表示しない
     [ "$branch" = "$base" ] && continue
+
+    if [ "$found" = false ]; then
+      printf "\n  Worktrees\n"
+      found=true
+    fi
+
     if echo "$merged_branches" | grep -qxF "$branch"; then
-      if { [ "$DRY_RUN" = true ] && can_remove_worktree "$wt"; } || { [ "$DRY_RUN" = false ] && git worktree remove "$wt"; }; then
-        if [ "$found" = false ]; then
-          printf "\n  Worktrees\n"
-          found=true
-        fi
-        if [ "$DRY_RUN" = true ]; then
-          printf "    [WILL DELETE] %s\n" "$wt"
-        else
-          printf "    [DELETED] %s\n" "$wt"
-        fi
+      # マージ済み: 未コミット変更があるかチェック
+      if has_uncommitted_changes "$wt"; then
+        printf "    [GROWING]      %s (uncommitted changes)\n" "$wt"
+      elif [ "$DRY_RUN" = true ]; then
+        printf "    [WILL DELETE]  %s\n" "$wt"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      else
+        git worktree remove "$wt"
+        printf "    [DELETED]      %s\n" "$wt"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
+    elif echo "$no_unique_branches" | grep -qxF "$branch"; then
+      printf "    [GROWING]      %s (no unique commits)\n" "$wt"
+    else
+      printf "    [GROWING]      %s (not merged)\n" "$wt"
     fi
   done < <(git worktree list --porcelain | grep --color=never '^worktree ' | sed 's/^worktree //')
   # 既に存在しない worktree の管理情報を削除
@@ -345,29 +359,48 @@ is_checked_out_in_worktree() {
   git worktree list --porcelain | grep -q "^branch refs/heads/${branch}$"
 }
 
-# マージ済みローカルブランチを削除する
+# ブランチが現在の HEAD かチェックする
+is_current_head() {
+  local branch="$1"
+  local current
+  current=$(git symbolic-ref --short HEAD 2>/dev/null) || return 1
+  [ "$branch" = "$current" ]
+}
+
+# ブランチの状態を表示・削除する (DELETED_COUNT をインクリメント)
 cleanup_branches() {
   local base="$1"
   local merged_branches="$2"
+  local no_unique_branches="$3"
   local found=false
 
   while read -r branch; do
     [ -z "$branch" ] && continue
     [ "$branch" = "$base" ] && continue
-    # dry-run: worktree にチェックアウト中のブランチは削除できないのでスキップ
-    if [ "$DRY_RUN" = true ] && is_checked_out_in_worktree "$branch"; then continue; fi
-    if { [ "$DRY_RUN" = true ] && git rev-parse --verify "$branch" >/dev/null 2>&1; } || { [ "$DRY_RUN" = false ] && git branch -D "$branch" >/dev/null 2>&1; }; then
-      if [ "$found" = false ]; then
-        printf "\n  Branches\n"
-        found=true
-      fi
-      if [ "$DRY_RUN" = true ]; then
-        printf "    [WILL DELETE] %s\n" "$branch"
-      else
-        printf "    [DELETED] %s\n" "$branch"
-      fi
+
+    if [ "$found" = false ]; then
+      printf "\n  Branches\n"
+      found=true
     fi
-  done <<<"$merged_branches"
+
+    if echo "$merged_branches" | grep -qxF "$branch"; then
+      # マージ済み: チェックアウト中かチェック
+      if is_current_head "$branch" || is_checked_out_in_worktree "$branch"; then
+        printf "    [GROWING]      %s (currently checked out)\n" "$branch"
+      elif [ "$DRY_RUN" = true ]; then
+        printf "    [WILL DELETE]  %s\n" "$branch"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      else
+        git branch -D "$branch" >/dev/null 2>&1
+        printf "    [DELETED]      %s\n" "$branch"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      fi
+    elif echo "$no_unique_branches" | grep -qxF "$branch"; then
+      printf "    [GROWING]      %s (no unique commits)\n" "$branch"
+    else
+      printf "    [GROWING]      %s (not merged)\n" "$branch"
+    fi
+  done < <(git branch | sed 's/^[*+ ]*//')
   # リモートで削除済みの追跡ブランチを整理
   if [ "$DRY_RUN" = false ]; then git fetch --prune >/dev/null 2>&1 || true; fi
 }
@@ -394,45 +427,67 @@ main() {
   local first_parent_commits
   first_parent_commits=$(git rev-list --first-parent "$base" 2>/dev/null) || true
 
-  local merged_branches
-  merged_branches=$(
-    while read -r branch; do
-      [ "$branch" = "$base" ] && continue
-      # 独自コミットがないブランチはスキップ（作成直後でまだ作業していないブランチ）
-      # ブランチ HEAD が base の first-parent 上にある場合、独自の作業がないと判断
-      local branch_head
-      branch_head=$(git rev-parse "$branch" 2>/dev/null) || continue
-      if echo "$first_parent_commits" | grep -q "^${branch_head}$"; then
-        continue
-      fi
-      # 通常マージ: ブランチが base の祖先であれば完全マージ済み
-      if git merge-base --is-ancestor "$branch" "$base" 2>/dev/null; then
-        echo "$branch"
-        continue
-      fi
-      # squash マージ: commit-tree で仮想 squash コミットを作成し git cherry で比較
-      local merge_base
-      merge_base=$(git merge-base "$base" "$branch" 2>/dev/null) || continue
-      local squash_commit
-      squash_commit=$(git commit-tree "$branch^{tree}" -p "$merge_base" -m "_" 2>/dev/null) || continue
-      local cherry_out
-      cherry_out=$(git cherry "$base" "$squash_commit" 2>/dev/null) || continue
-      if [ -n "$cherry_out" ] && [ "$(echo "$cherry_out" | grep -c '^+')" -eq 0 ]; then
-        echo "$branch"
-      fi
-    done < <(git branch | sed 's/^[*+ ]*//')
-  )
+  local all_branches
+  all_branches=$(git branch | sed 's/^[*+ ]*//')
 
-  if [ -z "$merged_branches" ]; then
+  local merged_branches=""
+  local no_unique_branches=""
+
+  while read -r branch; do
+    [ "$branch" = "$base" ] && continue
+    # 独自コミットがないブランチ（作成直後でまだ作業していないブランチ）
+    # ブランチ HEAD が base の first-parent 上にある場合、独自の作業がないと判断
+    local branch_head
+    branch_head=$(git rev-parse "$branch" 2>/dev/null) || continue
+    if echo "$first_parent_commits" | grep -q "^${branch_head}$"; then
+      no_unique_branches="${no_unique_branches:+$no_unique_branches
+}$branch"
+      continue
+    fi
+    # 通常マージ: ブランチが base の祖先であれば完全マージ済み
+    if git merge-base --is-ancestor "$branch" "$base" 2>/dev/null; then
+      merged_branches="${merged_branches:+$merged_branches
+}$branch"
+      continue
+    fi
+    # squash マージ: commit-tree で仮想 squash コミットを作成し git cherry で比較
+    local merge_base
+    merge_base=$(git merge-base "$base" "$branch" 2>/dev/null) || continue
+    local squash_commit
+    squash_commit=$(git commit-tree "$branch^{tree}" -p "$merge_base" -m "_" 2>/dev/null) || continue
+    local cherry_out
+    cherry_out=$(git cherry "$base" "$squash_commit" 2>/dev/null) || continue
+    if [ -n "$cherry_out" ] && [ "$(echo "$cherry_out" | grep -c '^+')" -eq 0 ]; then
+      merged_branches="${merged_branches:+$merged_branches
+}$branch"
+    fi
+  done <<<"$all_branches"
+
+  # デフォルトブランチのみ（他にブランチも linked worktree もない）場合
+  local linked_wt_count
+  linked_wt_count=$(git worktree list --porcelain | grep -c '^worktree ' || true)
+  linked_wt_count=$((linked_wt_count - 1)) # メインワーキングツリーを除外
+
+  local other_branch_count=0
+  while read -r b; do
+    [ -n "$b" ] && [ "$b" != "$base" ] && other_branch_count=$((other_branch_count + 1))
+  done <<<"$all_branches"
+
+  if [ "$other_branch_count" -eq 0 ] && [ "$linked_wt_count" -eq 0 ]; then
     printf "  Nothing to harvest. All clean!\n\n"
   else
     # worktree が参照中のブランチは削除できないため、worktree を先に削除する
-    cleanup_worktrees "$base" "$merged_branches"
-    cleanup_branches "$base" "$merged_branches"
+    DELETED_COUNT=0
+    cleanup_worktrees "$base" "$merged_branches" "$no_unique_branches"
+    cleanup_branches "$base" "$merged_branches" "$no_unique_branches"
 
     # サマリー表示
     printf "\n\n"
-    rainbow_animate "Harvested!"
+    if [ "$DELETED_COUNT" -gt 0 ]; then
+      rainbow_animate "Harvested!"
+    else
+      printf "  Nothing to harvest. All growing!"
+    fi
     printf '\n\n\n'
   fi
 
