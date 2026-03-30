@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.8](https://github.com/nozomiishii/git-harvest/compare/v0.1.7...v0.1.8) (2026-03-30)
+
+
+### Features
+
+* add harvest summary display, dry-run mode, and terminal animations ([#31](https://github.com/nozomiishii/git-harvest/issues/31)) ([6b200e4](https://github.com/nozomiishii/git-harvest/commit/6b200e41c89c6a3187e35b6acaa0572ba3f8e7d6))
+
+
+### Bug Fixes
+
+* add issues write permission to release-please workflow ([#35](https://github.com/nozomiishii/git-harvest/issues/35)) ([4b6244f](https://github.com/nozomiishii/git-harvest/commit/4b6244fda5f6d139972a09553019f422c2be7c6a))
+
 ## [0.1.7](https://github.com/nozomiishii/git-harvest/compare/v0.1.6...v0.1.7) (2026-03-28)
 
 

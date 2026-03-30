@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="0.1.7" # x-release-please-version
+VERSION="0.1.8" # x-release-please-version
 
 # アニメーション中の中断でカーソルが非表示のままにならないよう、EXIT で復元
 trap 'printf "\033[?25h" 2>/dev/null' EXIT
