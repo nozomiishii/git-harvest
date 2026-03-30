@@ -2,9 +2,14 @@
 set -euo pipefail
 
 VERSION="0.1.8" # x-release-please-version
+REPO="nozomiishii/git-harvest"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/git-harvest"
+CACHE_FILE="$CACHE_DIR/latest-version"
+CHECK_INTERVAL=86400 # 24時間（秒）
 
 # アニメーション中の中断でカーソルが非表示のままにならないよう、EXIT で復元
-trap 'printf "\033[?25h" 2>/dev/null' EXIT
+# 非TTY環境では何もしない（stdout を汚さない）
+trap '[ -t 1 ] && printf "\033[?25h" 2>/dev/null || true' EXIT
 
 # カラー出力の設定（非TTY / NO_COLOR 環境では無効化）
 USE_COLOR=false
@@ -131,12 +136,126 @@ sparkle_animate() {
   printf '\033[?25h'
 }
 
+# ---------------------------------------------------------------------------
+# バージョン更新チェック
+# ---------------------------------------------------------------------------
+
+# インストール経路を判定し、自動更新チェックの対象かどうかを返す
+# Homebrew / npm 経由のインストールはパッケージマネージャーに任せる
+should_check_update() {
+  local resolved
+  resolved=$(realpath "$0" 2>/dev/null || echo "$0")
+  case "$resolved" in
+    */Cellar/*|*/homebrew/*) return 1 ;;
+    */node_modules/*)        return 1 ;;
+  esac
+  return 0
+}
+
+# バックグラウンドで GitHub API から最新バージョンを取得しキャッシュに保存
+check_update_async() {
+  should_check_update || return 0
+
+  # TTL チェック: キャッシュが新しければスキップ
+  if [ -f "$CACHE_FILE" ]; then
+    local last_check now
+    last_check=$(stat -c %Y "$CACHE_FILE" 2>/dev/null \
+              || stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0)
+    now=$(date +%s)
+    if (( now - last_check < CHECK_INTERVAL )); then
+      return 0
+    fi
+  fi
+
+  mkdir -p "$CACHE_DIR"
+  # バックグラウンドで取得（メイン処理をブロックしない）
+  (
+    local tag
+    tag=$(curl -fsSL --max-time 5 \
+      "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
+      | grep -o '"tag_name":"[^"]*"' | head -1 \
+      | sed 's/"tag_name":"v\{0,1\}\([^"]*\)"/\1/')
+    if [ -n "$tag" ]; then
+      echo "$tag" > "$CACHE_FILE"
+    fi
+  ) &
+  UPDATE_CHECK_PID=$!
+}
+
+# メイン処理完了後に呼び出し、新しいバージョンがあれば stderr に通知
+show_update_notification() {
+  should_check_update || return 0
+  [ -f "$CACHE_FILE" ] || return 0
+
+  local latest
+  latest=$(cat "$CACHE_FILE" 2>/dev/null)
+  [ -z "$latest" ] && return 0
+  [ "$latest" = "$VERSION" ] && return 0
+
+  cat >&2 <<EOF
+
+  Update available: v${VERSION} -> v${latest}
+  Run: git-harvest --update
+
+EOF
+}
+
+# 自分自身を最新版に置き換える
+self_update() {
+  local install_path
+  install_path=$(realpath "$0" 2>/dev/null || echo "$0")
+
+  # Homebrew / npm 経由の場合はパッケージマネージャーを案内
+  case "$install_path" in
+    */Cellar/*|*/homebrew/*)
+      echo "Installed via Homebrew. Please update with:" >&2
+      echo "  brew upgrade git-harvest" >&2
+      exit 1
+      ;;
+    */node_modules/*)
+      echo "Installed via npm. Please update with:" >&2
+      echo "  npm update -g git-harvest" >&2
+      exit 1
+      ;;
+  esac
+
+  # 書き込み権限チェック
+  if ! [ -w "$install_path" ]; then
+    echo "Error: No write permission for $install_path" >&2
+    echo "  Retry with: sudo git-harvest --update" >&2
+    exit 1
+  fi
+
+  echo "Updating git-harvest..."
+  local tmp
+  tmp=$(mktemp)
+  # 最新リリースをダウンロードして置き換え
+  if curl -fsSL --max-time 30 \
+    "https://github.com/${REPO}/releases/latest/download/git-harvest" \
+    -o "$tmp" 2>/dev/null; then
+    chmod +x "$tmp"
+    mv "$tmp" "$install_path"
+    rm -f "$CACHE_FILE"
+    local new_version
+    new_version=$("$install_path" --version)
+    echo "Updated to ${new_version}"
+  else
+    rm -f "$tmp"
+    echo "Error: Download failed" >&2
+    exit 1
+  fi
+  exit 0
+}
+
 DRY_RUN=false
 
 case "${1:-}" in
 -v | --version)
   echo "git-harvest v$VERSION"
   exit 0
+  ;;
+--update)
+  self_update
   ;;
 -n | --dry-run)
   DRY_RUN=true
@@ -151,6 +270,7 @@ Options:
   -h, --help     Show this help
   -v, --version  Show version
   -n, --dry-run  Show what would be deleted without actually deleting
+  --update       Update to the latest version
 HELP
   exit 0
   ;;
@@ -253,6 +373,10 @@ cleanup_branches() {
 }
 
 main() {
+  # バックグラウンドでバージョンチェックを開始
+  UPDATE_CHECK_PID=""
+  check_update_async
+
   local base
   base=$(default_branch)
 
@@ -301,17 +425,22 @@ main() {
 
   if [ -z "$merged_branches" ]; then
     printf "  Nothing to harvest. All clean!\n\n"
-    exit 0
+  else
+    # worktree が参照中のブランチは削除できないため、worktree を先に削除する
+    cleanup_worktrees "$base" "$merged_branches"
+    cleanup_branches "$base" "$merged_branches"
+
+    # サマリー表示
+    printf "\n\n"
+    rainbow_animate "Harvested!"
+    printf '\n\n\n'
   fi
 
-  # worktree が参照中のブランチは削除できないため、worktree を先に削除する
-  cleanup_worktrees "$base" "$merged_branches"
-  cleanup_branches "$base" "$merged_branches"
-
-  # サマリー表示
-  printf "\n\n"
-  rainbow_animate "Harvested!"
-  printf '\n\n\n'
+  # バックグラウンドのバージョンチェックを待機して通知表示
+  if [ -n "$UPDATE_CHECK_PID" ]; then
+    wait "$UPDATE_CHECK_PID" 2>/dev/null || true
+  fi
+  show_update_notification
 }
 
 main
