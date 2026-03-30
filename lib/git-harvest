@@ -241,14 +241,14 @@ cleanup_branches() {
         found=true
       fi
       if [ "$DRY_RUN" = true ]; then
-        printf "  [WILL DELETE] %s\n" "$branch"
+        printf "    [WILL DELETE] %s\n" "$branch"
       else
-        printf "  [DELETED] %s\n" "$branch"
+        printf "    [DELETED] %s\n" "$branch"
       fi
     fi
   done <<<"$merged_branches"
   # リモートで削除済みの追跡ブランチを整理
-  if [ "$DRY_RUN" = false ]; then git fetch --prune || true; fi
+  if [ "$DRY_RUN" = false ]; then git fetch --prune >/dev/null 2>&1 || true; fi
 }
 
 main() {
