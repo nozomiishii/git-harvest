@@ -97,6 +97,31 @@ post-merge:
 4. マージ済みブランチを削除
 5. リモートで削除済みの追跡ブランチを整理（`git fetch --prune`）
 
+### ステータス表示
+
+git-harvest は全ての worktree・ブランチの状態を表示します。
+
+#### Worktree
+
+| 状態 | 表示 | 説明 | 挙動 |
+|---|---|---|---|
+| マージ済み + 変更なし | `[DELETED]` / `[WILL DELETE]` | 収穫対象 | 削除 |
+| マージ済み + 未コミット変更あり | `[GROWING] (uncommitted changes)` | 未保存の作業があるためスキップ | 残す |
+| 未マージ | `[GROWING] (not merged)` | まだマージされていない | 残す |
+| 独自コミットなし | `[GROWING] (no unique commits)` | 作成直後でまだ作業が始まっていない | 残す |
+| メインワーキングツリー | *(表示なし)* | 常に除外 | 残す |
+| デフォルトブランチ | *(表示なし)* | 常に除外 | 残す |
+
+#### ブランチ
+
+| 状態 | 表示 | 説明 | 挙動 |
+|---|---|---|---|
+| マージ済み + 削除可能 | `[DELETED]` / `[WILL DELETE]` | 収穫対象 | 削除 |
+| マージ済み + チェックアウト中 | `[GROWING] (currently checked out)` | 現在使用中のためスキップ | 残す |
+| 未マージ | `[GROWING] (not merged)` | まだマージされていない | 残す |
+| 独自コミットなし | `[GROWING] (no unique commits)` | 作成直後でまだ作業が始まっていない | 残す |
+| デフォルトブランチ | *(表示なし)* | 常に除外 | 残す |
+
 ### Squash merge の検出方法
 
 `git commit-tree` で仮想 squash コミットを作成し、`git cherry` でデフォルトブランチに含まれているかを判定します。`git branch --merged` では検出できない squash merge を正しく検出できます。
