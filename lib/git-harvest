@@ -265,10 +265,21 @@ main() {
   # デフォルトブランチにマージ済みのローカルブランチ一覧を取得
   # git branch --merged は squash merge を検出できないため、
   # commit-tree で仮想 squash コミットを作成し git cherry で比較する
+  # base の first-parent 上のコミット一覧（独自コミットなしブランチの判定に使用）
+  local first_parent_commits
+  first_parent_commits=$(git rev-list --first-parent "$base" 2>/dev/null) || true
+
   local merged_branches
   merged_branches=$(
     while read -r branch; do
       [ "$branch" = "$base" ] && continue
+      # 独自コミットがないブランチはスキップ（作成直後でまだ作業していないブランチ）
+      # ブランチ HEAD が base の first-parent 上にある場合、独自の作業がないと判断
+      local branch_head
+      branch_head=$(git rev-parse "$branch" 2>/dev/null) || continue
+      if echo "$first_parent_commits" | grep -q "^${branch_head}$"; then
+        continue
+      fi
       # 通常マージ: ブランチが base の祖先であれば完全マージ済み
       if git merge-base --is-ancestor "$branch" "$base" 2>/dev/null; then
         echo "$branch"
