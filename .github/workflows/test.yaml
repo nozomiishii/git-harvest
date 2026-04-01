@@ -10,10 +10,6 @@ on:
       - 'package.json'
       - 'bun.lock'
   pull_request:
-    paths:
-      - 'lib/**'
-      - 'package.json'
-      - 'bun.lock'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,11 +28,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      - name: Check for changes
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        id: changes
+        with:
+          filters: |
+            src:
+              - 'lib/**'
+              - 'package.json'
+              - 'bun.lock'
+
       - name: Setup Bun
+        if: steps.changes.outputs.src == 'true'
         uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
 
       - name: Install dependencies
+        if: steps.changes.outputs.src == 'true'
         run: bun install --frozen-lockfile
 
       - name: Run tests
+        if: steps.changes.outputs.src == 'true'
         run: bun run test
