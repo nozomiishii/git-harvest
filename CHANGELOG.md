@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.10](https://github.com/nozomiishii/git-harvest/compare/v0.1.9...v0.1.10) (2026-04-02)
+
+
+### Features
+
+* add bunfig.toml with minimumReleaseAge for supply chain protection ([#52](https://github.com/nozomiishii/git-harvest/issues/52)) ([f778993](https://github.com/nozomiishii/git-harvest/commit/f778993ca4f0f000cb16e69fe8395ea01bfd62df))
+* show status for all worktrees and branches with [GROWING]/[DELETED] labels ([#44](https://github.com/nozomiishii/git-harvest/issues/44)) ([3dbc939](https://github.com/nozomiishii/git-harvest/commit/3dbc9393f58307b82198edd6e395121ba2111b41))
+* use GitHub App token for release-please to trigger CI on PRs ([#55](https://github.com/nozomiishii/git-harvest/issues/55)) ([826e1f0](https://github.com/nozomiishii/git-harvest/commit/826e1f03aaf6790bc8fab6f52f6b39068aa79f43))
+
+
+### Bug Fixes
+
+* move restart instruction to end of install message ([#46](https://github.com/nozomiishii/git-harvest/issues/46)) ([ef09241](https://github.com/nozomiishii/git-harvest/commit/ef09241f88d65447d8e7152cde267bf492e87202))
+
 ## [0.1.9](https://github.com/nozomiishii/git-harvest/compare/v0.1.8...v0.1.9) (2026-03-30)
 
 
