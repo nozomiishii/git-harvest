@@ -22,6 +22,8 @@ bun install
 - PR のマージは必ずユーザーが手動で行う。AI アシスタントが `gh pr merge` や GitHub API 経由でマージを実行してはならない。
 - PR の作成・更新・push は許可するが、マージの最終判断は常にユーザーに委ねること。
 - PR タイトルは英語 semantic 形式で記述する。
+- ブランチ保護は **GitHub Rulesets のみ**で管理する。従来の Branch Protection Rules は使用しない。
+- Rulesets の bypass_actors は空（誰も bypass 不可）を維持する。
 
 ## テストスタイル
 
