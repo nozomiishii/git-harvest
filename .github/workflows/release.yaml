@@ -27,12 +27,28 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
 
     steps:
+      - name: Load secrets from 1Password
+        id: secrets
+        uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          APP_ID: op://github-app/nozomiishii-release/username
+          APP_PRIVATE_KEY: op://github-app/nozomiishii-release/credential
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ steps.secrets.outputs.APP_ID }}
+          private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
         with:
           config-file: .github/.release-please-config.json
           manifest-file: .github/.release-please-manifest.json
+          token: ${{ steps.app-token.outputs.token }}
 
   upload-assets:
     needs: release-please
@@ -86,20 +102,19 @@ jobs:
 
     steps:
       - name: Load secrets from 1Password
-        uses: 1password/load-secrets-action@581a835fb51b8e7ec56b71cf2ffddd7e68bb25e0 # v2
-        with:
-          export-env: true
+        id: secrets
+        uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          APP_ID: op://homebrew-tap/nozomiishii-homebrew-bot/username
-          APP_PRIVATE_KEY: op://homebrew-tap/nozomiishii-homebrew-bot/credential
+          APP_ID: op://github-app/nozomiishii-release/username
+          APP_PRIVATE_KEY: op://github-app/nozomiishii-release/credential
 
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
         with:
-          app-id: ${{ env.APP_ID }}
-          private-key: ${{ env.APP_PRIVATE_KEY }}
+          app-id: ${{ steps.secrets.outputs.APP_ID }}
+          private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
           owner: nozomiishii
           repositories: homebrew-tap
 
