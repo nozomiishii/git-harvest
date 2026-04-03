@@ -67,6 +67,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ needs.release-please.outputs.tag_name }}" lib/git-harvest
 
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${{ needs.release-please.outputs.tag_name }}" --draft=false
+
   npm-publish:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
