@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/nozomiishii/git-harvest/compare/v0.1.10...v0.1.11) (2026-04-03)
+
+
+### Features
+
+* adopt draft-then-publish pattern for release immutability ([#56](https://github.com/nozomiishii/git-harvest/issues/56)) ([31a4b02](https://github.com/nozomiishii/git-harvest/commit/31a4b02e695a9290c3a8431b5a17a4f1695639bc))
+
 ## [0.1.10](https://github.com/nozomiishii/git-harvest/compare/v0.1.9...v0.1.10) (2026-04-02)
 
 
