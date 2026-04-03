@@ -10,6 +10,11 @@ defaults:
   run:
     shell: bash
 
+# 同時実行を防止し、release-pr が未完了のリリースを参照する競合を回避する
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 # デフォルト権限を無効化し、各ジョブで必要最小限の権限のみ付与する
 permissions: {}
 
