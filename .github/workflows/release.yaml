@@ -14,17 +14,17 @@ defaults:
 permissions: {}
 
 jobs:
-  release-please:
-    runs-on: ubuntu-slim
+  # release PR がマージされていれば draft release + tag を作成
+  create-draft-release:
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
-      issues: write
       pull-requests: write
 
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
+      release_created: ${{ steps.detect.outputs.release_created }}
+      tag_name: ${{ steps.detect.outputs.tag_name }}
 
     steps:
       - name: Load secrets from 1Password
@@ -42,17 +42,45 @@ jobs:
           app-id: ${{ steps.secrets.outputs.APP_ID }}
           private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
 
-      - name: Run release-please
-        id: release
-        uses: googleapis/release-please-action@16a9c90856f42705d54a6fda1823352bdc62cf38 # v4
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          config-file: .github/.release-please-config.json
-          manifest-file: .github/.release-please-manifest.json
-          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run release-please github-release
+        run: |
+          bunx release-please github-release \
+            --repo-url="${{ github.repository }}" \
+            --config-file=.github/.release-please-config.json \
+            --manifest-file=.github/.release-please-manifest.json \
+            --token="${GITHUB_TOKEN}"
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Detect created release
+        id: detect
+        run: |
+          VERSION=$(jq -r '."."' .github/.release-please-manifest.json)
+          TAG_NAME="v${VERSION}"
+          if gh release view "${TAG_NAME}" --json isDraft --jq '.isDraft' 2>/dev/null | grep -q 'true'; then
+            echo "release_created=true" >> "$GITHUB_OUTPUT"
+            echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_created=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  # アセット upload + draft release を publish
   upload-assets:
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    needs: create-draft-release
+    if: needs.create-draft-release.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -61,20 +89,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.create-draft-release.outputs.tag_name }}
 
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ needs.release-please.outputs.tag_name }}" lib/git-harvest
+        run: gh release upload "${{ needs.create-draft-release.outputs.tag_name }}" lib/git-harvest
 
       - name: Publish Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release edit "${{ needs.release-please.outputs.tag_name }}" --draft=false
+        run: gh release edit "${{ needs.create-draft-release.outputs.tag_name }}" --draft=false
 
   npm-publish:
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    needs: create-draft-release
+    if: needs.create-draft-release.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -84,6 +114,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.create-draft-release.outputs.tag_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -95,8 +127,8 @@ jobs:
         run: npm publish
 
   homebrew-update:
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    needs: create-draft-release
+    if: needs.create-draft-release.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -129,9 +161,56 @@ jobs:
           formula-name: git-harvest
           homebrew-tap: nozomiishii/homebrew-tap
           push-to: nozomiishii/homebrew-tap
-          tag-name: ${{ needs.release-please.outputs.tag_name }}
+          tag-name: ${{ needs.create-draft-release.outputs.tag_name }}
           create-pullrequest: false
           commit-message: |
             {{formulaName}} {{version}}
         env:
           COMMITTER_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  # publish 後に次の release PR を作成/更新
+  release-pr:
+    needs: [create-draft-release, upload-assets]
+    if: ${{ always() && !cancelled() && needs.upload-assets.result != 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Load secrets from 1Password
+        id: secrets
+        uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          APP_ID: op://github-app/nozomiishii-release/username
+          APP_PRIVATE_KEY: op://github-app/nozomiishii-release/credential
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        with:
+          app-id: ${{ steps.secrets.outputs.APP_ID }}
+          private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run release-please release-pr
+        run: |
+          bunx release-please release-pr \
+            --repo-url="${{ github.repository }}" \
+            --config-file=.github/.release-please-config.json \
+            --manifest-file=.github/.release-please-manifest.json \
+            --token="${GITHUB_TOKEN}"
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
