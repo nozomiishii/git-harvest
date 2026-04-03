@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.13](https://github.com/nozomiishii/git-harvest/compare/v0.1.12...v0.1.13) (2026-04-03)
+
+
+### Miscellaneous
+
+* **ci:** simplify commit types to feat, fix, and chore ([#61](https://github.com/nozomiishii/git-harvest/issues/61)) ([cac0009](https://github.com/nozomiishii/git-harvest/commit/cac0009017b7c8ea1b465b288e8ae16db4a7469b))
+
 ## [0.1.12](https://github.com/nozomiishii/git-harvest/compare/v0.1.11...v0.1.12) (2026-04-03)
 
 
