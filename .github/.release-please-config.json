@@ -7,6 +7,11 @@
   "draft": true,
   "force-tag-creation": true,
   "pull-request-title-pattern": "chore: release ${version}",
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "chore", "section": "Miscellaneous" }
+  ],
   "packages": {
     ".": {
       "release-type": "node",
