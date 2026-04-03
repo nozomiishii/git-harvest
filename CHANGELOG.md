@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.14](https://github.com/nozomiishii/git-harvest/compare/v0.1.13...v0.1.14) (2026-04-03)
+
+
+### Bug Fixes
+
+* **ci:** add concurrency group to prevent release workflow race condition ([#65](https://github.com/nozomiishii/git-harvest/issues/65)) ([9f67b1b](https://github.com/nozomiishii/git-harvest/commit/9f67b1bb6933a051cfea13ac894200a3020a61f9))
+
 ## [0.1.13](https://github.com/nozomiishii/git-harvest/compare/v0.1.12...v0.1.13) (2026-04-03)
 
 
