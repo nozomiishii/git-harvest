@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.12](https://github.com/nozomiishii/git-harvest/compare/v0.1.11...v0.1.12) (2026-04-03)
+
+
+### Bug Fixes
+
+* **ci:** split release-please into separate CLI commands to fix draft bug ([#59](https://github.com/nozomiishii/git-harvest/issues/59)) ([d2caf9f](https://github.com/nozomiishii/git-harvest/commit/d2caf9f8b909c6d55985930d6f41e818d0a46d3c))
+
 ## [0.1.11](https://github.com/nozomiishii/git-harvest/compare/v0.1.10...v0.1.11) (2026-04-03)
 
 
