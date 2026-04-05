@@ -119,9 +119,14 @@ git-harvest shows the status of all worktrees and branches.
 | Merged + deletable | `[DELETED]` / `[WILL DELETE]` | Ready to harvest | Remove |
 | Merged + currently checked out | `[GROWING] (currently checked out)` | Currently in use, skipped | Keep |
 | Not merged | `[GROWING] (not merged)` | Not yet merged | Keep |
-| No unique commits | `[GROWING] (no unique commits)` | Just created, no work started yet | Keep |
+| No unique commits | `[DELETED]` / `[WILL DELETE]` | Leftover branch with no worktree, deleted | Remove |
 | Default branch | *(not shown)* | Always excluded | Keep |
 
-### Squash merge detection
+### Merge detection
 
-Uses `git commit-tree` to create a virtual squash commit and `git cherry` to check if the result is already included in the default branch. This correctly detects squash merges, which `git branch --merged` cannot.
+The following methods are tried in order, and a branch is considered merged if any of them succeeds:
+
+1. **First-parent match** — Branch HEAD is on the default branch's first-parent chain (no unique commits)
+2. **Ancestor check** — Regular merge detection via `git merge-base --is-ancestor`
+3. **Virtual squash + git cherry** — Creates a virtual squash commit with `git commit-tree` and checks with `git cherry`
+4. **Cherry-pick fallback** — Patch-id based comparison of all commits via `git log --cherry-pick` (handles orphaned branches after history rewrite)

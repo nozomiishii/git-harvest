@@ -371,7 +371,6 @@ is_current_head() {
 cleanup_branches() {
   local base="$1"
   local merged_branches="$2"
-  local no_unique_branches="$3"
   local found=false
 
   while read -r branch; do
@@ -395,8 +394,6 @@ cleanup_branches() {
         printf "    [DELETED]      %s\n" "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
-    elif echo "$no_unique_branches" | grep -qxF "$branch"; then
-      printf "    [GROWING]      %s (no unique commits)\n" "$branch"
     else
       printf "    [GROWING]      %s (not merged)\n" "$branch"
     fi
@@ -421,9 +418,8 @@ main() {
   printf '\n'
 
   # デフォルトブランチにマージ済みのローカルブランチ一覧を取得
-  # git branch --merged は squash merge を検出できないため、
-  # commit-tree で仮想 squash コミットを作成し git cherry で比較する
-  # base の first-parent 上のコミット一覧（独自コミットなしブランチの判定に使用）
+  # 検出手段: 1) first-parent 上のコミット一致、2) ancestor チェック、
+  # 3) 仮想 squash + git cherry、4) patch-id ベースの cherry-pick フォールバック
   local first_parent_commits
   first_parent_commits=$(git rev-list --first-parent "$base" 2>/dev/null) || true
 
@@ -435,8 +431,7 @@ main() {
 
   while read -r branch; do
     [ "$branch" = "$base" ] && continue
-    # 独自コミットがないブランチ（作成直後でまだ作業していないブランチ）
-    # ブランチ HEAD が base の first-parent 上にある場合、独自の作業がないと判断
+    # 独自コミットがないブランチ（HEAD が base の first-parent 上にある）
     local branch_head
     branch_head=$(git rev-parse "$branch" 2>/dev/null) || continue
     if echo "$first_parent_commits" | grep -q "^${branch_head}$"; then
@@ -460,6 +455,15 @@ main() {
     if [ -n "$cherry_out" ] && [ "$(echo "$cherry_out" | grep -c '^+')" -eq 0 ]; then
       merged_branches="${merged_branches:+$merged_branches
 }$branch"
+      continue
+    fi
+    # cherry-pick フォールバック: patch-id ベースで全コミットを比較
+    # orphaned ブランチ（履歴書き換えで共通祖先なし）や仮想 squash が一致しないケースをカバー
+    local cherry_pick_unique
+    cherry_pick_unique=$(git log --cherry-pick --right-only --no-merges --oneline "$base"..."$branch" 2>/dev/null)
+    if [ -z "$cherry_pick_unique" ]; then
+      merged_branches="${merged_branches:+$merged_branches
+}$branch"
     fi
   done <<<"$all_branches"
 
@@ -479,7 +483,14 @@ main() {
     # worktree が参照中のブランチは削除できないため、worktree を先に削除する
     DELETED_COUNT=0
     cleanup_worktrees "$base" "$merged_branches" "$no_unique_branches"
-    cleanup_branches "$base" "$merged_branches" "$no_unique_branches"
+    # ブランチ削除では独自コミットなしブランチもマージ済みとして扱う
+    # （worktree がないなら残骸ブランチなので削除対象）
+    local branches_to_delete="$merged_branches"
+    if [ -n "$no_unique_branches" ]; then
+      branches_to_delete="${branches_to_delete:+$branches_to_delete
+}$no_unique_branches"
+    fi
+    cleanup_branches "$base" "$branches_to_delete"
 
     # サマリー表示
     printf "\n\n"

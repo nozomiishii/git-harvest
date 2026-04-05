@@ -196,20 +196,19 @@ describe('merge detection', () => {
     expect(output).toContain('Nothing to harvest. All clean!');
   });
 
-  // 独自コミットなしのブランチは保持し [GROWING] (no unique commits) を表示
-  test('preserves branches with no unique commits and shows GROWING status', () => {
+  // 独自コミットなしのブランチは削除する
+  test('deletes branches with no unique commits', () => {
     git(repo, 'checkout -b no-commits-yet');
     git(repo, 'checkout main');
 
     const output = run(repo);
-    expect(branches(repo)).toContain('no-commits-yet');
-    expect(output).toContain('[GROWING]');
+    expect(branches(repo)).not.toContain('no-commits-yet');
+    expect(output).toContain('[DELETED]');
     expect(output).toContain('no-commits-yet');
-    expect(output).toContain('(no unique commits)');
   });
 
-  // main より古いコミットを指す独自コミットなしブランチも保持
-  test('preserves branches pointing to older commits with no unique work', () => {
+  // main より古いコミットを指す独自コミットなしブランチも削除
+  test('deletes branches pointing to older commits with no unique work', () => {
     git(repo, 'checkout -b old-branch');
     git(repo, 'checkout main');
     // main を先に進める
@@ -217,7 +216,7 @@ describe('merge detection', () => {
     git(repo, 'push');
 
     run(repo);
-    expect(branches(repo)).toContain('old-branch');
+    expect(branches(repo)).not.toContain('old-branch');
   });
 
   // 孤立ブランチはスキップ
