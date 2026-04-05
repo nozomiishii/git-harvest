@@ -176,6 +176,23 @@ describe('merge detection', () => {
     expect(output).toContain('Harvested!');
   });
 
+  // マージ済みでもチェックアウト中のブランチは保持
+  test('preserves merged branch that is currently checked out', () => {
+    git(repo, 'checkout -b feature-checkedout');
+    commitFile(repo, 'checkedout.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash feature-checkedout');
+    git(repo, 'commit -m "squash merge checkedout"');
+    git(repo, 'push');
+
+    // マージ済みブランチに戻ってそこから実行
+    git(repo, 'checkout feature-checkedout');
+    const output = run(repo);
+    expect(branches(repo)).toContain('feature-checkedout');
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('(currently checked out)');
+  });
+
   // 未マージは保持し [GROWING] (not merged) を表示
   test('preserves unmerged branches and shows GROWING status', () => {
     git(repo, 'checkout -b feature-wip');
@@ -228,6 +245,33 @@ describe('merge detection', () => {
     run(repo);
     expect(branches(repo)).toContain('isolated');
   });
+
+  // cherry-pick フォールバック: 履歴書き換え後の orphaned ブランチをマージ済みと検出
+  test('detects merged orphaned branches via cherry-pick fallback after history rewrite', () => {
+    // feature ブランチでコミット
+    git(repo, 'checkout -b feature-orphaned');
+    commitFile(repo, 'feature.txt', 'feature work');
+    git(repo, 'checkout main');
+
+    // main に cherry-pick で同じ変更を取り込む
+    const featureHead = git(repo, 'rev-parse feature-orphaned').trim();
+    git(repo, `cherry-pick ${featureHead}`);
+    git(repo, 'push');
+
+    // main の履歴を新しいルートから再構築（commit-tree で同じツリーを持つ新コミットを作成）
+    // これにより feature-orphaned と共通祖先を持たないが patch-id が一致する状態になる
+    const initTree = git(repo, 'rev-parse HEAD~1^{tree}').trim();
+    const newInit = git(repo, `commit-tree ${initTree} -m "init"`).trim();
+    const mainTree = git(repo, 'rev-parse HEAD^{tree}').trim();
+    const newMain = git(repo, `commit-tree ${mainTree} -p ${newInit} -m "feature work"`).trim();
+    git(repo, `checkout -B main ${newMain}`);
+    git(repo, 'push --force origin main');
+
+    const output = run(repo);
+    expect(branches(repo)).not.toContain('feature-orphaned');
+    expect(output).toContain('[DELETED]');
+    expect(output).toContain('feature-orphaned');
+  });
 });
 
 describe('worktree cleanup', () => {
@@ -265,6 +309,30 @@ describe('worktree cleanup', () => {
 
     // cleanup
     git(repo, `worktree remove ${wtDir}`);
+  });
+
+  // マージ済みでも未コミット変更がある worktree は保持
+  test('preserves merged worktree with uncommitted changes', () => {
+    git(repo, 'checkout -b wt-uncommitted');
+    commitFile(repo, 'wt-uncommitted.txt', 'committed work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-uncommitted');
+    git(repo, 'commit -m "squash merge uncommitted"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-uncommitted-dir');
+    git(repo, `worktree add ${wtDir} wt-uncommitted`);
+    // worktree 内に未コミットの変更を作成
+    writeFileSync(join(wtDir, 'dirty.txt'), 'uncommitted change\n');
+
+    const output = run(repo);
+    expect(branches(repo)).toContain('wt-uncommitted');
+    expect(worktrees(repo).length).toBeGreaterThan(1);
+    expect(output).toContain('[GROWING]');
+    expect(output).toContain('(uncommitted changes)');
+
+    // cleanup
+    git(repo, `worktree remove --force ${wtDir}`);
   });
 
   // 未マージ worktree は保持し [GROWING] (not merged) を表示
