@@ -23,6 +23,7 @@
     "lib/git-harvest"
   ],
   "scripts": {
+    "dev": "./lib/git-harvest --dry-run",
     "test": "bun test",
     "install:local": "bash install.sh",
     "uninstall:local": "bash uninstall.sh"
