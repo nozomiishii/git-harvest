@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.15](https://github.com/nozomiishii/git-harvest/compare/v0.1.14...v0.1.15) (2026-04-05)
+
+
+### Bug Fixes
+
+* improve merge detection for orphaned and no-unique-commits branches ([#70](https://github.com/nozomiishii/git-harvest/issues/70)) ([c7bf33c](https://github.com/nozomiishii/git-harvest/commit/c7bf33c25805d244845251e69f9223bd20e9c418))
+* swap animation effects between startup and harvest messages ([#67](https://github.com/nozomiishii/git-harvest/issues/67)) ([f5c5fa9](https://github.com/nozomiishii/git-harvest/commit/f5c5fa9a262765c6850786437ae6c703158e07d3))
+
+
+### Miscellaneous
+
+* add dev script for local dry-run testing ([#69](https://github.com/nozomiishii/git-harvest/issues/69)) ([fd329b6](https://github.com/nozomiishii/git-harvest/commit/fd329b615a2ecebd4ca4c5546a3b1f947ed621b2))
+
 ## [0.1.14](https://github.com/nozomiishii/git-harvest/compare/v0.1.13...v0.1.14) (2026-04-03)
 
 
