@@ -119,10 +119,15 @@ git-harvest は全ての worktree・ブランチの状態を表示します。
 | マージ済み + 削除可能 | `[DELETED]` / `[WILL DELETE]` | 収穫対象 | 削除 |
 | マージ済み + チェックアウト中 | `[GROWING] (currently checked out)` | 現在使用中のためスキップ | 残す |
 | 未マージ | `[GROWING] (not merged)` | まだマージされていない | 残す |
-| 独自コミットなし | `[GROWING] (no unique commits)` | 作成直後でまだ作業が始まっていない | 残す |
+| 独自コミットなし | `[DELETED]` / `[WILL DELETE]` | worktree がなければ残骸ブランチとして削除 | 削除 |
 | デフォルトブランチ | *(表示なし)* | 常に除外 | 残す |
 
-### Squash merge の検出方法
+### マージ検出方法
 
-`git commit-tree` で仮想 squash コミットを作成し、`git cherry` でデフォルトブランチに含まれているかを判定します。`git branch --merged` では検出できない squash merge を正しく検出できます。
+以下の手段を順に試み、いずれかで検出されたブランチをマージ済みと判定します:
+
+1. **first-parent 一致** — ブランチ HEAD がデフォルトブランチの first-parent 上にある（独自コミットなし）
+2. **ancestor チェック** — `git merge-base --is-ancestor` による通常マージ検出
+3. **仮想 squash + git cherry** — `git commit-tree` で仮想 squash コミットを作成し、`git cherry` で比較
+4. **cherry-pick フォールバック** — `git log --cherry-pick` による patch-id ベースの全コミット比較（履歴書き換え後の orphaned ブランチにも対応）
 

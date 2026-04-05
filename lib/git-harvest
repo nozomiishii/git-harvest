@@ -374,6 +374,13 @@ cleanup_branches() {
   local no_unique_branches="$3"
   local found=false
 
+  # ブランチ削除では独自コミットなしも削除対象（worktree がなければ残骸）
+  local deletable_branches="$merged_branches"
+  if [ -n "$no_unique_branches" ]; then
+    deletable_branches="${deletable_branches:+$deletable_branches
+}$no_unique_branches"
+  fi
+
   while read -r branch; do
     [ -z "$branch" ] && continue
     [ "$branch" = "$base" ] && continue
@@ -383,8 +390,8 @@ cleanup_branches() {
       found=true
     fi
 
-    if echo "$merged_branches" | grep -qxF "$branch"; then
-      # マージ済み: チェックアウト中かチェック
+    if echo "$deletable_branches" | grep -qxF "$branch"; then
+      # 削除対象: チェックアウト中かチェック
       if is_current_head "$branch" || is_checked_out_in_worktree "$branch"; then
         printf "    [GROWING]      %s (currently checked out)\n" "$branch"
       elif [ "$DRY_RUN" = true ]; then
@@ -395,8 +402,6 @@ cleanup_branches() {
         printf "    [DELETED]      %s\n" "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
-    elif echo "$no_unique_branches" | grep -qxF "$branch"; then
-      printf "    [GROWING]      %s (no unique commits)\n" "$branch"
     else
       printf "    [GROWING]      %s (not merged)\n" "$branch"
     fi
@@ -421,9 +426,8 @@ main() {
   printf '\n'
 
   # デフォルトブランチにマージ済みのローカルブランチ一覧を取得
-  # git branch --merged は squash merge を検出できないため、
-  # commit-tree で仮想 squash コミットを作成し git cherry で比較する
-  # base の first-parent 上のコミット一覧（独自コミットなしブランチの判定に使用）
+  # 検出手段: 1) first-parent 上のコミット一致、2) ancestor チェック、
+  # 3) 仮想 squash + git cherry、4) patch-id ベースの cherry-pick フォールバック
   local first_parent_commits
   first_parent_commits=$(git rev-list --first-parent "$base" 2>/dev/null) || true
 
@@ -435,8 +439,7 @@ main() {
 
   while read -r branch; do
     [ "$branch" = "$base" ] && continue
-    # 独自コミットがないブランチ（作成直後でまだ作業していないブランチ）
-    # ブランチ HEAD が base の first-parent 上にある場合、独自の作業がないと判断
+    # 独自コミットがないブランチ（HEAD が base の first-parent 上にある）
     local branch_head
     branch_head=$(git rev-parse "$branch" 2>/dev/null) || continue
     if echo "$first_parent_commits" | grep -q "^${branch_head}$"; then
@@ -451,13 +454,27 @@ main() {
       continue
     fi
     # squash マージ: commit-tree で仮想 squash コミットを作成し git cherry で比較
+    # merge-base が見つからない場合（orphaned ブランチ）はスキップして cherry-pick フォールバックへ
     local merge_base
-    merge_base=$(git merge-base "$base" "$branch" 2>/dev/null) || continue
-    local squash_commit
-    squash_commit=$(git commit-tree "$branch^{tree}" -p "$merge_base" -m "_" 2>/dev/null) || continue
-    local cherry_out
-    cherry_out=$(git cherry "$base" "$squash_commit" 2>/dev/null) || continue
-    if [ -n "$cherry_out" ] && [ "$(echo "$cherry_out" | grep -c '^+')" -eq 0 ]; then
+    merge_base=$(git merge-base "$base" "$branch" 2>/dev/null) || true
+    if [ -n "$merge_base" ]; then
+      local squash_commit
+      squash_commit=$(git commit-tree "$branch^{tree}" -p "$merge_base" -m "_" 2>/dev/null) || true
+      if [ -n "$squash_commit" ]; then
+        local cherry_out
+        cherry_out=$(git cherry "$base" "$squash_commit" 2>/dev/null) || true
+        if [ -n "$cherry_out" ] && [ "$(echo "$cherry_out" | grep -c '^+')" -eq 0 ]; then
+          merged_branches="${merged_branches:+$merged_branches
+}$branch"
+          continue
+        fi
+      fi
+    fi
+    # cherry-pick フォールバック: patch-id ベースで全コミットを比較
+    # orphaned ブランチ（履歴書き換えで共通祖先なし）や仮想 squash が一致しないケースをカバー
+    local cherry_pick_unique
+    cherry_pick_unique=$(git log --cherry-pick --right-only --no-merges --oneline "$base"..."$branch" 2>/dev/null)
+    if [ -z "$cherry_pick_unique" ]; then
       merged_branches="${merged_branches:+$merged_branches
 }$branch"
     fi
