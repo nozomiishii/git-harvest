@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.16](https://github.com/nozomiishii/git-harvest/compare/v0.1.15...v0.1.16) (2026-04-05)
+
+
+### Bug Fixes
+
+* keep rainbow animation running until first output appears ([#71](https://github.com/nozomiishii/git-harvest/issues/71)) ([c572b49](https://github.com/nozomiishii/git-harvest/commit/c572b49b4a531d89ed3254e51be474920ef5e661))
+
 ## [0.1.15](https://github.com/nozomiishii/git-harvest/compare/v0.1.14...v0.1.15) (2026-04-05)
 
 
