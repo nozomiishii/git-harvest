@@ -417,7 +417,7 @@ main() {
     printf "\n  Dry run mode - nothing will be deleted\n"
   fi
   printf '\n'
-  sparkle_animate "git harvest"
+  rainbow_animate "git harvest"
   printf '\n'
 
   # デフォルトブランチにマージ済みのローカルブランチ一覧を取得
@@ -484,7 +484,7 @@ main() {
     # サマリー表示
     printf "\n\n"
     if [ "$DELETED_COUNT" -gt 0 ]; then
-      rainbow_animate "Harvested!"
+      sparkle_animate "Harvested!"
     else
       printf "  Nothing to harvest. All growing!"
     fi
