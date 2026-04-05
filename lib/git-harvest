@@ -9,9 +9,10 @@ CHECK_INTERVAL=86400 # 24時間（秒）
 
 # アニメーション中の中断でカーソルが非表示のままにならないよう、EXIT で復元
 # 非TTY環境では何もしない（stdout を汚さない）
-trap '[ -t 1 ] && printf "\033[?25h" 2>/dev/null || true' EXIT
+trap 'rainbow_animate_stop; [ -t 1 ] && printf "\033[?25h" 2>/dev/null || true' EXIT
 
 # カラー出力の設定（非TTY / NO_COLOR 環境では無効化）
+RAINBOW_PID=""
 USE_COLOR=false
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   USE_COLOR=true
@@ -82,6 +83,52 @@ rainbow_animate() {
   done
   # カーソルを再表示
   printf '\033[?25h'
+}
+
+# レインボーアニメーションをバックグラウンドで開始 (TTY時のみ)
+rainbow_animate_start() {
+  local text="$1"
+  local len=${#text}
+  if [ "$USE_COLOR" = false ] || [ "$len" -eq 0 ]; then
+    printf '  %s' "$text"
+    return
+  fi
+  printf '\033[?25l'
+  (
+    local frame=0
+    while true; do
+      printf '\r  '
+      local i=0
+      local offset=$((frame * 18))
+      while [ "$i" -lt "$len" ]; do
+        local char="${text:$i:1}"
+        if [ "$char" = ' ' ]; then
+          printf ' '
+        else
+          local hue=$(((i * 360 / len - offset + 3600) % 360))
+          printf '%s%s' "$(hsl_fg "$hue")" "$char"
+        fi
+        i=$((i + 1))
+      done
+      printf '\033[0m'
+      sleep 0.04
+      frame=$((frame + 1))
+    done
+  ) &
+  RAINBOW_PID=$!
+}
+
+# バックグラウンドのレインボーアニメーションを停止
+rainbow_animate_stop() {
+  if [ -n "$RAINBOW_PID" ]; then
+    kill "$RAINBOW_PID" 2>/dev/null || true
+    wait "$RAINBOW_PID" 2>/dev/null || true
+    RAINBOW_PID=""
+  fi
+  if [ "$USE_COLOR" = true ]; then
+    printf '\r\033[2K'
+    printf '\033[?25h'
+  fi
 }
 
 # テキストを緑ベースでキラキラ光らせるアニメーション (TTY時のみ)
@@ -422,7 +469,7 @@ main() {
     printf "\n  Dry run mode - nothing will be deleted\n"
   fi
   printf '\n'
-  rainbow_animate "git harvest"
+  rainbow_animate_start "git harvest"
   printf '\n'
 
   # デフォルトブランチにマージ済みのローカルブランチ一覧を取得
@@ -491,10 +538,12 @@ main() {
   done <<<"$all_branches"
 
   if [ "$other_branch_count" -eq 0 ] && [ "$linked_wt_count" -eq 0 ]; then
+    rainbow_animate_stop
     printf "  Nothing to harvest. All clean!\n\n"
   else
     # worktree が参照中のブランチは削除できないため、worktree を先に削除する
     DELETED_COUNT=0
+    rainbow_animate_stop
     cleanup_worktrees "$base" "$merged_branches" "$no_unique_branches"
     cleanup_branches "$base" "$merged_branches" "$no_unique_branches"
 
