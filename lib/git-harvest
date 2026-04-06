@@ -6,6 +6,8 @@ REPO="nozomiishii/git-harvest"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/git-harvest"
 CACHE_FILE="$CACHE_DIR/latest-version"
 CHECK_INTERVAL=86400 # 24時間（秒）
+SPARKLE_FRAMES=30       # sparkle_animate のデフォルトフレーム数
+SPARKLE_INTERVAL=0.05   # sparkle/rainbow 共通の sleep 間隔（秒）
 
 # アニメーション中の中断でカーソルが非表示のままにならないよう、EXIT で復元
 # 非TTY環境では何もしない（stdout を汚さない）
@@ -95,7 +97,7 @@ rainbow_animate_start() {
   (
     while true; do
       sparkle_frame "$HEADER_TEXT" "$HEADER_HUES"
-      sleep 0.1
+      sleep "$SPARKLE_INTERVAL"
     done
   ) &
   RAINBOW_PID=$!
@@ -138,7 +140,7 @@ rainbow_static() {
 # テキストをキラキラ光らせるアニメーション (TTY時のみ)
 # 引数: text hue [frames] [sleep]
 sparkle_animate() {
-  local text="$1" hue="$2" frames="${3:-60}" interval="${4:-0.05}"
+  local text="$1" hue="$2" frames="${3:-$SPARKLE_FRAMES}" interval="${4:-$SPARKLE_INTERVAL}"
   local len=${#text}
   if [ "$USE_COLOR" = false ] || [ "$len" -eq 0 ]; then
     printf '  %s' "$text"
