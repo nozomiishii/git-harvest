@@ -24,16 +24,22 @@ else
   BOLD='' GREEN='' DIM='' RESET=''
 fi
 
-# HSL (hue 0-360) から ANSI truecolor エスケープを生成
-# 彩度・明度は固定 (S=80%, L=65%) でレインボー向けに最適化
+# HSL (hue 0-360, lightness 0-100) から ANSI truecolor エスケープを生成
+# 彩度は固定 (S=80%)
 hsl_fg() {
   local h=$1
+  local l=${2:-65}
   # HSL to RGB (簡易版: 6セクターに分けて線形補間)
-  local s=80 l=65
+  local s=80
   local c=$(((100 - (2 * l - 100 > 0 ? 2 * l - 100 : 100 - 2 * l)) * s / 100))
   local h_section=$((h / 60))
   local h_remainder=$((h % 60))
-  local x=$((c * (60 - (h_remainder > 30 ? h_remainder * 2 - 60 : 60 - h_remainder * 2)) / 60))
+  local x
+  if [ $((h_section % 2)) -eq 0 ]; then
+    x=$((c * h_remainder / 60))
+  else
+    x=$((c * (60 - h_remainder) / 60))
+  fi
   local m=$(((l * 255 / 100) - (c * 255 / 200)))
   local r g b
   case $h_section in
@@ -51,68 +57,45 @@ hsl_fg() {
   printf '\033[38;2;%d;%d;%dm' "$r" "$g" "$b"
 }
 
-# テキストをレインボーアニメーションで表示 (TTY時のみ)
-rainbow_animate() {
-  local text="$1"
-  local len=${#text}
-  if [ "$USE_COLOR" = false ] || [ "$len" -eq 0 ]; then
-    printf '  %s' "$text"
-    return
-  fi
-  # カーソルを非表示
-  printf '\033[?25l'
-  local frames=20
-  local frame=0
-  while [ "$frame" -lt "$frames" ]; do
-    printf '\r  '
-    local i=0
-    local offset=$((frame * 18))
-    while [ "$i" -lt "$len" ]; do
-      local char="${text:$i:1}"
-      if [ "$char" = ' ' ]; then
-        printf ' '
+# "git harvest" の各文字に割り当てる固定色相 (ultrathink 風レインボー)
+# g=0, i=36, t=72, ' '=-, h=108, a=144, r=180, v=216, e=252, s=288, t=324
+HEADER_TEXT="git harvest"
+HEADER_HUES="0 36 72 -1 108 144 180 216 252 288 324"
+
+# キラキラの1フレームを描画 (text, hues)
+# hues はスペース区切りの色相リスト (-1 = スペース)
+sparkle_frame() {
+  local text="$1" hues="$2"
+  printf '\r  '
+  local idx=0
+  for hue in $hues; do
+    if [ "$hue" = "-1" ]; then
+      printf ' '
+    else
+      local rand=$((RANDOM % 100)) lightness
+      if [ "$rand" -lt 10 ]; then
+        lightness=$((85 + RANDOM % 11))
+      elif [ "$rand" -lt 25 ]; then
+        lightness=$((60 + RANDOM % 16))
       else
-        local hue=$(((i * 360 / len - offset + 3600) % 360))
-        printf '%s%s' "$(hsl_fg "$hue")" "$char"
+        lightness=$((35 + RANDOM % 16))
       fi
-      i=$((i + 1))
-    done
-    printf '\033[0m'
-    sleep 0.04
-    frame=$((frame + 1))
+      hsl_fg "$hue" "$lightness"
+      printf '%s' "${text:$idx:1}"
+    fi
+    idx=$((idx + 1))
   done
-  # カーソルを再表示
-  printf '\033[?25h'
+  printf '\033[0m'
 }
 
-# レインボーアニメーションをバックグラウンドで開始 (TTY時のみ)
+# レインボーキラキラアニメーションをバックグラウンドで開始 (TTY時のみ)
 rainbow_animate_start() {
-  local text="$1"
-  local len=${#text}
-  if [ "$USE_COLOR" = false ] || [ "$len" -eq 0 ]; then
-    printf '  %s' "$text"
-    return
-  fi
+  [ "$USE_COLOR" = false ] && return
   printf '\033[?25l'
   (
-    local frame=0
     while true; do
-      printf '\r  '
-      local i=0
-      local offset=$((frame * 18))
-      while [ "$i" -lt "$len" ]; do
-        local char="${text:$i:1}"
-        if [ "$char" = ' ' ]; then
-          printf ' '
-        else
-          local hue=$(((i * 360 / len - offset + 3600) % 360))
-          printf '%s%s' "$(hsl_fg "$hue")" "$char"
-        fi
-        i=$((i + 1))
-      done
-      printf '\033[0m'
-      sleep 0.04
-      frame=$((frame + 1))
+      sparkle_frame "$HEADER_TEXT" "$HEADER_HUES"
+      sleep 0.1
     done
   ) &
   RAINBOW_PID=$!
@@ -131,53 +114,52 @@ rainbow_animate_stop() {
   fi
 }
 
-# テキストを緑ベースでキラキラ光らせるアニメーション (TTY時のみ)
+# 静的レインボーヘッダーを表示
+rainbow_static() {
+  printf '  '
+  if [ "$USE_COLOR" = false ]; then
+    printf '%s' "$HEADER_TEXT"
+  else
+    local idx=0
+    for hue in $HEADER_HUES; do
+      if [ "$hue" = "-1" ]; then
+        printf ' '
+      else
+        hsl_fg "$hue"
+        printf '%s' "${HEADER_TEXT:$idx:1}"
+      fi
+      idx=$((idx + 1))
+    done
+    printf '\033[0m'
+  fi
+  printf '\n'
+}
+
+# テキストをキラキラ光らせるアニメーション (TTY時のみ)
+# 引数: text hue [frames] [sleep]
 sparkle_animate() {
-  local text="$1"
+  local text="$1" hue="$2" frames="${3:-60}" interval="${4:-0.05}"
   local len=${#text}
   if [ "$USE_COLOR" = false ] || [ "$len" -eq 0 ]; then
     printf '  %s' "$text"
     return
   fi
+  # 全文字に同じ hue を割り当てた hues 文字列を生成
+  local hues="" i=0
+  while [ "$i" -lt "$len" ]; do
+    [ "$i" -gt 0 ] && hues="$hues "
+    if [ "${text:$i:1}" = ' ' ]; then
+      hues="$hues-1"
+    else
+      hues="$hues$hue"
+    fi
+    i=$((i + 1))
+  done
   printf '\033[?25l'
-  local frames=25
   local frame=0
   while [ "$frame" -lt "$frames" ]; do
-    printf '\r  '
-    local i=0
-    while [ "$i" -lt "$len" ]; do
-      local char="${text:$i:1}"
-      if [ "$char" = ' ' ]; then
-        printf ' '
-      else
-        # ランダムに明度を変える (40-100%)、一部の文字を白に近づけて「キラッ」
-        local rand=$((RANDOM % 100))
-        local lightness
-        if [ "$rand" -lt 10 ]; then
-          # 10% の確率で白に近い光 (明度 85-95%)
-          lightness=$((85 + RANDOM % 11))
-        elif [ "$rand" -lt 25 ]; then
-          # 15% の確率で明るい緑 (明度 60-75%)
-          lightness=$((60 + RANDOM % 16))
-        else
-          # 通常の緑 (明度 35-50%)
-          lightness=$((35 + RANDOM % 16))
-        fi
-        # 緑 (hue=120) 固定、彩度80%、明度可変
-        local s=80 l=$lightness
-        local c=$(((100 - (2 * l - 100 > 0 ? 2 * l - 100 : 100 - 2 * l)) * s / 100))
-        local x=0
-        local m=$(((l * 255 / 100) - (c * 255 / 200)))
-        local r=$m g=$((c * 255 / 100 + m)) b=$m
-        if [ "$r" -lt 0 ]; then r=0; elif [ "$r" -gt 255 ]; then r=255; fi
-        if [ "$g" -lt 0 ]; then g=0; elif [ "$g" -gt 255 ]; then g=255; fi
-        if [ "$b" -lt 0 ]; then b=0; elif [ "$b" -gt 255 ]; then b=255; fi
-        printf '\033[38;2;%d;%d;%dm%s' "$r" "$g" "$b" "$char"
-      fi
-      i=$((i + 1))
-    done
-    printf '\033[0m'
-    sleep 0.05
+    sparkle_frame "$text" "$hues"
+    sleep "$interval"
     frame=$((frame + 1))
   done
   printf '\033[?25h'
@@ -512,8 +494,7 @@ main() {
     printf "\n  Dry run mode - nothing will be deleted\n"
   fi
   printf '\n'
-  rainbow_animate_start "git harvest"
-  printf '\n'
+  rainbow_animate_start
 
   local all_branches
   all_branches=$(git branch | sed 's/^[*+ ]*//' | grep -v '^(')
@@ -585,18 +566,20 @@ main() {
 
   if [ "$other_branch_count" -eq 0 ] && [ "$linked_wt_count" -eq 0 ]; then
     rainbow_animate_stop
+    rainbow_static
     printf "  Nothing to harvest. All clean!\n\n"
   else
     # worktree が参照中のブランチは削除できないため、worktree を先に削除する
     DELETED_COUNT=0
     rainbow_animate_stop
+    rainbow_static
     cleanup_worktrees "$base" "$merged_branches" "$no_unique_branches"
     cleanup_branches "$base" "$merged_branches" "$no_unique_branches"
 
     # サマリー表示
     printf "\n\n"
     if [ "$DELETED_COUNT" -gt 0 ]; then
-      sparkle_animate "Harvested!"
+      sparkle_animate "Harvested!" 120
     else
       printf "  Nothing to harvest. All growing!"
     fi
