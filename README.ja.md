@@ -4,6 +4,20 @@
 
 merge 済み branch と worktree を自動で整理するツール
 
+
+## インストールせずに直接実行
+
+```sh
+# bun
+bunx git-harvest@latest
+
+# pnpm
+pnpx git-harvest@latest
+
+# npm
+npx -y git-harvest@latest
+```
+
 ## インストール
 
 ### Shell (macOS/Linux) (recommended)
@@ -43,18 +57,7 @@ git config --global alias.harvest '!git-harvest'
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
 ```
 
-## インストールせずに直接実行
 
-```sh
-# bun
-bunx git-harvest@latest
-
-# pnpm
-pnpx git-harvest@latest
-
-# npm
-npx -y git-harvest@latest
-```
 
 ## 使い方
 

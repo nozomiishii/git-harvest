@@ -4,6 +4,20 @@ English | [日本語](./README.ja.md)
 
 Clean up merged branches and worktrees (supports squash merges).
 
+
+## Run directly without installing
+
+```sh
+# bun
+bunx git-harvest@latest
+
+# pnpm
+pnpx git-harvest@latest
+
+# npm
+npx -y git-harvest@latest
+```
+
 ## Install
 
 ### Shell (macOS/Linux) (recommended)
@@ -41,19 +55,6 @@ git config --global alias.harvest '!git-harvest'
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
-```
-
-## Run directly without installing
-
-```sh
-# bun
-bunx git-harvest@latest
-
-# pnpm
-pnpx git-harvest@latest
-
-# npm
-npx -y git-harvest@latest
 ```
 
 ## Usage
