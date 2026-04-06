@@ -38,10 +38,11 @@ brew install nozomiishii/tap/git-harvest
 
 Set up aliases for quicker access. You can use both or just the one you prefer:
 
-`ghv`
+`ghv` / `ghv!`
 ```sh
 # Shell alias
 echo "alias ghv='git-harvest'" >> ~/.zshrc
+echo "alias 'ghv!'='git-harvest --all'" >> ~/.zshrc
 ```
 
 `git harvest`

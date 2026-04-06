@@ -38,10 +38,11 @@ brew install nozomiishii/tap/git-harvest
 
 エイリアスを設定するとより手軽に実行できます。両方設定しても片方だけでも設定できます:
 
-`ghv`
+`ghv` / `ghv!`
 ```sh
 # シェルエイリアス
 echo "alias ghv='git-harvest'" >> ~/.zshrc
+echo "alias 'ghv!'='git-harvest --all'" >> ~/.zshrc
 ```
 
 `git harvest`
