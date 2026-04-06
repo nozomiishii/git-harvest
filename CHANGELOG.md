@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.17](https://github.com/nozomiishii/git-harvest/compare/v0.1.16...v0.1.17) (2026-04-06)
+
+
+### Features
+
+* add --all flag to delete all non-default branches and worktrees ([#78](https://github.com/nozomiishii/git-harvest/issues/78)) ([4e1fc9c](https://github.com/nozomiishii/git-harvest/commit/4e1fc9c9856f9626152ecf7c61750fb7091f7614))
+
+
+### Miscellaneous
+
+* **docs:** move run-without-installing section before install section ([#75](https://github.com/nozomiishii/git-harvest/issues/75)) ([6bcd732](https://github.com/nozomiishii/git-harvest/commit/6bcd7327a92c47e2443d4929d39c1df51864f9da))
+
 ## [0.1.16](https://github.com/nozomiishii/git-harvest/compare/v0.1.15...v0.1.16) (2026-04-05)
 
 
