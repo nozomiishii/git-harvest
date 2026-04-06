@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.18](https://github.com/nozomiishii/git-harvest/compare/v0.1.17...v0.1.18) (2026-04-06)
+
+
+### Features
+
+* add static rainbow header and unify sparkle animation ([#79](https://github.com/nozomiishii/git-harvest/issues/79)) ([21b4a6b](https://github.com/nozomiishii/git-harvest/commit/21b4a6bb6c4de16b5983247146e11e76995aebc1))
+
 ## [0.1.17](https://github.com/nozomiishii/git-harvest/compare/v0.1.16...v0.1.17) (2026-04-06)
 
 
