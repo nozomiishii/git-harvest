@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.19](https://github.com/nozomiishii/git-harvest/compare/v0.1.18...v0.1.19) (2026-04-06)
+
+
+### Features
+
+* reduce sparkle animation duration and extract timing constants ([#81](https://github.com/nozomiishii/git-harvest/issues/81)) ([56682f5](https://github.com/nozomiishii/git-harvest/commit/56682f5eb1057959f6ab019e443a839033cbdfdb))
+
 ## [0.1.18](https://github.com/nozomiishii/git-harvest/compare/v0.1.17...v0.1.18) (2026-04-06)
 
 
