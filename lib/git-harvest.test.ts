@@ -95,13 +95,14 @@ afterEach(() => {
 });
 
 describe('--help / --version / --update', () => {
-  // ヘルプ表示
+  // ヘルプ表示（--all を含む）
   test('prints help and exits with 0', () => {
     const output = run(repo, '--help');
     expect(output).toContain('Usage: git-harvest');
     expect(output).toContain('--help');
     expect(output).toContain('--version');
     expect(output).toContain('--update');
+    expect(output).toContain('--all');
   });
 
   // バージョン表示
@@ -768,5 +769,179 @@ describe('update check', () => {
     } finally {
       rmSync(cacheDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('--all', () => {
+  // マージ済み + 未マージを全部削除する
+  test('deletes all branches including unmerged', () => {
+    // マージ済みブランチ
+    git(repo, 'checkout -b merged-all');
+    commitFile(repo, 'merged-all.txt', 'merged work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash merged-all');
+    git(repo, 'commit -m "squash merged-all"');
+    git(repo, 'push');
+
+    // 未マージブランチ
+    git(repo, 'checkout -b unmerged-all');
+    commitFile(repo, 'unmerged-all.txt', 'unmerged work');
+    git(repo, 'checkout main');
+
+    const output = run(repo, '--all');
+    expect(branches(repo)).not.toContain('merged-all');
+    expect(branches(repo)).not.toContain('unmerged-all');
+    expect(branches(repo)).toContain('main');
+    expect(output).toContain('[DELETED]');
+    expect(output).toContain('Harvested!');
+  });
+
+  // デフォルトブランチは残る
+  test('preserves default branch', () => {
+    git(repo, 'checkout -b to-delete-all');
+    commitFile(repo, 'del.txt', 'del');
+    git(repo, 'checkout main');
+
+    run(repo, '--all');
+    expect(branches(repo)).toContain('main');
+    expect(branches(repo)).not.toContain('to-delete-all');
+  });
+
+  // メインワーキングツリーは残る
+  test('preserves main working tree', () => {
+    git(repo, 'checkout -b wt-all-check');
+    commitFile(repo, 'wt-all.txt', 'wt work');
+    git(repo, 'checkout main');
+
+    const wtDir = join(repo, '..', 'wt-all-check-dir');
+    git(repo, `worktree add ${wtDir} wt-all-check`);
+
+    run(repo, '--all');
+    // メインワーキングツリーは残り、linked worktree は削除される
+    expect(worktrees(repo)).toHaveLength(1);
+    expect(branches(repo)).not.toContain('wt-all-check');
+  });
+
+  // 未コミット変更のある worktree も強制削除する
+  test('force removes worktrees with uncommitted changes', () => {
+    git(repo, 'checkout -b wt-dirty-all');
+    commitFile(repo, 'wt-dirty-all.txt', 'work');
+    git(repo, 'checkout main');
+
+    const wtDir = join(repo, '..', 'wt-dirty-all-dir');
+    git(repo, `worktree add ${wtDir} wt-dirty-all`);
+    writeFileSync(join(wtDir, 'uncommitted.txt'), 'dirty\n');
+
+    const output = run(repo, '--all');
+    expect(worktrees(repo)).toHaveLength(1);
+    expect(branches(repo)).not.toContain('wt-dirty-all');
+    expect(output).toContain('[DELETED]');
+  });
+
+  // チェックアウト中のブランチはエラー終了する
+  test('exits with error when non-default branch is checked out', () => {
+    git(repo, 'checkout -b checked-out-all');
+    commitFile(repo, 'co-all.txt', 'work');
+
+    const result = runExpectFail(repo, '--all');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Cannot delete branch');
+    expect(result.stderr).toContain('checked-out-all');
+    expect(result.stderr).toContain('git checkout main');
+  });
+
+  // エラー時に何も削除されない
+  test('deletes nothing when checkout error occurs', () => {
+    // マージ済みブランチを作成
+    git(repo, 'checkout -b merged-no-delete');
+    commitFile(repo, 'mnd.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash merged-no-delete');
+    git(repo, 'commit -m "squash mnd"');
+    git(repo, 'push');
+
+    // 未マージブランチに移動して --all を実行
+    git(repo, 'checkout -b blocking-branch');
+    commitFile(repo, 'block.txt', 'block');
+
+    runExpectFail(repo, '--all');
+    // どちらのブランチも残っている
+    expect(branches(repo)).toContain('merged-no-delete');
+    expect(branches(repo)).toContain('blocking-branch');
+  });
+
+  // --dry-run --all で全リソースが [WILL DELETE] 表示される
+  test('dry-run --all shows WILL DELETE for all resources', () => {
+    // マージ済みブランチ
+    git(repo, 'checkout -b dry-merged-all');
+    commitFile(repo, 'dry-m.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash dry-merged-all');
+    git(repo, 'commit -m "squash dry-merged"');
+    git(repo, 'push');
+
+    // 未マージブランチ
+    git(repo, 'checkout -b dry-unmerged-all');
+    commitFile(repo, 'dry-u.txt', 'work');
+    git(repo, 'checkout main');
+
+    const output = run(repo, '--dry-run --all');
+    expect(output).toContain('Dry run mode');
+    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('dry-merged-all');
+    expect(output).toContain('dry-unmerged-all');
+    // ブランチは残っている
+    expect(branches(repo)).toContain('dry-merged-all');
+    expect(branches(repo)).toContain('dry-unmerged-all');
+  });
+
+  // --all --dry-run でも同じ動作（引数順序）
+  test('--all --dry-run works regardless of argument order', () => {
+    git(repo, 'checkout -b order-test');
+    commitFile(repo, 'order.txt', 'work');
+    git(repo, 'checkout main');
+
+    const output = run(repo, '--all --dry-run');
+    expect(output).toContain('Dry run mode');
+    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('order-test');
+    expect(branches(repo)).toContain('order-test');
+  });
+
+  // --dry-run --all でチェックアウト中のブランチも [WILL DELETE] 表示（エラーにならない）
+  test('dry-run --all shows WILL DELETE for checked-out branch without error', () => {
+    git(repo, 'checkout -b dry-checked-out');
+    commitFile(repo, 'dry-co.txt', 'work');
+
+    const output = run(repo, '--dry-run --all');
+    expect(output).toContain('Dry run mode');
+    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('dry-checked-out');
+    expect(branches(repo)).toContain('dry-checked-out');
+  });
+
+  // detached HEAD では全ブランチ削除できる
+  test('deletes all branches when in detached HEAD state', () => {
+    git(repo, 'checkout -b detached-test');
+    commitFile(repo, 'detached.txt', 'detached work');
+    git(repo, 'checkout main');
+
+    // detached HEAD にする
+    const headSha = git(repo, 'rev-parse HEAD').trim();
+    git(repo, `checkout ${headSha}`);
+
+    const output = run(repo, '--all');
+    expect(branches(repo)).not.toContain('detached-test');
+    expect(branches(repo)).toContain('main');
+    expect(output).toContain('[DELETED]');
+  });
+});
+
+describe('unknown option', () => {
+  // 不明なオプションでエラー終了する
+  test('exits with error for unknown options', () => {
+    const result = runExpectFail(repo, '--invalid');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Unknown option: --invalid');
   });
 });

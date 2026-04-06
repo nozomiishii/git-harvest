@@ -38,10 +38,11 @@ brew install nozomiishii/tap/git-harvest
 
 Set up aliases for quicker access. You can use both or just the one you prefer:
 
-`ghv`
+`ghv` / `ghv!`
 ```sh
 # Shell alias
 echo "alias ghv='git-harvest'" >> ~/.zshrc
+echo "alias 'ghv!'='git-harvest --all'" >> ~/.zshrc
 ```
 
 `git harvest`
@@ -68,7 +69,25 @@ git-harvest
 ```sh
 git-harvest --help     # Show help
 git-harvest --version  # Show version
+git-harvest --dry-run  # Show what would be deleted without actually deleting
+git-harvest --all      # Delete all branches and worktrees except the default branch
 ```
+
+### `--all` mode
+
+Deletes all branches and worktrees except the default branch and main working tree, regardless of merge status.
+
+| Resource | Default | `--all` |
+|---|---|---|
+| Main working tree | Keep | Keep |
+| Default branch | Keep | Keep |
+| Merged worktree/branch | Delete | Delete |
+| Unmerged worktree/branch | Keep (GROWING) | Delete |
+| Worktree with uncommitted changes | Keep (GROWING) | Delete |
+| Checked-out non-default branch | Keep (GROWING) | Error |
+
+- If a non-default branch is currently checked out, `--all` exits with an error before deleting anything.
+- `--dry-run --all` shows all resources as `[WILL DELETE]` without errors, including checked-out branches.
 
 ## Recommended workflow
 

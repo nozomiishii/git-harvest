@@ -38,10 +38,11 @@ brew install nozomiishii/tap/git-harvest
 
 エイリアスを設定するとより手軽に実行できます。両方設定しても片方だけでも設定できます:
 
-`ghv`
+`ghv` / `ghv!`
 ```sh
 # シェルエイリアス
 echo "alias ghv='git-harvest'" >> ~/.zshrc
+echo "alias 'ghv!'='git-harvest --all'" >> ~/.zshrc
 ```
 
 `git harvest`
@@ -69,7 +70,25 @@ git-harvest
 ```sh
 git-harvest --help     # ヘルプを表示
 git-harvest --version  # バージョンを表示
+git-harvest --dry-run  # 実際には削除せず、削除対象を表示
+git-harvest --all      # デフォルトブランチ以外の全ブランチ・worktree を削除
 ```
+
+### `--all` モード
+
+マージ状態に関係なく、デフォルトブランチとメインワーキングツリー以外の全リソースを削除します。
+
+| リソース | 通常 | `--all` |
+|---|---|---|
+| メインワーキングツリー | 残る | 残る |
+| デフォルトブランチ | 残る | 残る |
+| マージ済み worktree / ブランチ | 削除 | 削除 |
+| 未マージ worktree / ブランチ | 残る (GROWING) | 削除 |
+| 未コミット変更のある worktree | 残る (GROWING) | 削除 |
+| チェックアウト中の非デフォルトブランチ | 残る (GROWING) | エラー終了 |
+
+- デフォルトブランチ以外をチェックアウト中に `--all` を実行すると、何も削除せずエラー終了します。
+- `--dry-run --all` ではチェックアウト中のブランチも含め全リソースを `[WILL DELETE]` で表示します（エラーにならない）。
 
 ## おすすめの運用法
 
