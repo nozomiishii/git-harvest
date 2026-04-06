@@ -295,20 +295,25 @@ self_update() {
 }
 
 DRY_RUN=false
+DELETE_ALL=false
 
-case "${1:-}" in
--v | --version)
-  echo "git-harvest v$VERSION"
-  exit 0
-  ;;
---update)
-  self_update
-  ;;
--n | --dry-run)
-  DRY_RUN=true
-  ;;
--h | --help)
-  cat <<'HELP'
+while [ $# -gt 0 ]; do
+  case "$1" in
+  -v | --version)
+    echo "git-harvest v$VERSION"
+    exit 0
+    ;;
+  --update)
+    self_update
+    ;;
+  -n | --dry-run)
+    DRY_RUN=true
+    ;;
+  --all)
+    DELETE_ALL=true
+    ;;
+  -h | --help)
+    cat <<'HELP'
 git-harvest - Clean up merged branches and worktrees
 
 Usage: git-harvest [options]
@@ -317,11 +322,18 @@ Options:
   -h, --help     Show this help
   -v, --version  Show version
   -n, --dry-run  Show what would be deleted without actually deleting
+  --all          Delete all branches and worktrees except the default branch
   --update       Update to the latest version
 HELP
-  exit 0
-  ;;
-esac
+    exit 0
+    ;;
+  *)
+    echo "Unknown option: $1" >&2
+    exit 1
+    ;;
+  esac
+  shift
+done
 
 # リモートのデフォルトブランチ名を取得する (例: main, master)
 # 未設定の場合はリモートから自動取得を試みる
@@ -378,7 +390,17 @@ cleanup_worktrees() {
       found=true
     fi
 
-    if echo "$merged_branches" | grep -qxF "$branch"; then
+    if [ "$DELETE_ALL" = true ]; then
+      # --all: 全 worktree を削除対象にする
+      if [ "$DRY_RUN" = true ]; then
+        printf "    [WILL DELETE]  %s\n" "$wt"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      else
+        git worktree remove --force "$wt"
+        printf "    [DELETED]      %s\n" "$wt"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      fi
+    elif echo "$merged_branches" | grep -qxF "$branch"; then
       # マージ済み: 未コミット変更があるかチェック
       if has_uncommitted_changes "$wt"; then
         printf "    [GROWING]      %s (uncommitted changes)\n" "$wt"
@@ -437,7 +459,17 @@ cleanup_branches() {
       found=true
     fi
 
-    if echo "$deletable_branches" | grep -qxF "$branch"; then
+    if [ "$DELETE_ALL" = true ]; then
+      # --all: 全ブランチを削除対象にする（事前チェック済みなのでチェックアウト中は dry-run のみ）
+      if [ "$DRY_RUN" = true ]; then
+        printf "    [WILL DELETE]  %s\n" "$branch"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      else
+        git branch -D "$branch" >/dev/null 2>&1
+        printf "    [DELETED]      %s\n" "$branch"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      fi
+    elif echo "$deletable_branches" | grep -qxF "$branch"; then
       # 削除対象: チェックアウト中かチェック
       if is_current_head "$branch" || is_checked_out_in_worktree "$branch"; then
         printf "    [GROWING]      %s (currently checked out)\n" "$branch"
@@ -452,7 +484,7 @@ cleanup_branches() {
     else
       printf "    [GROWING]      %s (not merged)\n" "$branch"
     fi
-  done < <(git branch | sed 's/^[*+ ]*//')
+  done < <(git branch | sed 's/^[*+ ]*//' | grep -v '^(')
   # リモートで削除済みの追跡ブランチを整理
   if [ "$DRY_RUN" = false ]; then git fetch --prune >/dev/null 2>&1 || true; fi
 }
@@ -465,6 +497,17 @@ main() {
   local base
   base=$(default_branch)
 
+  # --all の事前チェック: デフォルトブランチ以外をチェックアウト中ならエラー終了
+  if [ "$DELETE_ALL" = true ] && [ "$DRY_RUN" = false ]; then
+    local current
+    current=$(git symbolic-ref --short HEAD 2>/dev/null) || true
+    if [ -n "$current" ] && [ "$current" != "$base" ]; then
+      printf "\n  Error: Cannot delete branch '%s' (currently checked out)\n" "$current" >&2
+      printf "  Run: git checkout %s && git-harvest --all\n\n" "$base" >&2
+      exit 1
+    fi
+  fi
+
   if [ "$DRY_RUN" = true ]; then
     printf "\n  Dry run mode - nothing will be deleted\n"
   fi
@@ -472,60 +515,63 @@ main() {
   rainbow_animate_start "git harvest"
   printf '\n'
 
-  # デフォルトブランチにマージ済みのローカルブランチ一覧を取得
-  # 検出手段: 1) first-parent 上のコミット一致、2) ancestor チェック、
-  # 3) 仮想 squash + git cherry、4) patch-id ベースの cherry-pick フォールバック
-  local first_parent_commits
-  first_parent_commits=$(git rev-list --first-parent "$base" 2>/dev/null) || true
-
   local all_branches
-  all_branches=$(git branch | sed 's/^[*+ ]*//')
+  all_branches=$(git branch | sed 's/^[*+ ]*//' | grep -v '^(')
 
   local merged_branches=""
   local no_unique_branches=""
 
-  while read -r branch; do
-    [ "$branch" = "$base" ] && continue
-    # 独自コミットがないブランチ（HEAD が base の first-parent 上にある）
-    local branch_head
-    branch_head=$(git rev-parse "$branch" 2>/dev/null) || continue
-    if echo "$first_parent_commits" | grep -q "^${branch_head}$"; then
-      no_unique_branches="${no_unique_branches:+$no_unique_branches
+  # --all の場合はマージ検出をスキップ（全ブランチが削除対象）
+  if [ "$DELETE_ALL" = false ]; then
+    # デフォルトブランチにマージ済みのローカルブランチ一覧を取得
+    # 検出手段: 1) first-parent 上のコミット一致、2) ancestor チェック、
+    # 3) 仮想 squash + git cherry、4) patch-id ベースの cherry-pick フォールバック
+    local first_parent_commits
+    first_parent_commits=$(git rev-list --first-parent "$base" 2>/dev/null) || true
+
+    while read -r branch; do
+      [ "$branch" = "$base" ] && continue
+      # 独自コミットがないブランチ（HEAD が base の first-parent 上にある）
+      local branch_head
+      branch_head=$(git rev-parse "$branch" 2>/dev/null) || continue
+      if echo "$first_parent_commits" | grep -q "^${branch_head}$"; then
+        no_unique_branches="${no_unique_branches:+$no_unique_branches
 }$branch"
-      continue
-    fi
-    # 通常マージ: ブランチが base の祖先であれば完全マージ済み
-    if git merge-base --is-ancestor "$branch" "$base" 2>/dev/null; then
-      merged_branches="${merged_branches:+$merged_branches
+        continue
+      fi
+      # 通常マージ: ブランチが base の祖先であれば完全マージ済み
+      if git merge-base --is-ancestor "$branch" "$base" 2>/dev/null; then
+        merged_branches="${merged_branches:+$merged_branches
 }$branch"
-      continue
-    fi
-    # squash マージ: commit-tree で仮想 squash コミットを作成し git cherry で比較
-    # merge-base が見つからない場合（orphaned ブランチ）はスキップして cherry-pick フォールバックへ
-    local merge_base
-    merge_base=$(git merge-base "$base" "$branch" 2>/dev/null) || true
-    if [ -n "$merge_base" ]; then
-      local squash_commit
-      squash_commit=$(git commit-tree "$branch^{tree}" -p "$merge_base" -m "_" 2>/dev/null) || true
-      if [ -n "$squash_commit" ]; then
-        local cherry_out
-        cherry_out=$(git cherry "$base" "$squash_commit" 2>/dev/null) || true
-        if [ -n "$cherry_out" ] && [ "$(echo "$cherry_out" | grep -c '^+')" -eq 0 ]; then
-          merged_branches="${merged_branches:+$merged_branches
+        continue
+      fi
+      # squash マージ: commit-tree で仮想 squash コミットを作成し git cherry で比較
+      # merge-base が見つからない場合（orphaned ブランチ）はスキップして cherry-pick フォールバックへ
+      local merge_base
+      merge_base=$(git merge-base "$base" "$branch" 2>/dev/null) || true
+      if [ -n "$merge_base" ]; then
+        local squash_commit
+        squash_commit=$(git commit-tree "$branch^{tree}" -p "$merge_base" -m "_" 2>/dev/null) || true
+        if [ -n "$squash_commit" ]; then
+          local cherry_out
+          cherry_out=$(git cherry "$base" "$squash_commit" 2>/dev/null) || true
+          if [ -n "$cherry_out" ] && [ "$(echo "$cherry_out" | grep -c '^+')" -eq 0 ]; then
+            merged_branches="${merged_branches:+$merged_branches
 }$branch"
-          continue
+            continue
+          fi
         fi
       fi
-    fi
-    # cherry-pick フォールバック: patch-id ベースで全コミットを比較
-    # orphaned ブランチ（履歴書き換えで共通祖先なし）や仮想 squash が一致しないケースをカバー
-    local cherry_pick_unique
-    cherry_pick_unique=$(git log --cherry-pick --right-only --no-merges --oneline "$base"..."$branch" 2>/dev/null)
-    if [ -z "$cherry_pick_unique" ]; then
-      merged_branches="${merged_branches:+$merged_branches
+      # cherry-pick フォールバック: patch-id ベースで全コミットを比較
+      # orphaned ブランチ（履歴書き換えで共通祖先なし）や仮想 squash が一致しないケースをカバー
+      local cherry_pick_unique
+      cherry_pick_unique=$(git log --cherry-pick --right-only --no-merges --oneline "$base"..."$branch" 2>/dev/null)
+      if [ -z "$cherry_pick_unique" ]; then
+        merged_branches="${merged_branches:+$merged_branches
 }$branch"
-    fi
-  done <<<"$all_branches"
+      fi
+    done <<<"$all_branches"
+  fi
 
   # デフォルトブランチのみ（他にブランチも linked worktree もない）場合
   local linked_wt_count
