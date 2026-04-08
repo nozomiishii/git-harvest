@@ -72,6 +72,7 @@ git-harvest --help     # ヘルプを表示
 git-harvest --version  # バージョンを表示
 git-harvest --dry-run  # 実際には削除せず、削除対象を表示
 git-harvest --all      # デフォルトブランチ以外の全ブランチ・worktree を削除
+git-harvest logo       # git-harvest のロゴを表示
 ```
 
 ### `--all` モード

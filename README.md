@@ -71,6 +71,7 @@ git-harvest --help     # Show help
 git-harvest --version  # Show version
 git-harvest --dry-run  # Show what would be deleted without actually deleting
 git-harvest --all      # Delete all branches and worktrees except the default branch
+git-harvest logo       # Show the git-harvest logo
 ```
 
 ### `--all` mode

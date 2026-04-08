@@ -116,6 +116,25 @@ rainbow_animate_stop() {
   fi
 }
 
+# 緑グラデーションロゴを表示 (下→上で明るくなる)
+print_logo() {
+  local lines=(
+    ' \|/                     \|/'
+    '\\|//  ~~~~~~~~~~~~~~~  \\|//'
+    ' \|/        G I T        \|/'
+    '  |     H A R V E S T     |'
+    ' _|_______________________|_'
+  )
+  local colors=("120;230;120" "90;200;90" "60;170;60" "40;145;40" "20;120;20")
+  if [ "$USE_COLOR" = false ]; then
+    for line in "${lines[@]}"; do printf '%s\n' "$line"; done
+    return
+  fi
+  for i in "${!lines[@]}"; do
+    printf '\033[38;2;%sm%s\033[0m\n' "${colors[$i]}" "${lines[$i]}"
+  done
+}
+
 # 静的レインボーヘッダーを表示
 rainbow_static() {
   printf '  '
@@ -287,6 +306,10 @@ while [ $# -gt 0 ]; do
     echo "git-harvest v$VERSION"
     exit 0
     ;;
+  logo)
+    print_logo
+    exit 0
+    ;;
   --update)
     self_update
     ;;
@@ -308,6 +331,9 @@ Options:
   -n, --dry-run  Show what would be deleted without actually deleting
   --all          Delete all branches and worktrees except the default branch
   --update       Update to the latest version
+
+Subcommands:
+  logo           Show the git-harvest logo
 HELP
     exit 0
     ;;

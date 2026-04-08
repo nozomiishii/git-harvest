@@ -35,6 +35,14 @@ bun install
 
 README.ja.md（日本語）と README.md（英語）は同じ構成を保つ。新しい項目を追加する際は両方を更新する。
 
+## CLI 変更時のチェックリスト
+
+コマンド・オプション・サブコマンドを追加・変更・削除した場合は、以下を必ず同時に更新する:
+
+1. `lib/git-harvest` の help テキスト（`--help` 出力）
+2. `README.md` の Options / Usage セクション
+3. `README.ja.md` の対応セクション
+
 ## アーキテクチャ概要
 
 マージ済みブランチと worktree を自動で整理する CLI ツール。
