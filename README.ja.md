@@ -2,7 +2,11 @@
 
 [English](./README.md) | 日本語
 
-<img src="demo/logo.gif" alt="logo" width="480" />
+<br>
+<div align="center">
+  <img src="demo/logo.gif" alt="logo" width="480" />
+</div>
+<br>
 
 branch と worktree を自動で整理するツール
 
