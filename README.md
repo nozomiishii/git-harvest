@@ -2,7 +2,9 @@
 
 English | [日本語](./README.ja.md)
 
-Clean up merged branches and worktrees (supports squash merges).
+<img src="demo/logo.gif" alt="logo" width="480" />
+
+Clean up branches and worktrees.
 
 
 ## Run directly without installing
@@ -16,6 +18,22 @@ pnpx git-harvest@latest
 
 # npm
 npx -y git-harvest@latest
+```
+
+### (Optional) Set up aliases
+
+```sh
+# bun
+echo "alias ghv='bunx git-harvest@latest'" >> ~/.zshrc
+echo "alias 'ghv!'='bunx git-harvest@latest --all'" >> ~/.zshrc
+
+# pnpm
+echo "alias ghv='pnpx git-harvest@latest'" >> ~/.zshrc
+echo "alias 'ghv!'='pnpx git-harvest@latest --all'" >> ~/.zshrc
+
+# npm
+echo "alias ghv='npx -y git-harvest@latest'" >> ~/.zshrc
+echo "alias 'ghv!'='npx -y git-harvest@latest --all'" >> ~/.zshrc
 ```
 
 ## Install
@@ -71,23 +89,8 @@ git-harvest --help     # Show help
 git-harvest --version  # Show version
 git-harvest --dry-run  # Show what would be deleted without actually deleting
 git-harvest --all      # Delete all branches and worktrees except the default branch
+git-harvest logo       # Show the git-harvest logo
 ```
-
-### `--all` mode
-
-Deletes all branches and worktrees except the default branch and main working tree, regardless of merge status.
-
-| Resource | Default | `--all` |
-|---|---|---|
-| Main working tree | Keep | Keep |
-| Default branch | Keep | Keep |
-| Merged worktree/branch | Delete | Delete |
-| Unmerged worktree/branch | Keep (GROWING) | Delete |
-| Worktree with uncommitted changes | Keep (GROWING) | Delete |
-| Checked-out non-default branch | Keep (GROWING) | Error |
-
-- If a non-default branch is currently checked out, `--all` exits with an error before deleting anything.
-- `--dry-run --all` shows all resources as `[WILL DELETE]` without errors, including checked-out branches.
 
 ## Recommended workflow
 
@@ -111,42 +114,25 @@ post-merge:
 
 ## What it does
 
-1. Detects the default branch (main/master) from `origin/HEAD`
-2. Finds local branches already merged into the default branch (including squash merges)
-3. Removes worktrees associated with merged branches
-4. Deletes the merged branches
-5. Prunes stale remote-tracking references (`git fetch --prune`)
+### Worktrees
 
-### Status display
-
-git-harvest shows the status of all worktrees and branches.
-
-#### Worktrees
-
-| State | Display | Description | Action |
+| State | Display | Default | `--all` |
 |---|---|---|---|
-| Merged + clean | `[DELETED]` / `[WILL DELETE]` | Ready to harvest | Remove |
-| Merged + uncommitted changes | `[GROWING] (uncommitted changes)` | Has unsaved work, skipped | Keep |
-| Not merged | `[GROWING] (not merged)` | Not yet merged | Keep |
-| No unique commits | `[GROWING] (no unique commits)` | Just created, no work started yet | Keep |
-| Main working tree | *(not shown)* | Always excluded | Keep |
-| Default branch | *(not shown)* | Always excluded | Keep |
+| Merged + clean | `[DELETED]` / `[WILL DELETE]` | Delete | Delete |
+| Merged + uncommitted changes | `[GROWING] (uncommitted changes)` | Keep | Delete |
+| Not merged | `[GROWING] (not merged)` | Keep | Delete |
+| No unique commits | `[GROWING] (no unique commits)` | Keep | Delete |
+| Main working tree | *(not shown)* | Keep | Keep |
 
-#### Branches
+### Branches
 
-| State | Display | Description | Action |
+| State | Display | Default | `--all` |
 |---|---|---|---|
-| Merged + deletable | `[DELETED]` / `[WILL DELETE]` | Ready to harvest | Remove |
-| Merged + currently checked out | `[GROWING] (currently checked out)` | Currently in use, skipped | Keep |
-| Not merged | `[GROWING] (not merged)` | Not yet merged | Keep |
-| No unique commits | `[DELETED]` / `[WILL DELETE]` | Leftover branch with no worktree, deleted | Remove |
-| Default branch | *(not shown)* | Always excluded | Keep |
+| Merged | `[DELETED]` / `[WILL DELETE]` | Delete | Delete |
+| Merged + checked out | `[GROWING] (currently checked out)` | Keep | Error |
+| Not merged | `[GROWING] (not merged)` | Keep | Delete |
+| No unique commits | `[DELETED]` / `[WILL DELETE]` | Delete | Delete |
+| Default branch | *(not shown)* | Keep | Keep |
 
-### Merge detection
+> `--all` exits with an error if a non-default branch is currently checked out. `--dry-run --all` shows all resources as `[WILL DELETE]` without errors.
 
-The following methods are tried in order, and a branch is considered merged if any of them succeeds:
-
-1. **First-parent match** — Branch HEAD is on the default branch's first-parent chain (no unique commits)
-2. **Ancestor check** — Regular merge detection via `git merge-base --is-ancestor`
-3. **Virtual squash + git cherry** — Creates a virtual squash commit with `git commit-tree` and checks with `git cherry`
-4. **Cherry-pick fallback** — Patch-id based comparison of all commits via `git log --cherry-pick` (handles orphaned branches after history rewrite)
