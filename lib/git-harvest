@@ -323,7 +323,7 @@ while [ $# -gt 0 ]; do
     ;;
   -h | --help)
     cat <<'HELP'
-git-harvest - Clean up merged branches and worktrees
+git-harvest - Clean up branches and worktrees
 
 Usage: git-harvest [options]
 
