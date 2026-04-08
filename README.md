@@ -2,7 +2,11 @@
 
 English | [日本語](./README.ja.md)
 
-<img src="demo/logo.gif" alt="logo" width="480" />
+<br>
+<div align="center">
+  <img src="demo/logo.gif" alt="logo" width="480" />
+</div>
+<br>
 
 Clean up branches and worktrees.
 
