@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.20](https://github.com/nozomiishii/git-harvest/compare/v0.1.19...v0.1.20) (2026-04-08)
+
+
+### Features
+
+* add logo subcommand with green gradient ASCII art ([#83](https://github.com/nozomiishii/git-harvest/issues/83)) ([96a06ba](https://github.com/nozomiishii/git-harvest/commit/96a06ba87b292c11826795ff27184b2f91fbbfe2))
+
 ## [0.1.19](https://github.com/nozomiishii/git-harvest/compare/v0.1.18...v0.1.19) (2026-04-06)
 
 
