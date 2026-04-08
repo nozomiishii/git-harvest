@@ -126,13 +126,15 @@ print_logo() {
     ' _|_______________________|_'
   )
   local colors=("120;230;120" "90;200;90" "60;170;60" "40;145;40" "20;120;20")
+  printf '\n'
   if [ "$USE_COLOR" = false ]; then
     for line in "${lines[@]}"; do printf '%s\n' "$line"; done
-    return
+  else
+    for i in "${!lines[@]}"; do
+      printf '\033[38;2;%sm%s\033[0m\n' "${colors[$i]}" "${lines[$i]}"
+    done
   fi
-  for i in "${!lines[@]}"; do
-    printf '\033[38;2;%sm%s\033[0m\n' "${colors[$i]}" "${lines[$i]}"
-  done
+  printf '\n'
 }
 
 # 静的レインボーヘッダーを表示
