@@ -1,14 +1,6 @@
 name: Test
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'lib/**'
-      - 'package.json'
-      - 'bun.lock'
   pull_request:
 
 concurrency:
