@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.2.0](https://github.com/nozomiishii/git-harvest/compare/v0.1.20...v0.2.0) (2026-04-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* branch-protection required checks must move from `actionlint / lint` and `secretlint / scan` to `github-actions / required` and `secret-scan / secretlint` before merge.
+
+### Bug Fixes
+
+* **ci:** scope github-actions trigger to pull_request only ([#108](https://github.com/nozomiishii/git-harvest/issues/108)) ([f1fbcb1](https://github.com/nozomiishii/git-harvest/commit/f1fbcb10013cf5f2202909a706fa35b18810a6f6))
+
+
+### Miscellaneous
+
+* drop CLAUDE.md rules moved to global ([#87](https://github.com/nozomiishii/git-harvest/issues/87)) ([ca7973d](https://github.com/nozomiishii/git-harvest/commit/ca7973dd93d6b8e163139e91aa32c04d73c61cc8))
+* migrate reusable workflows to v3.0.0 ([#106](https://github.com/nozomiishii/git-harvest/issues/106)) ([a85c139](https://github.com/nozomiishii/git-harvest/commit/a85c13952b70de0c8ac0e493550e95d78313ff78))
+* migrate shared CI workflows to nozomiishii/workflows v1.1.0 ([#89](https://github.com/nozomiishii/git-harvest/issues/89)) ([41046e7](https://github.com/nozomiishii/git-harvest/commit/41046e757b7c5a1403f14aa54e8abbc9019af81b))
+* pin ghcr.io/charmbracelet/vhs docker tag to 9d5fc3d ([#90](https://github.com/nozomiishii/git-harvest/issues/90)) ([65d11e3](https://github.com/nozomiishii/git-harvest/commit/65d11e3c1f68cc4243535f16ce609f527a97e16c))
+* update actions/checkout action to v6.0.2 ([#101](https://github.com/nozomiishii/git-harvest/issues/101)) ([88bad31](https://github.com/nozomiishii/git-harvest/commit/88bad31ba7bcf621c109aa42450cc3949e1229f8))
+* update actions/create-github-app-token action to v3 ([#96](https://github.com/nozomiishii/git-harvest/issues/96)) ([b468ab9](https://github.com/nozomiishii/git-harvest/commit/b468ab9d58491aa5e80828aea833f997791ed855))
+* update actions/create-github-app-token action to v3.1.1 ([#103](https://github.com/nozomiishii/git-harvest/issues/103)) ([3f5c5a3](https://github.com/nozomiishii/git-harvest/commit/3f5c5a304f9bf72192751833263f4ce589827c8a))
+* update actions/setup-node action to v6 ([#98](https://github.com/nozomiishii/git-harvest/issues/98)) ([8c3b7a9](https://github.com/nozomiishii/git-harvest/commit/8c3b7a9b0951ac6932ecf8236bb9301cd17a77ec))
+* update actions/setup-node action to v6.4.0 ([#104](https://github.com/nozomiishii/git-harvest/issues/104)) ([8df5d27](https://github.com/nozomiishii/git-harvest/commit/8df5d2768f45ea1d91dad1cd427feed466ea7be2))
+* update dependency @types/bun to v1.3.12 ([#93](https://github.com/nozomiishii/git-harvest/issues/93)) ([8c1c334](https://github.com/nozomiishii/git-harvest/commit/8c1c334d9b764d5ab38fb5806eb4fb5a8e5d69cb))
+* update dependency release-please to v17.6.0 ([#94](https://github.com/nozomiishii/git-harvest/issues/94)) ([1bf871c](https://github.com/nozomiishii/git-harvest/commit/1bf871c3741f121589bb5030ab70ca7bcc899b1c))
+* update dorny/paths-filter action to v4 ([#99](https://github.com/nozomiishii/git-harvest/issues/99)) ([d3e5370](https://github.com/nozomiishii/git-harvest/commit/d3e5370691a56918a371d64e7675bcb3ba2fc53e))
+* update dorny/paths-filter action to v4.0.1 ([#102](https://github.com/nozomiishii/git-harvest/issues/102)) ([15fc968](https://github.com/nozomiishii/git-harvest/commit/15fc968e0f3f4f1197dbc0f3ababc4d68c7e198e))
+* update nozomiishii/workflows digest to f0cee3c ([#109](https://github.com/nozomiishii/git-harvest/issues/109)) ([bd5358c](https://github.com/nozomiishii/git-harvest/commit/bd5358c798052901df9c4c2d4a8b02215b24ea43))
+* update oven-sh/setup-bun digest to 0c5077e ([#92](https://github.com/nozomiishii/git-harvest/issues/92)) ([849beaa](https://github.com/nozomiishii/git-harvest/commit/849beaa5798eb4b6116c389a5ca0cbde77c1eefd))
+
 ## [0.1.20](https://github.com/nozomiishii/git-harvest/compare/v0.1.19...v0.1.20) (2026-04-08)
 
 
