@@ -17,6 +17,7 @@ bun install
 - PR タイトルは英語 semantic 形式で記述する。
 - ブランチ保護は **GitHub Rulesets のみ**で管理する。従来の Branch Protection Rules は使用しない。
 - Rulesets の bypass_actors は空（誰も bypass 不可）を維持する。
+- `BREAKING CHANGE:` フッターは **`git-harvest` の公開 API（CLI のコマンド・オプション・出力フォーマット）の互換性を破る変更にのみ**使用する。CI / workflows / branch protection / リポジトリ運用上の変更には使わない（release-please が `bump-minor-pre-major: true` の設定下で minor bump を実行し、CHANGELOG に Breaking Changes として表示してしまうため。実例: PR #106 で workflow 移行を BREAKING CHANGE と書いたことで 0.1.x → 0.2.0 と誤判定された）。これらの注意事項は PR 本文に記述する。
 
 ## テストスタイル
 
