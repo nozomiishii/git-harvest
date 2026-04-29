@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.22](https://github.com/nozomiishii/git-harvest/compare/v0.1.21...v0.1.22) (2026-04-28)
+
+
+### Miscellaneous
+
+* **ci:** delegate homebrew formula updates to renovate ([#115](https://github.com/nozomiishii/git-harvest/issues/115)) ([9989d30](https://github.com/nozomiishii/git-harvest/commit/9989d3048cb710b0595793a84334af19c1291cd5))
+* update nozomiishii/workflows action to v3.0.1 ([#117](https://github.com/nozomiishii/git-harvest/issues/117)) ([cc725ed](https://github.com/nozomiishii/git-harvest/commit/cc725ed79fe64b458a8bfcd205ff690bd72e0876))
+
 ## [0.1.21](https://github.com/nozomiishii/git-harvest/compare/v0.1.20...v0.1.21) (2026-04-28)
 
 
