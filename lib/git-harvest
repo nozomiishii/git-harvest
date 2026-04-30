@@ -68,7 +68,7 @@ HEADER_HUES="0 36 72 -1 108 144 180 216 252 288 324"
 # hues はスペース区切りの色相リスト (-1 = スペース)
 sparkle_frame() {
   local text="$1" hues="$2"
-  printf '\r  '
+  printf '\r'
   local idx=0
   for hue in $hues; do
     if [ "$hue" = "-1" ]; then
@@ -139,7 +139,6 @@ print_logo() {
 
 # 静的レインボーヘッダーを表示
 rainbow_static() {
-  printf '  '
   if [ "$USE_COLOR" = false ]; then
     printf '%s' "$HEADER_TEXT"
   else
@@ -164,7 +163,7 @@ sparkle_animate() {
   local text="$1" hue="$2" frames="${3:-$SPARKLE_FRAMES}" interval="${4:-$SPARKLE_INTERVAL}"
   local len=${#text}
   if [ "$USE_COLOR" = false ] || [ "$len" -eq 0 ]; then
-    printf '  %s' "$text"
+    printf '%s' "$text"
     return
   fi
   # 全文字に同じ hue を割り当てた hues 文字列を生成
@@ -246,8 +245,8 @@ show_update_notification() {
 
   cat >&2 <<EOF
 
-  Update available: v${VERSION} -> v${latest}
-  Run: git-harvest --update
+Update available: v${VERSION} -> v${latest}
+Run: git-harvest --update
 
 EOF
 }
@@ -398,36 +397,36 @@ cleanup_worktrees() {
     [ "$branch" = "$base" ] && continue
 
     if [ "$found" = false ]; then
-      printf "\n  Worktrees\n"
+      printf "\nWorktrees\n"
       found=true
     fi
 
     if [ "$DELETE_ALL" = true ]; then
       # --all: 全 worktree を削除対象にする
       if [ "$DRY_RUN" = true ]; then
-        printf "    [WILL DELETE]  %s\n" "$wt"
+        printf "[WILL DELETE]  %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
         git worktree remove --force "$wt"
-        printf "    [DELETED]      %s\n" "$wt"
+        printf "[DELETED]      %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     elif echo "$merged_branches" | grep -qxF "$branch"; then
       # マージ済み: 未コミット変更があるかチェック
       if has_uncommitted_changes "$wt"; then
-        printf "    [GROWING]      %s (uncommitted changes)\n" "$wt"
+        printf "[GROWING]      %s (uncommitted changes)\n" "$wt"
       elif [ "$DRY_RUN" = true ]; then
-        printf "    [WILL DELETE]  %s\n" "$wt"
+        printf "[WILL DELETE]  %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
         git worktree remove "$wt"
-        printf "    [DELETED]      %s\n" "$wt"
+        printf "[DELETED]      %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     elif echo "$no_unique_branches" | grep -qxF "$branch"; then
-      printf "    [GROWING]      %s (no unique commits)\n" "$wt"
+      printf "[GROWING]      %s (no unique commits)\n" "$wt"
     else
-      printf "    [GROWING]      %s (not merged)\n" "$wt"
+      printf "[GROWING]      %s (not merged)\n" "$wt"
     fi
   done < <(git worktree list --porcelain | grep --color=never '^worktree ' | sed 's/^worktree //')
   # 既に存在しない worktree の管理情報を削除
@@ -467,34 +466,34 @@ cleanup_branches() {
     [ "$branch" = "$base" ] && continue
 
     if [ "$found" = false ]; then
-      printf "\n  Branches\n"
+      printf "\nBranches\n"
       found=true
     fi
 
     if [ "$DELETE_ALL" = true ]; then
       # --all: 全ブランチを削除対象にする（事前チェック済みなのでチェックアウト中は dry-run のみ）
       if [ "$DRY_RUN" = true ]; then
-        printf "    [WILL DELETE]  %s\n" "$branch"
+        printf "[WILL DELETE]  %s\n" "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
         git branch -D "$branch" >/dev/null 2>&1
-        printf "    [DELETED]      %s\n" "$branch"
+        printf "[DELETED]      %s\n" "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     elif echo "$deletable_branches" | grep -qxF "$branch"; then
       # 削除対象: チェックアウト中かチェック
       if is_current_head "$branch" || is_checked_out_in_worktree "$branch"; then
-        printf "    [GROWING]      %s (currently checked out)\n" "$branch"
+        printf "[GROWING]      %s (currently checked out)\n" "$branch"
       elif [ "$DRY_RUN" = true ]; then
-        printf "    [WILL DELETE]  %s\n" "$branch"
+        printf "[WILL DELETE]  %s\n" "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
         git branch -D "$branch" >/dev/null 2>&1
-        printf "    [DELETED]      %s\n" "$branch"
+        printf "[DELETED]      %s\n" "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     else
-      printf "    [GROWING]      %s (not merged)\n" "$branch"
+      printf "[GROWING]      %s (not merged)\n" "$branch"
     fi
   done < <(git branch | sed 's/^[*+ ]*//' | grep -v '^(')
   # リモートで削除済みの追跡ブランチを整理
@@ -514,14 +513,14 @@ main() {
     local current
     current=$(git symbolic-ref --short HEAD 2>/dev/null) || true
     if [ -n "$current" ] && [ "$current" != "$base" ]; then
-      printf "\n  Error: Cannot delete branch '%s' (currently checked out)\n" "$current" >&2
-      printf "  Run: git checkout %s && git-harvest --all\n\n" "$base" >&2
+      printf "\nError: Cannot delete branch '%s' (currently checked out)\n" "$current" >&2
+      printf "Run: git checkout %s && git-harvest --all\n\n" "$base" >&2
       exit 1
     fi
   fi
 
   if [ "$DRY_RUN" = true ]; then
-    printf "\n  Dry run mode - nothing will be deleted\n"
+    printf "\nDry run mode - nothing will be deleted\n"
   fi
   printf '\n'
   rainbow_animate_start
@@ -597,7 +596,7 @@ main() {
   if [ "$other_branch_count" -eq 0 ] && [ "$linked_wt_count" -eq 0 ]; then
     rainbow_animate_stop
     rainbow_static
-    printf "  Nothing to harvest. All clean!\n\n"
+    printf "Nothing to harvest. All clean!\n\n"
   else
     # worktree が参照中のブランチは削除できないため、worktree を先に削除する
     DELETED_COUNT=0
@@ -611,7 +610,7 @@ main() {
     if [ "$DELETED_COUNT" -gt 0 ]; then
       sparkle_animate "Harvested!" 120
     else
-      printf "  Nothing to harvest. All growing!"
+      printf "Nothing to harvest. All growing!"
     fi
     printf '\n\n\n'
   fi
