@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.23](https://github.com/nozomiishii/git-harvest/compare/v0.1.22...v0.1.23) (2026-04-30)
+
+
+### Miscellaneous
+
+* remove leading indentation from output lines ([#118](https://github.com/nozomiishii/git-harvest/issues/118)) ([fddf189](https://github.com/nozomiishii/git-harvest/commit/fddf189b6b98f0ad739b87167bb1ae7ef5b34a61))
+
 ## [0.1.22](https://github.com/nozomiishii/git-harvest/compare/v0.1.21...v0.1.22) (2026-04-28)
 
 
