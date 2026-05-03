@@ -1,0 +1,8 @@
+# @see https://github.com/nozomiishii/configs/blob/main/packages/lefthook-config/README.md
+# 当面 .yml 拡張子の禁止のみ。commitlint や cleanup-merged など他フラグメントは
+# git-harvest に独自設定が無い / 循環依存になるため未採用。
+extends:
+  - ./node_modules/@nozomiishii/lefthook-config/hooks/pre-commit/lint/file-extension/yaml.yaml
+
+pre-commit:
+  parallel: true
