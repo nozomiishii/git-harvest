@@ -2,16 +2,6 @@
 
 このリポジトリで Claude Code (claude.ai/code) が作業する際のガイドラインです。
 
-## よく使うコマンド
-
-```bash
-# テスト実行
-bun test
-
-# 依存のインストール
-bun install
-```
-
 ## Git・GitHub 運用ルール
 
 - PR タイトルは英語 semantic 形式で記述する。
