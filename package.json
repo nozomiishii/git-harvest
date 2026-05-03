@@ -30,7 +30,8 @@
     "uninstall:local": "bash uninstall.sh"
   },
   "devDependencies": {
-    "@nozomiishii/lefthook-config": "0.4.1",
+    "@nozomiishii/commitlint-config": "0.2.0",
+    "@nozomiishii/lefthook-config": "0.6.0",
     "@types/bun": "1.3.13",
     "lefthook": "2.1.6",
     "release-please": "17.6.0"

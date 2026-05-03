@@ -1,8 +1,12 @@
-# @see https://github.com/nozomiishii/configs/blob/main/packages/lefthook-config/README.md
-# 当面 .yml 拡張子の禁止のみ。commitlint や cleanup-merged など他フラグメントは
-# git-harvest に独自設定が無い / 循環依存になるため未採用。
+# @see
+# https://github.com/evilmartians/lefthook
+#
+# Run the command to test:
+#   pnpx lefthook run [-v,--verbose] <hook-name>
+#
+# Examples:
+#   pnpx lefthook run --verbose pre-commit
+#   pnpx lefthook run --verbose commit-msg
+#   pnpx lefthook run --verbose post-merge
 extends:
-  - ./node_modules/@nozomiishii/lefthook-config/hooks/pre-commit/lint/file-extension/yaml.yaml
-
-pre-commit:
-  parallel: true
+  - ./node_modules/@nozomiishii/lefthook-config/recommended.yaml

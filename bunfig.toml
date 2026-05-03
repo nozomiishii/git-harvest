@@ -1,4 +1,0 @@
-# 公開から3日未満のバージョンをインストールしない（サプライチェーン攻撃対策）
-# https://bun.sh/docs/runtime/bunfig#install-minimumreleaseage
-[install]
-minimumReleaseAge = 259200
