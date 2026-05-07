@@ -5,8 +5,8 @@
     "": {
       "name": "git-harvest",
       "devDependencies": {
-        "@nozomiishii/commitlint-config": "0.2.0",
-        "@nozomiishii/lefthook-config": "0.6.0",
+        "@nozomiishii/commitlint-config": "0.2.2",
+        "@nozomiishii/lefthook-config": "0.7.0",
         "@types/bun": "1.3.13",
         "lefthook": "2.1.6",
         "release-please": "17.6.0",
@@ -18,9 +18,9 @@
 
     "@babel/helper-validator-identifier": ["@babel/helper-validator-identifier@7.28.5", "", {}, "sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q=="],
 
-    "@commitlint/cli": ["@commitlint/cli@20.5.2", "", { "dependencies": { "@commitlint/format": "^20.5.0", "@commitlint/lint": "^20.5.0", "@commitlint/load": "^20.5.2", "@commitlint/read": "^20.5.0", "@commitlint/types": "^20.5.0", "tinyexec": "^1.0.0", "yargs": "^17.0.0" }, "bin": { "commitlint": "./cli.js" } }, "sha512-IXr5xd3IX8SEG936P8gcpozRplkDeDSwJlt8UvoY1winwIy2udTbQ/cOCgbaaxcjdDqVoS29VUcz/wkwnSozbA=="],
+    "@commitlint/cli": ["@commitlint/cli@20.5.3", "", { "dependencies": { "@commitlint/format": "^20.5.0", "@commitlint/lint": "^20.5.3", "@commitlint/load": "^20.5.3", "@commitlint/read": "^20.5.0", "@commitlint/types": "^20.5.0", "tinyexec": "^1.0.0", "yargs": "^17.0.0" }, "bin": { "commitlint": "./cli.js" } }, "sha512-OJdL0EXWD5y9LPa0nr/geOwzaS8BsdaybKkcloB0JgsguGxNv2R+hC2FTPqrAcprg35zF33KOQerY0x8W1aesA=="],
 
-    "@commitlint/config-conventional": ["@commitlint/config-conventional@20.5.0", "", { "dependencies": { "@commitlint/types": "^20.5.0", "conventional-changelog-conventionalcommits": "^9.2.0" } }, "sha512-t3Ni88rFw1XMa4nZHgOKJ8fIAT9M2j5TnKyTqJzsxea7FUetlNdYFus9dz+MhIRZmc16P0PPyEfh6X2d/qw8SA=="],
+    "@commitlint/config-conventional": ["@commitlint/config-conventional@20.5.3", "", { "dependencies": { "@commitlint/types": "^20.5.0", "conventional-changelog-conventionalcommits": "^9.2.0" } }, "sha512-j34Qqeaa152chJgz2ysyk0BCpHenJn1lV0Rx0VXf8k3ccQcED+48EZrzMvo9jLmJUyBrrBwvu89I+2er4gW7QQ=="],
 
     "@commitlint/config-validator": ["@commitlint/config-validator@20.5.0", "", { "dependencies": { "@commitlint/types": "^20.5.0", "ajv": "^8.11.0" } }, "sha512-T/Uh6iJUzyx7j35GmHWdIiGRQB+ouZDk0pwAaYq4SXgB54KZhFdJ0vYmxiW6AMYICTIWuyMxDBl1jK74oFp/Gw=="],
 
@@ -64,9 +64,9 @@
 
     "@jsep-plugin/regex": ["@jsep-plugin/regex@1.0.4", "", { "peerDependencies": { "jsep": "^0.4.0||^1.0.0" } }, "sha512-q7qL4Mgjs1vByCaTnDFcBnV9HS7GVPJX5vyVoCgZHNSC9rjwIlmbXG5sUuorR5ndfHAIlJ8pVStxvjXHbNvtUg=="],
 
-    "@nozomiishii/commitlint-config": ["@nozomiishii/commitlint-config@0.2.0", "", { "dependencies": { "@commitlint/cli": "20.5.2", "@commitlint/config-conventional": "20.5.0", "@commitlint/types": "20.5.0" }, "bin": { "nozo-commitlint": "dist/cli.js" } }, "sha512-IvOVxqYTM6LoaIrH5ZrB6Nesqq3RdYHMBCpf3vgFJbYZTq2vitXgWtFAwl7Bt4Z1304CD1/msxjHzElE2l6Amg=="],
+    "@nozomiishii/commitlint-config": ["@nozomiishii/commitlint-config@0.2.2", "", { "dependencies": { "@commitlint/cli": "20.5.3", "@commitlint/config-conventional": "20.5.3", "@commitlint/types": "20.5.0" }, "bin": { "nozo-commitlint": "dist/cli.js", "nozo-commitlint-init": "dist/init.js" } }, "sha512-GmlcpaFaiqiKtRlS2zCZf4AFHMDdYvqVbygUjHceP2hMvNsXpCWjwF2e0Ia3fcqKwLxfyKqjsOyo7bvcKsUbFA=="],
 
-    "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@0.6.0", "", { "dependencies": { "git-harvest": "0.1.23", "lefthook": "2.1.6" }, "bin": { "nozo-git-harvest": "dist/cli.js" } }, "sha512-roe6WjICHgSSPZys+duFuioUfjLZ4MoFox/jgIsL+vV1p7tLm21odJ/0dh85BsF1TpUx9w7S1Fi304bVt1ITqA=="],
+    "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@0.7.0", "", { "dependencies": { "git-harvest": "0.1.23" }, "peerDependencies": { "lefthook": "2.1.6" }, "bin": { "nozo-git-harvest": "dist/cli.js", "nozo-lefthook-init": "dist/init.js" } }, "sha512-biAtxppLFkhDMFKQffzKG8xi+Ujwf028uy5QWqRqcpGe9X8easolNhNz17thj4mCKssbcQrOriQg8BDiLwb9ng=="],
 
     "@octokit/auth-token": ["@octokit/auth-token@4.0.0", "", {}, "sha512-tY/msAuJo6ARbK6SPIxZrPBms3xPbfwBrulZe0Wtr/DIY9lje2HeV1uoebShn6mx7SjCHif6EjMvoREj+gZ+SA=="],
 
