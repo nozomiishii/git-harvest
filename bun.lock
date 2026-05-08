@@ -5,8 +5,8 @@
     "": {
       "name": "git-harvest",
       "devDependencies": {
-        "@nozomiishii/commitlint-config": "0.2.2",
-        "@nozomiishii/lefthook-config": "0.7.0",
+        "@nozomiishii/commitlint-config": "0.2.3",
+        "@nozomiishii/lefthook-config": "0.7.1",
         "@types/bun": "1.3.13",
         "lefthook": "2.1.6",
         "release-please": "17.6.0",
@@ -64,9 +64,9 @@
 
     "@jsep-plugin/regex": ["@jsep-plugin/regex@1.0.4", "", { "peerDependencies": { "jsep": "^0.4.0||^1.0.0" } }, "sha512-q7qL4Mgjs1vByCaTnDFcBnV9HS7GVPJX5vyVoCgZHNSC9rjwIlmbXG5sUuorR5ndfHAIlJ8pVStxvjXHbNvtUg=="],
 
-    "@nozomiishii/commitlint-config": ["@nozomiishii/commitlint-config@0.2.2", "", { "dependencies": { "@commitlint/cli": "20.5.3", "@commitlint/config-conventional": "20.5.3", "@commitlint/types": "20.5.0" }, "bin": { "nozo-commitlint": "dist/cli.js", "nozo-commitlint-init": "dist/init.js" } }, "sha512-GmlcpaFaiqiKtRlS2zCZf4AFHMDdYvqVbygUjHceP2hMvNsXpCWjwF2e0Ia3fcqKwLxfyKqjsOyo7bvcKsUbFA=="],
+    "@nozomiishii/commitlint-config": ["@nozomiishii/commitlint-config@0.2.3", "", { "dependencies": { "@commitlint/cli": "20.5.3", "@commitlint/config-conventional": "20.5.3", "@commitlint/types": "20.5.0" }, "bin": { "nozo-commitlint": "./dist/cli.js", "nozo-commitlint-init": "./dist/init.js" } }, "sha512-iD3mFCEKeD2dI59BEGjE1ewfRzL9e38aw12/+doFIqtUR0MwFzZ/z887MA72pI7ISMqN/nDUu2RI7+U9g6dqmQ=="],
 
-    "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@0.7.0", "", { "dependencies": { "git-harvest": "0.1.23" }, "peerDependencies": { "lefthook": "2.1.6" }, "bin": { "nozo-git-harvest": "dist/cli.js", "nozo-lefthook-init": "dist/init.js" } }, "sha512-biAtxppLFkhDMFKQffzKG8xi+Ujwf028uy5QWqRqcpGe9X8easolNhNz17thj4mCKssbcQrOriQg8BDiLwb9ng=="],
+    "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@0.7.1", "", { "dependencies": { "git-harvest": "0.1.23" }, "peerDependencies": { "lefthook": "2.1.6" }, "bin": { "nozo-git-harvest": "./dist/cli.js", "nozo-lefthook-init": "./dist/init.js" } }, "sha512-KorpEBNsr1fg4uUl6L9ZFUmyDAHR961KrfQZ9NR88l3dC1a4dQamyyTuyzd9o3MSJRv4OTxKFx3YW1nJFXtxhA=="],
 
     "@octokit/auth-token": ["@octokit/auth-token@4.0.0", "", {}, "sha512-tY/msAuJo6ARbK6SPIxZrPBms3xPbfwBrulZe0Wtr/DIY9lje2HeV1uoebShn6mx7SjCHif6EjMvoREj+gZ+SA=="],
 
