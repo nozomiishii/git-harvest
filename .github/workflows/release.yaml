@@ -134,8 +134,10 @@ jobs:
           node-version: lts/*
           registry-url: https://registry.npmjs.org
 
+      # publish 時に prepare（lefthook install）が走ると devDependencies 未インストールで落ちる。
+      # git-harvest は shell スクリプト配布で publish 時のビルド工程は無いため、scripts は無効化する。
       - name: Publish to npm
-        run: npm publish
+        run: npm publish --ignore-scripts
 
   # publish 後に次の release PR を作成/更新
   release-pr:
