@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.25](https://github.com/nozomiishii/git-harvest/compare/v0.1.24...v0.1.25) (2026-05-09)
+
+
+### Bug Fixes
+
+* **ci:** skip prepare script on npm publish ([#129](https://github.com/nozomiishii/git-harvest/issues/129)) ([eaec63f](https://github.com/nozomiishii/git-harvest/commit/eaec63fdd03676e4f819820ec2023f5218292124))
+
+
+### Miscellaneous
+
+* update nozomiishii/workflows action to v3.0.2 ([#128](https://github.com/nozomiishii/git-harvest/issues/128)) ([b6248b4](https://github.com/nozomiishii/git-harvest/commit/b6248b4c276bf4c98f376d96759afad94df40a1d))
+
 ## [0.1.24](https://github.com/nozomiishii/git-harvest/compare/v0.1.23...v0.1.24) (2026-05-08)
 
 
