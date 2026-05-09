@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.24](https://github.com/nozomiishii/git-harvest/compare/v0.1.23...v0.1.24) (2026-05-08)
+
+
+### Miscellaneous
+
+* add lefthook with .yaml extension enforcement ([#124](https://github.com/nozomiishii/git-harvest/issues/124)) ([1967f4b](https://github.com/nozomiishii/git-harvest/commit/1967f4b181d78d3f018ee85eb8fd188e70f97a44))
+* **claude:** run bun install on session start ([#120](https://github.com/nozomiishii/git-harvest/issues/120)) ([75b318c](https://github.com/nozomiishii/git-harvest/commit/75b318c43d6a040d65dfe39f8beb61279854f174))
+* lock file maintenance ([#125](https://github.com/nozomiishii/git-harvest/issues/125)) ([4b2e780](https://github.com/nozomiishii/git-harvest/commit/4b2e780be16bca774eceac895567aeb266cf2623))
+* trim redundant command sections from claude.md ([#123](https://github.com/nozomiishii/git-harvest/issues/123)) ([453180d](https://github.com/nozomiishii/git-harvest/commit/453180de6ebc08eb520fdd7b49091338b2ea1163))
+* update nozomiishii ([#126](https://github.com/nozomiishii/git-harvest/issues/126)) ([60e730b](https://github.com/nozomiishii/git-harvest/commit/60e730bb56686b408250a51ebc96935040356286))
+* update nozomiishii ([#127](https://github.com/nozomiishii/git-harvest/issues/127)) ([18b87fc](https://github.com/nozomiishii/git-harvest/commit/18b87fcdb16fae959f13bc92604af7f6e30c7c59))
+
 ## [0.1.23](https://github.com/nozomiishii/git-harvest/compare/v0.1.22...v0.1.23) (2026-04-30)
 
 
