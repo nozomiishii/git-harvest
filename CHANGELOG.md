@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.26](https://github.com/nozomiishii/git-harvest/compare/v0.1.25...v0.1.26) (2026-05-11)
+
+
+### Features
+
+* protect worktrees with active claude code sessions ([#137](https://github.com/nozomiishii/git-harvest/issues/137)) ([bbcef08](https://github.com/nozomiishii/git-harvest/commit/bbcef081218c3f35beaee4f51857371665165df5))
+
+
+### Miscellaneous
+
+* lock file maintenance ([#136](https://github.com/nozomiishii/git-harvest/issues/136)) ([96aecda](https://github.com/nozomiishii/git-harvest/commit/96aecda56c80a161ef30af2f0147bac96f1e5e72))
+* migrate create-github-app-token input from app-id to client-id ([#134](https://github.com/nozomiishii/git-harvest/issues/134)) ([57df364](https://github.com/nozomiishii/git-harvest/commit/57df364f5b8196b70d167d2a0c65aba8f17ff236))
+* update nozomiishii to v1 ([a888c50](https://github.com/nozomiishii/git-harvest/commit/a888c50ed889427ebae65ff9f9487dfff85b189d))
+* update nozomiishii to v1 (major) ([#133](https://github.com/nozomiishii/git-harvest/issues/133)) ([a888c50](https://github.com/nozomiishii/git-harvest/commit/a888c50ed889427ebae65ff9f9487dfff85b189d))
+* update nozomiishii to v1.0.1 ([#135](https://github.com/nozomiishii/git-harvest/issues/135)) ([f0db717](https://github.com/nozomiishii/git-harvest/commit/f0db7177879154d64abc56dc1967780cca427437))
+* update nozomiishii/workflows action to v3.1.0 ([#131](https://github.com/nozomiishii/git-harvest/issues/131)) ([2b9b485](https://github.com/nozomiishii/git-harvest/commit/2b9b485eb602403a7536c6759f8fbcbf4b422792))
+
 ## [0.1.25](https://github.com/nozomiishii/git-harvest/compare/v0.1.24...v0.1.25) (2026-05-09)
 
 
