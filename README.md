@@ -158,26 +158,3 @@ Override paths for testing or non-standard installs:
 | `GIT_HARVEST_CLAUDE_SESSIONS_DIR` | `~/.claude/sessions` |
 | `GIT_HARVEST_CLAUDE_APP_DIR` | `~/Library/Application Support/Claude` (macOS), `~/.config/Claude` or `~/.local/share/Claude` (Linux), `$APPDATA/Claude` (Windows, best-effort) |
 
-#### Optional: monitor Claude Code session schema
-
-If Claude Code changes its session file schema, the active-session protection silently stops working — your worktrees may then be deleted unexpectedly. To catch this, run a small weekly check as a scheduled task (cron, launchd, or a Claude Code Routine):
-
-```bash
-#!/usr/bin/env bash
-APP_DIR="$HOME/Library/Application Support/Claude"
-ROOT="$APP_DIR/claude-code-sessions"
-[ -d "$ROOT" ] || exit 0
-
-total=0; with_wp=0
-while IFS= read -r f; do
-  total=$((total + 1))
-  grep -q '"worktreePath"' "$f" && with_wp=$((with_wp + 1))
-done < <(find "$ROOT" -type f -name 'local_*.json')
-
-if [ "$total" -gt 0 ] && [ "$with_wp" -eq 0 ]; then
-  osascript -e 'display notification "Claude Code session schema unrecognized — git-harvest may need an update" with title "git-harvest"'
-fi
-```
-
-This is intentionally **not** built into git-harvest itself, so the tool stays focused on harvesting and you can wire the notification into whatever channel you prefer (system notification, Slack, etc.).
-
