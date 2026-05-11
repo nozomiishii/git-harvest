@@ -5,7 +5,9 @@ VERSION="0.1.25" # x-release-please-version
 REPO="nozomiishii/git-harvest"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/git-harvest"
 CACHE_FILE="$CACHE_DIR/latest-version"
+SCHEMA_CHECK_CACHE_FILE="$CACHE_DIR/last-claude-schema-check"
 CHECK_INTERVAL=86400 # 24時間（秒）
+SCHEMA_CHECK_INTERVAL=604800 # 7日（秒）
 SPARKLE_FRAMES=30       # sparkle_animate のデフォルトフレーム数
 SPARKLE_INTERVAL=0.05   # sparkle/rainbow 共通の sleep 間隔（秒）
 
@@ -375,6 +377,146 @@ has_uncommitted_changes() {
   return 1
 }
 
+# Claude CLI が走行中セッションを記録するディレクトリ。
+# 上書き用 env: GIT_HARVEST_CLAUDE_SESSIONS_DIR (テスト / power user 用)
+claude_sessions_dir() {
+  echo "${GIT_HARVEST_CLAUDE_SESSIONS_DIR:-$HOME/.claude/sessions}"
+}
+
+# Claude desktop app のデータディレクトリ。複数 OS の候補を順に試す。
+# 上書き用 env: GIT_HARVEST_CLAUDE_APP_DIR
+# 該当なしの場合は空文字を返す。
+claude_app_dir() {
+  if [ -n "${GIT_HARVEST_CLAUDE_APP_DIR:-}" ]; then
+    echo "$GIT_HARVEST_CLAUDE_APP_DIR"
+    return
+  fi
+  local c
+  for c in \
+    "$HOME/Library/Application Support/Claude" \
+    "$HOME/.config/Claude" \
+    "$HOME/.local/share/Claude" \
+    "${APPDATA:-}/Claude"; do
+    [ -n "$c" ] && [ -d "$c" ] && { echo "$c"; return; }
+  done
+  echo ""
+}
+
+# パスを canonical (symlink 解決済み) に正規化する。
+# git は worktree path を canonical で保持するが、JSON 内の cwd / worktreePath は
+# ユーザーが指定したまま記録される可能性があるため、両者を同一表記に揃える必要がある。
+# (例: macOS の /var/folders は /private/var/folders への symlink)
+canonical_path() {
+  local p="$1"
+  [ -z "$p" ] && return
+  if [ -d "$p" ]; then
+    (cd "$p" 2>/dev/null && pwd -P) 2>/dev/null || echo "$p"
+  else
+    echo "$p"
+  fi
+}
+
+# 走行中の claude プロセスがこの worktree で動いているか (0=あり, 1=なし)。
+# ~/.claude/sessions/<pid>.json の cwd が canonical 一致し、pid が生存していれば true。
+has_running_claude_session() {
+  local wt="$1"
+  local sessions_dir
+  sessions_dir=$(claude_sessions_dir)
+  [ -d "$sessions_dir" ] || return 1
+
+  local wt_canon
+  wt_canon=$(canonical_path "$wt")
+  [ -z "$wt_canon" ] && return 1
+
+  local f cwd cwd_canon pid
+  for f in "$sessions_dir"/*.json; do
+    [ -f "$f" ] || continue
+    cwd=$(sed -n 's/.*"cwd":"\([^"]*\)".*/\1/p' "$f" | head -1)
+    [ -z "$cwd" ] && continue
+    cwd_canon=$(canonical_path "$cwd")
+    [ "$cwd_canon" = "$wt_canon" ] || continue
+    pid=$(grep --color=never -o '"pid":[0-9]\{1,\}' "$f" | head -1 | sed 's/"pid"://')
+    [ -z "$pid" ] && continue
+    if kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Claude Code app の "active" (= 未 archive) セッションがこの worktree にあるか (0=あり, 1=なし)。
+# claude-code-sessions/**/local_*.json で worktreePath が canonical 一致し、
+# isArchived: true でないものが1つでもあれば true。
+has_active_claude_session() {
+  local wt="$1"
+  local app_dir
+  app_dir=$(claude_app_dir)
+  [ -n "$app_dir" ] || return 1
+  local sessions_root="$app_dir/claude-code-sessions"
+  [ -d "$sessions_root" ] || return 1
+
+  local wt_canon
+  wt_canon=$(canonical_path "$wt")
+  [ -z "$wt_canon" ] && return 1
+
+  local f wp wp_canon
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    wp=$(sed -n 's/.*"worktreePath":"\([^"]*\)".*/\1/p' "$f" | head -1)
+    [ -z "$wp" ] && continue
+    wp_canon=$(canonical_path "$wp")
+    [ "$wp_canon" = "$wt_canon" ] || continue
+    if ! grep -F '"isArchived":true' "$f" >/dev/null 2>&1; then
+      return 0
+    fi
+  done < <(find "$sessions_root" -type f -name 'local_*.json' 2>/dev/null)
+  return 1
+}
+
+# Claude Code app の session JSON schema が認識可能か週1回チェック。
+# session ファイルは見つかったが worktreePath を抽出できない (= schema が変わった可能性) なら、
+# stderr に1行警告を出す。TTL cache で post-merge hook 連発時の rate-limit を行う。
+claude_schema_check() {
+  local app_dir
+  app_dir=$(claude_app_dir)
+  [ -n "$app_dir" ] || return 0
+  local sessions_root="$app_dir/claude-code-sessions"
+  [ -d "$sessions_root" ] || return 0
+
+  # TTL cache: 1週間以内ならスキップ
+  if [ -f "$SCHEMA_CHECK_CACHE_FILE" ]; then
+    local last_check now
+    last_check=$(stat -c %Y "$SCHEMA_CHECK_CACHE_FILE" 2>/dev/null \
+              || stat -f %m "$SCHEMA_CHECK_CACHE_FILE" 2>/dev/null || echo 0)
+    now=$(date +%s)
+    if (( now - last_check < SCHEMA_CHECK_INTERVAL )); then
+      return 0
+    fi
+  fi
+
+  local total=0 extracted=0
+  local f wp
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    total=$((total + 1))
+    wp=$(sed -n 's/.*"worktreePath":"\([^"]*\)".*/\1/p' "$f" | head -1)
+    [ -n "$wp" ] && extracted=$((extracted + 1))
+  done < <(find "$sessions_root" -type f -name 'local_*.json' 2>/dev/null)
+
+  if [ "$total" -gt 0 ] && [ "$extracted" -eq 0 ]; then
+    cat >&2 <<EOF
+
+Notice: Claude Code session schema unrecognized — active session detection disabled.
+Update git-harvest if available: https://github.com/${REPO}/issues
+
+EOF
+  fi
+
+  # cache を touch して TTL を回す（警告の有無に関わらず）
+  mkdir -p "$CACHE_DIR"
+  touch "$SCHEMA_CHECK_CACHE_FILE"
+}
+
 # worktree の状態を表示・削除する (DELETED_COUNT をインクリメント)
 cleanup_worktrees() {
   local base="$1"
@@ -402,7 +544,7 @@ cleanup_worktrees() {
     fi
 
     if [ "$DELETE_ALL" = true ]; then
-      # --all: 全 worktree を削除対象にする
+      # --all: 全 worktree を削除対象にする (claude セッション保護も bypass)
       if [ "$DRY_RUN" = true ]; then
         printf "[WILL DELETE]  %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
@@ -411,10 +553,14 @@ cleanup_worktrees() {
         printf "[DELETED]      %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
+    elif has_running_claude_session "$wt"; then
+      printf "[GROWING]      %s (session running)\n" "$wt"
     elif echo "$merged_branches" | grep -qxF "$branch"; then
-      # マージ済み: 未コミット変更があるかチェック
+      # マージ済み: 未コミット変更 → claude active session → 削除可能 の順に判定
       if has_uncommitted_changes "$wt"; then
         printf "[GROWING]      %s (uncommitted changes)\n" "$wt"
+      elif has_active_claude_session "$wt"; then
+        printf "[GROWING]      %s (active claude session)\n" "$wt"
       elif [ "$DRY_RUN" = true ]; then
         printf "[WILL DELETE]  %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
@@ -620,6 +766,7 @@ main() {
     wait "$UPDATE_CHECK_PID" 2>/dev/null || true
   fi
   show_update_notification
+  claude_schema_check
 }
 
 main
