@@ -148,7 +148,7 @@ git-harvest avoids deleting worktrees that you are still working in via [Claude 
 
 - **Running session**: if a `claude` process is alive in a worktree (detected via `~/.claude/sessions/<pid>.json`), the worktree is preserved with `(session running)`.
 - **Active app session**: if the Claude Code desktop app has a session for the worktree that is **not archived** (detected via `claude-code-sessions/**/local_*.json` with `isArchived: false`), the worktree is preserved with `(active claude session)`. To allow deletion, archive the session in the app (press `A` on the session in Recents).
-- **Bypass**: `--all` ignores both protections and deletes everything except the default branch and main working tree.
+- **`--all`**: deletes worktrees regardless of running or active claude sessions; only the worktree directories are removed and the session metadata itself is not modified.
 - **No Claude Code installed**: the integration is silently skipped — git-harvest behaves as if these checks did not exist.
 
 Override paths for testing or non-standard installs:

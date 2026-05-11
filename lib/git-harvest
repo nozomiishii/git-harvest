@@ -498,7 +498,7 @@ cleanup_worktrees() {
     fi
 
     if [ "$DELETE_ALL" = true ]; then
-      # --all: 全 worktree を削除対象にする (claude セッション保護も bypass)
+      # --all: 全保護判定をスキップして worktree を削除する
       if [ "$DRY_RUN" = true ]; then
         printf "[WILL DELETE]  %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
