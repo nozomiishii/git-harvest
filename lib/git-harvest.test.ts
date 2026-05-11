@@ -1169,6 +1169,123 @@ describe('claude session protection', () => {
     }
   });
 
+  // 未マージ worktree でも走行中セッションがあれば、表示は (not merged) ではなく (session running) が勝つ
+  // (層 ① は merged 判定の外で動くため。設計意図の固定テスト)
+  test('shows session-running label over not-merged for unmerged worktree with running claude', () => {
+    git(repo, 'checkout -b wt-unmerged-running');
+    commitFile(repo, 'unm-run.txt', 'work');
+    git(repo, 'checkout main');
+    // merge せず未マージのまま
+
+    const wtDir = join(repo, '..', 'wt-unmerged-running-dir');
+    git(repo, `worktree add ${wtDir} wt-unmerged-running`);
+
+    const sleepProc = spawn('sleep', ['60'], { detached: false });
+    const livePid = sleepProc.pid!;
+
+    const sessionsDir = mkdtempSync(join(tmpdir(), 'gh-claude-sess-'));
+    writeFileSync(
+      join(sessionsDir, `${livePid}.json`),
+      JSON.stringify({ pid: livePid, cwd: wtDir, status: 'idle' })
+    );
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_SESSIONS_DIR: sessionsDir },
+      });
+      // worktree は残る (どちらの理由でも残る) かつ表示は走行中が勝つ
+      expect(branches(repo)).toContain('wt-unmerged-running');
+      expect(output).toContain('wt-unmerged-running-dir (session running)');
+      expect(output).not.toMatch(/wt-unmerged-running-dir \(not merged\)/);
+    } finally {
+      sleepProc.kill('SIGKILL');
+      rmSync(sessionsDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // GIT_HARVEST_CLAUDE_APP_DIR が存在しないパスを指している場合、silent skip して
+  // 既存の merge ベース挙動と同等になる
+  test('silently skips claude detection when app dir does not exist', () => {
+    git(repo, 'checkout -b wt-no-app-dir');
+    commitFile(repo, 'no-app.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-no-app-dir');
+    git(repo, 'commit -m "squash no-app"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-no-app-dir-dir');
+    git(repo, `worktree add ${wtDir} wt-no-app-dir`);
+
+    // 存在しないパスを env var に渡す
+    const fakeAppDir = join(tmpdir(), 'gh-nonexistent-app-' + Date.now());
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: fakeAppDir },
+      });
+      // claude 検出は silent skip され、merge 済み worktree は通常通り削除される
+      expect(branches(repo)).not.toContain('wt-no-app-dir');
+      expect(output).toContain('[DELETED]');
+      expect(output).not.toContain('(active claude session)');
+    } finally {
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // pretty-print された (key/value 間に空白がある) JSON でも検出できる
+  test('detects worktreePath in pretty-printed JSON (whitespace between key and value)', () => {
+    git(repo, 'checkout -b wt-pretty-json');
+    commitFile(repo, 'pretty.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-pretty-json');
+    git(repo, 'commit -m "squash pretty"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-pretty-json-dir');
+    git(repo, `worktree add ${wtDir} wt-pretty-json`);
+
+    const appDir = mkdtempSync(join(tmpdir(), 'gh-claude-app-'));
+    const sessionPath = join(appDir, 'claude-code-sessions', 'ws', 'sub');
+    mkdirSync(sessionPath, { recursive: true });
+    // pretty-print: key と value の間に space を入れる
+    const prettyJson = JSON.stringify(
+      { worktreePath: wtDir, isArchived: false, title: 'pretty' },
+      null,
+      2
+    );
+    writeFileSync(join(sessionPath, 'local_pretty.json'), prettyJson);
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
+      });
+      expect(branches(repo)).toContain('wt-pretty-json');
+      expect(output).toContain('(active claude session)');
+    } finally {
+      rmSync(appDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
   // 複数セッションがあって、1つでも archived じゃないなら保護する (OR semantics)
   test('preserves worktree if any session is non-archived (multiple sessions)', () => {
     git(repo, 'checkout -b wt-claude-multi');

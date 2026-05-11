@@ -429,11 +429,13 @@ has_running_claude_session() {
   local f cwd cwd_canon pid
   for f in "$sessions_dir"/*.json; do
     [ -f "$f" ] || continue
-    cwd=$(sed -n 's/.*"cwd":"\([^"]*\)".*/\1/p' "$f" | head -1)
+    # JSON は通常 single-line だが、pretty-print された場合にも備えて key/value 間の
+    # whitespace を許容する
+    cwd=$(sed -nE 's/.*"cwd"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$f" | head -1)
     [ -z "$cwd" ] && continue
     cwd_canon=$(canonical_path "$cwd")
     [ "$cwd_canon" = "$wt_canon" ] || continue
-    pid=$(grep --color=never -o '"pid":[0-9]\{1,\}' "$f" | head -1 | sed 's/"pid"://')
+    pid=$(sed -nE 's/.*"pid"[[:space:]]*:[[:space:]]*([0-9]+).*/\1/p' "$f" | head -1)
     [ -z "$pid" ] && continue
     if kill -0 "$pid" 2>/dev/null; then
       return 0
@@ -460,11 +462,13 @@ has_active_claude_session() {
   local f wp wp_canon
   while IFS= read -r f; do
     [ -f "$f" ] || continue
-    wp=$(sed -n 's/.*"worktreePath":"\([^"]*\)".*/\1/p' "$f" | head -1)
+    # JSON は通常 single-line だが、pretty-print された場合にも備えて key/value 間の
+    # whitespace を許容する
+    wp=$(sed -nE 's/.*"worktreePath"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$f" | head -1)
     [ -z "$wp" ] && continue
     wp_canon=$(canonical_path "$wp")
     [ "$wp_canon" = "$wt_canon" ] || continue
-    if ! grep -F '"isArchived":true' "$f" >/dev/null 2>&1; then
+    if ! grep -Eq '"isArchived"[[:space:]]*:[[:space:]]*true' "$f" 2>/dev/null; then
       return 0
     fi
   done < <(find "$sessions_root" -type f -name 'local_*.json' 2>/dev/null)
