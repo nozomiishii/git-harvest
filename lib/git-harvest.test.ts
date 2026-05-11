@@ -163,9 +163,9 @@ describe('merge detection', () => {
     const output = run(repo);
     expect(branches(repo)).not.toContain('feature-regular');
     expect(branches(repo)).toContain('main');
-    expect(output).toContain('[DELETED]');
+    expect(output).toContain('✓');
     expect(output).toContain('feature-regular');
-    expect(output).toContain('Harvested!');
+    expect(output).toContain('Harvested');
   });
 
   // squash マージ済み
@@ -181,9 +181,9 @@ describe('merge detection', () => {
     const output = run(repo);
     expect(branches(repo)).not.toContain('feature-squash');
     expect(branches(repo)).toContain('main');
-    expect(output).toContain('[DELETED]');
+    expect(output).toContain('✓');
     expect(output).toContain('feature-squash');
-    expect(output).toContain('Harvested!');
+    expect(output).toContain('Harvested');
   });
 
   // マージ済みでもチェックアウト中のブランチは保持
@@ -199,11 +199,11 @@ describe('merge detection', () => {
     git(repo, 'checkout feature-checkedout');
     const output = run(repo);
     expect(branches(repo)).toContain('feature-checkedout');
-    expect(output).toContain('[GROWING]');
-    expect(output).toContain('(currently checked out)');
+    expect(output).toContain('·');
+    expect(output).toContain('currently checked out');
   });
 
-  // 未マージは保持し [GROWING] (not merged) を表示
+  // 未マージは保持し · not merged を表示
   test('preserves unmerged branches and shows GROWING status', () => {
     git(repo, 'checkout -b feature-wip');
     commitFile(repo, 'wip.txt', 'wip');
@@ -211,16 +211,16 @@ describe('merge detection', () => {
 
     const output = run(repo);
     expect(branches(repo)).toContain('feature-wip');
-    expect(output).toContain('[GROWING]');
+    expect(output).toContain('·');
     expect(output).toContain('feature-wip');
-    expect(output).toContain('(not merged)');
+    expect(output).toContain('not merged');
   });
 
   // マージ済みなし → Nothing to harvest メッセージ
   test('exits with 0 and shows nothing-to-harvest message when no merged branches exist', () => {
     const output = run(repo);
     expect(branches(repo)).toEqual(['main']);
-    expect(output).toContain('Nothing to harvest. All clean!');
+    expect(output).toContain('Nothing to harvest. All clean.');
   });
 
   // 独自コミットなしのブランチは削除する
@@ -230,7 +230,7 @@ describe('merge detection', () => {
 
     const output = run(repo);
     expect(branches(repo)).not.toContain('no-commits-yet');
-    expect(output).toContain('[DELETED]');
+    expect(output).toContain('✓');
     expect(output).toContain('no-commits-yet');
   });
 
@@ -279,7 +279,7 @@ describe('merge detection', () => {
 
     const output = run(repo);
     expect(branches(repo)).not.toContain('feature-orphaned');
-    expect(output).toContain('[DELETED]');
+    expect(output).toContain('✓');
     expect(output).toContain('feature-orphaned');
   });
 });
@@ -301,8 +301,8 @@ describe('worktree cleanup', () => {
     const output = run(repo);
     expect(branches(repo)).not.toContain('wt-merged');
     expect(worktrees(repo)).toHaveLength(1);
-    expect(output).toContain('[DELETED]');
-    expect(output).toContain('Harvested!');
+    expect(output).toContain('✓');
+    expect(output).toContain('Harvested');
   });
 
   // default branch の worktree は保持
@@ -338,14 +338,14 @@ describe('worktree cleanup', () => {
     const output = run(repo);
     expect(branches(repo)).toContain('wt-uncommitted');
     expect(worktrees(repo).length).toBeGreaterThan(1);
-    expect(output).toContain('[GROWING]');
-    expect(output).toContain('(uncommitted changes)');
+    expect(output).toContain('·');
+    expect(output).toContain('uncommitted changes');
 
     // cleanup
     git(repo, `worktree remove --force ${wtDir}`);
   });
 
-  // 未マージ worktree は保持し [GROWING] (not merged) を表示
+  // 未マージ worktree は保持し · not merged を表示
   test('preserves worktrees for unmerged branches and shows GROWING status', () => {
     git(repo, 'checkout -b wt-unmerged');
     commitFile(repo, 'wt-unmerged.txt', 'unmerged work');
@@ -357,14 +357,14 @@ describe('worktree cleanup', () => {
     const output = run(repo);
     expect(branches(repo)).toContain('wt-unmerged');
     expect(worktrees(repo).length).toBeGreaterThan(1);
-    expect(output).toContain('[GROWING]');
-    expect(output).toContain('(not merged)');
+    expect(output).toContain('·');
+    expect(output).toContain('not merged');
 
     // cleanup
     git(repo, `worktree remove ${wtDir}`);
   });
 
-  // 独自コミットなしの worktree は保持し [GROWING] (no unique commits) を表示
+  // 独自コミットなしの worktree は保持し · no unique commits を表示
   test('preserves worktrees for branches with no unique commits and shows GROWING status', () => {
     const wtDir = join(repo, '..', 'wt-no-commits-dir');
     git(repo, `worktree add -b wt-no-commits ${wtDir}`);
@@ -372,8 +372,8 @@ describe('worktree cleanup', () => {
     const output = run(repo);
     expect(branches(repo)).toContain('wt-no-commits');
     expect(worktrees(repo).length).toBeGreaterThan(1);
-    expect(output).toContain('[GROWING]');
-    expect(output).toContain('(no unique commits)');
+    expect(output).toContain('·');
+    expect(output).toContain('no unique commits');
 
     // cleanup
     git(repo, `worktree remove ${wtDir}`);
@@ -426,8 +426,8 @@ describe('combined scenarios', () => {
     const output = run(repo);
     expect(branches(repo)).not.toContain('combo-merged');
     expect(worktrees(repo)).toHaveLength(1);
-    expect(output).toContain('[DELETED]');
-    expect(output).toContain('Harvested!');
+    expect(output).toContain('✓');
+    expect(output).toContain('Harvested');
   });
 
   // マージ済みと未マージの混在
@@ -494,12 +494,12 @@ describe('combined scenarios', () => {
     expect(worktrees(repo).length).toBeGreaterThan(1);
     // 出力にはサマリーが表示される
     expect(output).toContain('Dry run mode');
-    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('→');
     expect(output).toContain('dry-run-wt-dir');
-    // worktree にチェックアウト中のブランチは [GROWING] (currently checked out) として表示
-    expect(output).toContain('[GROWING]');
-    expect(output).toContain('(currently checked out)');
-    expect(output).toContain('Harvested!');
+    // worktree にチェックアウト中のブランチは · currently checked out として表示
+    expect(output).toContain('·');
+    expect(output).toContain('currently checked out');
+    expect(output).toContain('Would harvest');
 
     // cleanup
     git(repo, `worktree remove ${wtDir}`);
@@ -533,7 +533,7 @@ describe('combined scenarios', () => {
     git(repo, `worktree remove ${wtDir}`);
   });
 
-  // dry-run でステージ済み変更のある worktree は [GROWING] (uncommitted changes) を表示
+  // dry-run でステージ済み変更のある worktree は · uncommitted changes を表示
   test('dry-run shows GROWING for worktrees with staged-only changes', () => {
     git(repo, 'checkout -b drywt-staged');
     commitFile(repo, 'staged-base.txt', 'base');
@@ -549,9 +549,9 @@ describe('combined scenarios', () => {
     git(wtDir, 'add staged-only.txt');
 
     const output = run(repo, '--dry-run');
-    expect(output).not.toContain(`[WILL DELETE]`);
-    expect(output).toContain('[GROWING]');
-    expect(output).toContain('(uncommitted changes)');
+    expect(output).not.toContain(`→`);
+    expect(output).toContain('·');
+    expect(output).toContain('uncommitted changes');
 
     // cleanup
     git(repo, `worktree remove --force ${wtDir}`);
@@ -568,10 +568,10 @@ describe('combined scenarios', () => {
 
     const output = run(repo, '--dry-run');
     // メインワーキングツリー (repo 自体) は Worktrees セクションに含まれない
-    expect(output).not.toContain(`[WILL DELETE] ${repo}`);
+    expect(output).not.toContain(`→  ${repo}`);
   });
 
-  // dry-run で未コミット変更のある worktree は [GROWING] (uncommitted changes) を表示
+  // dry-run で未コミット変更のある worktree は · uncommitted changes を表示
   test('dry-run shows GROWING for dirty worktrees', () => {
     git(repo, 'checkout -b drywt-dirty');
     commitFile(repo, 'dirty-base.txt', 'base');
@@ -586,17 +586,17 @@ describe('combined scenarios', () => {
     writeFileSync(join(wtDir, 'uncommitted.txt'), 'dirty\n');
 
     const output = run(repo, '--dry-run');
-    // dirty な worktree は [GROWING] として表示
-    expect(output).toContain('[GROWING]');
-    expect(output).toContain('(uncommitted changes)');
+    // dirty な worktree は · として表示
+    expect(output).toContain('·');
+    expect(output).toContain('uncommitted changes');
     // worktree にチェックアウト中のブランチも削除できない
-    expect(output).toContain('(currently checked out)');
+    expect(output).toContain('currently checked out');
 
     // cleanup
     git(repo, `worktree remove --force ${wtDir}`);
   });
 
-  // マージ済みブランチをチェックアウト中に実行 → [GROWING] (currently checked out) を表示
+  // マージ済みブランチをチェックアウト中に実行 → · currently checked out を表示
   test('shows GROWING for merged branch that is currently checked out', () => {
     git(repo, 'checkout -b checked-out-merged');
     commitFile(repo, 'co.txt', 'checked out work');
@@ -608,15 +608,15 @@ describe('combined scenarios', () => {
     // マージ済みブランチに戻って実行
     git(repo, 'checkout checked-out-merged');
     const output = run(repo);
-    // ブランチは削除されず [GROWING] (currently checked out) を表示
+    // ブランチは削除されず · currently checked out を表示
     expect(branches(repo)).toContain('checked-out-merged');
-    expect(output).toContain('[GROWING]');
+    expect(output).toContain('·');
     expect(output).toContain('checked-out-merged');
-    expect(output).toContain('(currently checked out)');
-    expect(output).not.toContain('[DELETED]');
+    expect(output).toContain('currently checked out');
+    expect(output).not.toContain('✓');
   });
 
-  // 実行時: マージ済み + dirty worktree → [GROWING] (uncommitted changes) を表示
+  // 実行時: マージ済み + dirty worktree → · uncommitted changes を表示
   test('shows GROWING for dirty worktree during actual run', () => {
     git(repo, 'checkout -b dirty-wt-run');
     commitFile(repo, 'dirty-run.txt', 'dirty run work');
@@ -634,24 +634,24 @@ describe('combined scenarios', () => {
     // worktree もブランチも残る
     expect(worktrees(repo).length).toBeGreaterThan(1);
     expect(branches(repo)).toContain('dirty-wt-run');
-    // [GROWING] (uncommitted changes) が表示される
-    expect(output).toContain('[GROWING]');
-    expect(output).toContain('(uncommitted changes)');
-    expect(output).not.toContain('[DELETED]');
+    // · uncommitted changes が表示される
+    expect(output).toContain('·');
+    expect(output).toContain('uncommitted changes');
+    expect(output).not.toContain('✓');
 
     // cleanup
     git(repo, `worktree remove --force ${wtDir}`);
   });
 
-  // 全てのブランチが GROWING の場合 → "Nothing to harvest. All growing!" を表示
+  // 全てのブランチが GROWING の場合 → "Nothing to harvest. All growing." を表示
   test('shows "All growing" when nothing is deleted', () => {
     git(repo, 'checkout -b only-growing');
     commitFile(repo, 'growing.txt', 'growing work');
     git(repo, 'checkout main');
 
     const output = run(repo);
-    expect(output).toContain('Nothing to harvest. All growing!');
-    expect(output).not.toContain('Harvested!');
+    expect(output).toContain('Nothing to harvest. All growing.');
+    expect(output).not.toContain('Harvested');
   });
 
   // exit code 0
@@ -801,8 +801,8 @@ describe('--all', () => {
     expect(branches(repo)).not.toContain('merged-all');
     expect(branches(repo)).not.toContain('unmerged-all');
     expect(branches(repo)).toContain('main');
-    expect(output).toContain('[DELETED]');
-    expect(output).toContain('Harvested!');
+    expect(output).toContain('✓');
+    expect(output).toContain('Harvested');
   });
 
   // デフォルトブランチは残る
@@ -844,7 +844,7 @@ describe('--all', () => {
     const output = run(repo, '--all');
     expect(worktrees(repo)).toHaveLength(1);
     expect(branches(repo)).not.toContain('wt-dirty-all');
-    expect(output).toContain('[DELETED]');
+    expect(output).toContain('✓');
   });
 
   // チェックアウト中のブランチはエラー終了する
@@ -879,7 +879,7 @@ describe('--all', () => {
     expect(branches(repo)).toContain('blocking-branch');
   });
 
-  // --dry-run --all で全リソースが [WILL DELETE] 表示される
+  // --dry-run --all で全リソースが → 表示される
   test('dry-run --all shows WILL DELETE for all resources', () => {
     // マージ済みブランチ
     git(repo, 'checkout -b dry-merged-all');
@@ -896,7 +896,7 @@ describe('--all', () => {
 
     const output = run(repo, '--dry-run --all');
     expect(output).toContain('Dry run mode');
-    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('→');
     expect(output).toContain('dry-merged-all');
     expect(output).toContain('dry-unmerged-all');
     // ブランチは残っている
@@ -912,19 +912,19 @@ describe('--all', () => {
 
     const output = run(repo, '--all --dry-run');
     expect(output).toContain('Dry run mode');
-    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('→');
     expect(output).toContain('order-test');
     expect(branches(repo)).toContain('order-test');
   });
 
-  // --dry-run --all でチェックアウト中のブランチも [WILL DELETE] 表示（エラーにならない）
+  // --dry-run --all でチェックアウト中のブランチも → 表示（エラーにならない）
   test('dry-run --all shows WILL DELETE for checked-out branch without error', () => {
     git(repo, 'checkout -b dry-checked-out');
     commitFile(repo, 'dry-co.txt', 'work');
 
     const output = run(repo, '--dry-run --all');
     expect(output).toContain('Dry run mode');
-    expect(output).toContain('[WILL DELETE]');
+    expect(output).toContain('→');
     expect(output).toContain('dry-checked-out');
     expect(branches(repo)).toContain('dry-checked-out');
   });
@@ -942,7 +942,7 @@ describe('--all', () => {
     const output = run(repo, '--all');
     expect(branches(repo)).not.toContain('detached-test');
     expect(branches(repo)).toContain('main');
-    expect(output).toContain('[DELETED]');
+    expect(output).toContain('✓');
   });
 });
 
@@ -981,8 +981,8 @@ describe('claude session protection', () => {
       });
       // pid が死んでいるので保護されず、merged worktree は削除される
       expect(branches(repo)).not.toContain('wt-stale-claude');
-      expect(output).toContain('[DELETED]');
-      expect(output).not.toContain('(session running)');
+      expect(output).toContain('✓');
+      expect(output).not.toContain('session running');
     } finally {
       rmSync(sessionsDir, { recursive: true, force: true });
       try {
@@ -1031,9 +1031,9 @@ describe('claude session protection', () => {
       });
       expect(branches(repo)).toContain('wt-claude-running');
       expect(worktrees(repo).length).toBeGreaterThan(1);
-      expect(output).toContain('[GROWING]');
-      expect(output).toContain('(session running)');
-      expect(output).not.toContain('[DELETED]');
+      expect(output).toContain('·');
+      expect(output).toContain('session running');
+      expect(output).not.toContain('✓');
     } finally {
       sleepProc.kill('SIGKILL');
       rmSync(sessionsDir, { recursive: true, force: true });
@@ -1082,9 +1082,9 @@ describe('claude session protection', () => {
       });
       expect(branches(repo)).toContain('wt-claude-active');
       expect(worktrees(repo).length).toBeGreaterThan(1);
-      expect(output).toContain('[GROWING]');
-      expect(output).toContain('(active claude session)');
-      expect(output).not.toContain('[DELETED]');
+      expect(output).toContain('·');
+      expect(output).toContain('active claude session');
+      expect(output).not.toContain('✓');
     } finally {
       rmSync(appDir, { recursive: true, force: true });
       try {
@@ -1122,8 +1122,8 @@ describe('claude session protection', () => {
         env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
       });
       expect(branches(repo)).not.toContain('wt-claude-archived');
-      expect(output).toContain('[DELETED]');
-      expect(output).not.toContain('(active claude session)');
+      expect(output).toContain('✓');
+      expect(output).not.toContain('active claude session');
     } finally {
       rmSync(appDir, { recursive: true, force: true });
       try {
@@ -1161,15 +1161,15 @@ describe('claude session protection', () => {
       // --all は claude 保護を無視して削除する
       expect(branches(repo)).not.toContain('wt-claude-all');
       expect(worktrees(repo)).toHaveLength(1);
-      expect(output).toContain('[DELETED]');
-      expect(output).not.toContain('(active claude session)');
-      expect(output).not.toContain('(session running)');
+      expect(output).toContain('✓');
+      expect(output).not.toContain('active claude session');
+      expect(output).not.toContain('session running');
     } finally {
       rmSync(appDir, { recursive: true, force: true });
     }
   });
 
-  // 未マージ worktree でも走行中セッションがあれば、表示は (not merged) ではなく (session running) が勝つ
+  // 未マージ worktree でも走行中セッションがあれば、表示は not merged ではなく session running が勝つ
   // (層 ① は merged 判定の外で動くため。設計意図の固定テスト)
   test('shows session-running label over not-merged for unmerged worktree with running claude', () => {
     git(repo, 'checkout -b wt-unmerged-running');
@@ -1197,8 +1197,10 @@ describe('claude session protection', () => {
       });
       // worktree は残る (どちらの理由でも残る) かつ表示は走行中が勝つ
       expect(branches(repo)).toContain('wt-unmerged-running');
-      expect(output).toContain('wt-unmerged-running-dir (session running)');
-      expect(output).not.toMatch(/wt-unmerged-running-dir \(not merged\)/);
+      expect(output).toContain('wt-unmerged-running-dir');
+      expect(output).toContain('session running');
+      // worktree 行が 'session running' で表示され、'not merged' で表示されないこと
+      expect(output).not.toMatch(/wt-unmerged-running-dir[^\n]*not merged/);
     } finally {
       sleepProc.kill('SIGKILL');
       rmSync(sessionsDir, { recursive: true, force: true });
@@ -1234,8 +1236,8 @@ describe('claude session protection', () => {
       });
       // claude 検出は silent skip され、merge 済み worktree は通常通り削除される
       expect(branches(repo)).not.toContain('wt-no-app-dir');
-      expect(output).toContain('[DELETED]');
-      expect(output).not.toContain('(active claude session)');
+      expect(output).toContain('✓');
+      expect(output).not.toContain('active claude session');
     } finally {
       try {
         git(repo, `worktree remove --force ${wtDir}`);
@@ -1275,7 +1277,7 @@ describe('claude session protection', () => {
         env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
       });
       expect(branches(repo)).toContain('wt-pretty-json');
-      expect(output).toContain('(active claude session)');
+      expect(output).toContain('active claude session');
     } finally {
       rmSync(appDir, { recursive: true, force: true });
       try {
@@ -1319,7 +1321,7 @@ describe('claude session protection', () => {
         env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
       });
       expect(branches(repo)).toContain('wt-claude-multi');
-      expect(output).toContain('(active claude session)');
+      expect(output).toContain('active claude session');
     } finally {
       rmSync(appDir, { recursive: true, force: true });
       try {

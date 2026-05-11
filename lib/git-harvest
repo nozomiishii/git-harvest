@@ -6,117 +6,90 @@ REPO="nozomiishii/git-harvest"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/git-harvest"
 CACHE_FILE="$CACHE_DIR/latest-version"
 CHECK_INTERVAL=86400 # 24時間（秒）
-SPARKLE_FRAMES=30       # sparkle_animate のデフォルトフレーム数
-SPARKLE_INTERVAL=0.05   # sparkle/rainbow 共通の sleep 間隔（秒）
 
-# アニメーション中の中断でカーソルが非表示のままにならないよう、EXIT で復元
-# 非TTY環境では何もしない（stdout を汚さない）
-trap 'rainbow_animate_stop; [ -t 1 ] && printf "\033[?25h" 2>/dev/null || true' EXIT
+# git-harvest のブランドカラー #C0FF39 rgb(192, 255, 57)
+BRAND_COLOR='192;255;57'
 
-# カラー出力の設定（非TTY / NO_COLOR 環境では無効化）
-RAINBOW_PID=""
+# カラー出力可否（非 TTY / NO_COLOR では無効）
 USE_COLOR=false
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   USE_COLOR=true
-  BOLD='\033[1m'
-  GREEN='\033[32m'
-  DIM='\033[2m'
-  RESET='\033[0m'
-else
-  BOLD='' GREEN='' DIM='' RESET=''
 fi
 
-# HSL (hue 0-360, lightness 0-100) から ANSI truecolor エスケープを生成
-# 彩度は固定 (S=80%)
-hsl_fg() {
-  local h=$1
-  local l=${2:-65}
-  # HSL to RGB (簡易版: 6セクターに分けて線形補間)
-  local s=80
-  local c=$(((100 - (2 * l - 100 > 0 ? 2 * l - 100 : 100 - 2 * l)) * s / 100))
-  local h_section=$((h / 60))
-  local h_remainder=$((h % 60))
-  local x
-  if [ $((h_section % 2)) -eq 0 ]; then
-    x=$((c * h_remainder / 60))
-  else
-    x=$((c * (60 - h_remainder) / 60))
-  fi
-  local m=$(((l * 255 / 100) - (c * 255 / 200)))
-  local r g b
-  case $h_section in
-  0) r=$((c * 255 / 100 + m)) g=$((x * 255 / 100 + m)) b=$m ;;
-  1) r=$((x * 255 / 100 + m)) g=$((c * 255 / 100 + m)) b=$m ;;
-  2) r=$m g=$((c * 255 / 100 + m)) b=$((x * 255 / 100 + m)) ;;
-  3) r=$m g=$((x * 255 / 100 + m)) b=$((c * 255 / 100 + m)) ;;
-  4) r=$((x * 255 / 100 + m)) g=$m b=$((c * 255 / 100 + m)) ;;
-  *) r=$((c * 255 / 100 + m)) g=$m b=$((x * 255 / 100 + m)) ;;
-  esac
-  # clamp 0-255
-  if [ "$r" -lt 0 ]; then r=0; elif [ "$r" -gt 255 ]; then r=255; fi
-  if [ "$g" -lt 0 ]; then g=0; elif [ "$g" -gt 255 ]; then g=255; fi
-  if [ "$b" -lt 0 ]; then b=0; elif [ "$b" -gt 255 ]; then b=255; fi
-  printf '\033[38;2;%d;%d;%dm' "$r" "$g" "$b"
-}
+# ---------------------------------------------------------------------------
+# 表示ヘルパー
+# ---------------------------------------------------------------------------
 
-# "git harvest" の各文字に割り当てる固定色相 (ultrathink 風レインボー)
-# g=0, i=36, t=72, ' '=-, h=108, a=144, r=180, v=216, e=252, s=288, t=324
-HEADER_TEXT="git harvest"
-HEADER_HUES="0 36 72 -1 108 144 180 216 252 288 324"
-
-# キラキラの1フレームを描画 (text, hues)
-# hues はスペース区切りの色相リスト (-1 = スペース)
-sparkle_frame() {
-  local text="$1" hues="$2"
-  printf '\r'
-  local idx=0
-  for hue in $hues; do
-    if [ "$hue" = "-1" ]; then
-      printf ' '
-    else
-      local rand=$((RANDOM % 100)) lightness
-      if [ "$rand" -lt 10 ]; then
-        lightness=$((85 + RANDOM % 11))
-      elif [ "$rand" -lt 25 ]; then
-        lightness=$((60 + RANDOM % 16))
-      else
-        lightness=$((35 + RANDOM % 16))
-      fi
-      hsl_fg "$hue" "$lightness"
-      printf '%s' "${text:$idx:1}"
-    fi
-    idx=$((idx + 1))
-  done
-  printf '\033[0m'
-}
-
-# レインボーキラキラアニメーションをバックグラウンドで開始 (TTY時のみ)
-rainbow_animate_start() {
-  [ "$USE_COLOR" = false ] && return
-  printf '\033[?25l'
-  (
-    while true; do
-      sparkle_frame "$HEADER_TEXT" "$HEADER_HUES"
-      sleep "$SPARKLE_INTERVAL"
-    done
-  ) &
-  RAINBOW_PID=$!
-}
-
-# バックグラウンドのレインボーアニメーションを停止
-rainbow_animate_stop() {
-  if [ -n "$RAINBOW_PID" ]; then
-    kill "$RAINBOW_PID" 2>/dev/null || true
-    wait "$RAINBOW_PID" 2>/dev/null || true
-    RAINBOW_PID=""
-  fi
+# ブランドカラー (truecolor)
+hi() {
   if [ "$USE_COLOR" = true ]; then
-    printf '\r\033[2K'
-    printf '\033[?25h'
+    printf '\033[38;2;%sm%s\033[0m' "$BRAND_COLOR" "$1"
+  else
+    printf '%s' "$1"
   fi
 }
 
-# 緑グラデーションロゴを表示 (下→上で明るくなる)
+# bold
+bold() {
+  if [ "$USE_COLOR" = true ]; then
+    printf '\033[1m%s\033[0m' "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
+
+# dim（補助情報）
+dim() {
+  if [ "$USE_COLOR" = true ]; then
+    printf '\033[2m%s\033[0m' "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
+
+# bold + ブランドカラー (wordmark 用)
+brand() {
+  if [ "$USE_COLOR" = true ]; then
+    printf '\033[1;38;2;%sm%s\033[0m' "$BRAND_COLOR" "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
+
+# $HOME を ~ に置換してパスを短縮
+relpath() {
+  local p="$1"
+  case "$p" in
+    "$HOME") printf '~' ;;
+    "$HOME"/*) printf '~%s' "${p#"$HOME"}" ;;
+    *) printf '%s' "$p" ;;
+  esac
+}
+
+# 現在時刻をミリ秒で取得（portable: bash 5+ / python3 / perl / date の順）
+now_ms() {
+  if [ -n "${EPOCHREALTIME:-}" ]; then
+    awk -v t="$EPOCHREALTIME" 'BEGIN{split(t,p,"."); printf "%d", p[1]*1000 + substr(p[2] "000",1,3)}'
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import time; print(int(time.time()*1000))' 2>/dev/null
+  elif command -v perl >/dev/null 2>&1; then
+    perl -MTime::HiRes -E 'printf("%d", Time::HiRes::time()*1000)' 2>/dev/null
+  else
+    echo $(($(date +%s) * 1000))
+  fi
+}
+
+# 経過時間を "X.Ys" 形式で（start_ms を受け取り、現在時刻との差を返す）
+elapsed_str() {
+  local start_ms=$1 end_ms
+  end_ms=$(now_ms)
+  local diff=$((end_ms - start_ms))
+  local s=$((diff / 1000))
+  local ds=$(((diff % 1000) / 100))
+  printf '%d.%ds' "$s" "$ds"
+}
+
+# ブランドカラー単色のロゴ
 print_logo() {
   local lines=(
     ' \|/                     \|/'
@@ -125,66 +98,44 @@ print_logo() {
     '  |     H A R V E S T     |'
     ' _|_______________________|_'
   )
-  local colors=("120;230;120" "90;200;90" "60;170;60" "40;145;40" "20;120;20")
   printf '\n'
-  if [ "$USE_COLOR" = false ]; then
-    for line in "${lines[@]}"; do printf '%s\n' "$line"; done
-  else
-    for i in "${!lines[@]}"; do
-      printf '\033[38;2;%sm%s\033[0m\n' "${colors[$i]}" "${lines[$i]}"
-    done
-  fi
-  printf '\n'
-}
-
-# 静的レインボーヘッダーを表示
-rainbow_static() {
-  if [ "$USE_COLOR" = false ]; then
-    printf '%s' "$HEADER_TEXT"
-  else
-    local idx=0
-    for hue in $HEADER_HUES; do
-      if [ "$hue" = "-1" ]; then
-        printf ' '
-      else
-        hsl_fg "$hue"
-        printf '%s' "${HEADER_TEXT:$idx:1}"
-      fi
-      idx=$((idx + 1))
-    done
-    printf '\033[0m'
-  fi
-  printf '\n'
-}
-
-# テキストをキラキラ光らせるアニメーション (TTY時のみ)
-# 引数: text hue [frames] [sleep]
-sparkle_animate() {
-  local text="$1" hue="$2" frames="${3:-$SPARKLE_FRAMES}" interval="${4:-$SPARKLE_INTERVAL}"
-  local len=${#text}
-  if [ "$USE_COLOR" = false ] || [ "$len" -eq 0 ]; then
-    printf '%s' "$text"
-    return
-  fi
-  # 全文字に同じ hue を割り当てた hues 文字列を生成
-  local hues="" i=0
-  while [ "$i" -lt "$len" ]; do
-    [ "$i" -gt 0 ] && hues="$hues "
-    if [ "${text:$i:1}" = ' ' ]; then
-      hues="$hues-1"
+  for line in "${lines[@]}"; do
+    if [ "$USE_COLOR" = true ]; then
+      printf '\033[38;2;%sm%s\033[0m\n' "$BRAND_COLOR" "$line"
     else
-      hues="$hues$hue"
+      printf '%s\n' "$line"
     fi
-    i=$((i + 1))
   done
-  printf '\033[?25l'
-  local frame=0
-  while [ "$frame" -lt "$frames" ]; do
-    sparkle_frame "$text" "$hues"
-    sleep "$interval"
-    frame=$((frame + 1))
-  done
-  printf '\033[?25h'
+  printf '\n'
+}
+
+# ブランド wordmark を表示
+wordmark() {
+  printf '\n  %s\n\n' "$(brand 'git harvest')"
+}
+
+# ✓ で removed 表示
+print_removed() {
+  local item="$1"
+  printf '    %s  %s\n' "$(hi ✓)" "$item"
+}
+
+# → で would-remove 表示
+print_will_remove() {
+  local item="$1"
+  printf '    %s  %s\n' "$(hi →)" "$item"
+}
+
+# · で growing 表示（保護理由付き、path と reason の間に最低 2 spaces 確保）
+print_growing() {
+  local item="$1" reason="$2"
+  local pad=$((38 - ${#item}))
+  [ $pad -lt 2 ] && pad=2
+  if [ "$USE_COLOR" = true ]; then
+    printf '    \033[2m·  %s%*s%s\033[0m\n' "$item" "$pad" '' "$reason"
+  else
+    printf '    ·  %s%*s%s\n' "$item" "$pad" '' "$reason"
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -298,6 +249,10 @@ self_update() {
   exit 0
 }
 
+# ---------------------------------------------------------------------------
+# 引数パース
+# ---------------------------------------------------------------------------
+
 DRY_RUN=false
 DELETE_ALL=false
 
@@ -345,6 +300,10 @@ HELP
   esac
   shift
 done
+
+# ---------------------------------------------------------------------------
+# git / Claude 連携
+# ---------------------------------------------------------------------------
 
 # リモートのデフォルトブランチ名を取得する (例: main, master)
 # 未設定の場合はリモートから自動取得を試みる
@@ -475,6 +434,10 @@ has_active_claude_session() {
   return 1
 }
 
+# ---------------------------------------------------------------------------
+# 整理ロジック
+# ---------------------------------------------------------------------------
+
 # worktree の状態を表示・削除する (DELETED_COUNT をインクリメント)
 cleanup_worktrees() {
   local base="$1"
@@ -497,40 +460,43 @@ cleanup_worktrees() {
     [ "$branch" = "$base" ] && continue
 
     if [ "$found" = false ]; then
-      printf "\nWorktrees\n"
+      printf '\n  %s\n' "$(bold Worktrees)"
       found=true
     fi
+
+    local rel
+    rel=$(relpath "$wt")
 
     if [ "$DELETE_ALL" = true ]; then
       # --all: 全保護判定をスキップして worktree を削除する
       if [ "$DRY_RUN" = true ]; then
-        printf "[WILL DELETE]  %s\n" "$wt"
+        print_will_remove "$rel"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
         git worktree remove --force "$wt"
-        printf "[DELETED]      %s\n" "$wt"
+        print_removed "$rel"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     elif has_running_claude_session "$wt"; then
-      printf "[GROWING]      %s (session running)\n" "$wt"
+      print_growing "$rel" "session running"
     elif echo "$merged_branches" | grep -qxF "$branch"; then
       # マージ済み: 未コミット変更 → claude active session → 削除可能 の順に判定
       if has_uncommitted_changes "$wt"; then
-        printf "[GROWING]      %s (uncommitted changes)\n" "$wt"
+        print_growing "$rel" "uncommitted changes"
       elif has_active_claude_session "$wt"; then
-        printf "[GROWING]      %s (active claude session)\n" "$wt"
+        print_growing "$rel" "active claude session"
       elif [ "$DRY_RUN" = true ]; then
-        printf "[WILL DELETE]  %s\n" "$wt"
+        print_will_remove "$rel"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
         git worktree remove "$wt"
-        printf "[DELETED]      %s\n" "$wt"
+        print_removed "$rel"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     elif echo "$no_unique_branches" | grep -qxF "$branch"; then
-      printf "[GROWING]      %s (no unique commits)\n" "$wt"
+      print_growing "$rel" "no unique commits"
     else
-      printf "[GROWING]      %s (not merged)\n" "$wt"
+      print_growing "$rel" "not merged"
     fi
   done < <(git worktree list --porcelain | grep --color=never '^worktree ' | sed 's/^worktree //')
   # 既に存在しない worktree の管理情報を削除
@@ -570,44 +536,51 @@ cleanup_branches() {
     [ "$branch" = "$base" ] && continue
 
     if [ "$found" = false ]; then
-      printf "\nBranches\n"
+      printf '\n  %s\n' "$(bold Branches)"
       found=true
     fi
 
     if [ "$DELETE_ALL" = true ]; then
       # --all: 全ブランチを削除対象にする（事前チェック済みなのでチェックアウト中は dry-run のみ）
       if [ "$DRY_RUN" = true ]; then
-        printf "[WILL DELETE]  %s\n" "$branch"
+        print_will_remove "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
         git branch -D "$branch" >/dev/null 2>&1
-        printf "[DELETED]      %s\n" "$branch"
+        print_removed "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     elif echo "$deletable_branches" | grep -qxF "$branch"; then
       # 削除対象: チェックアウト中かチェック
       if is_current_head "$branch" || is_checked_out_in_worktree "$branch"; then
-        printf "[GROWING]      %s (currently checked out)\n" "$branch"
+        print_growing "$branch" "currently checked out"
       elif [ "$DRY_RUN" = true ]; then
-        printf "[WILL DELETE]  %s\n" "$branch"
+        print_will_remove "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
         git branch -D "$branch" >/dev/null 2>&1
-        printf "[DELETED]      %s\n" "$branch"
+        print_removed "$branch"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     else
-      printf "[GROWING]      %s (not merged)\n" "$branch"
+      print_growing "$branch" "not merged"
     fi
   done < <(git branch | sed 's/^[*+ ]*//' | grep -v '^(')
   # リモートで削除済みの追跡ブランチを整理
   if [ "$DRY_RUN" = false ]; then git fetch --prune >/dev/null 2>&1 || true; fi
 }
 
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
+
 main() {
   # バックグラウンドでバージョンチェックを開始
   UPDATE_CHECK_PID=""
   check_update_async
+
+  local start_ms
+  start_ms=$(now_ms)
 
   local base
   base=$(default_branch)
@@ -623,11 +596,11 @@ main() {
     fi
   fi
 
+  wordmark
+
   if [ "$DRY_RUN" = true ]; then
-    printf "\nDry run mode - nothing will be deleted\n"
+    printf '  %s\n' "$(dim 'Dry run mode - nothing will be deleted')"
   fi
-  printf '\n'
-  rainbow_animate_start
 
   local all_branches
   all_branches=$(git branch | sed 's/^[*+ ]*//' | grep -v '^(')
@@ -698,25 +671,33 @@ main() {
   done <<<"$all_branches"
 
   if [ "$other_branch_count" -eq 0 ] && [ "$linked_wt_count" -eq 0 ]; then
-    rainbow_animate_stop
-    rainbow_static
-    printf "Nothing to harvest. All clean!\n\n"
+    printf '\n  %s\n\n' "$(dim '· Nothing to harvest. All clean.')"
   else
     # worktree が参照中のブランチは削除できないため、worktree を先に削除する
     DELETED_COUNT=0
-    rainbow_animate_stop
-    rainbow_static
     cleanup_worktrees "$base" "$merged_branches" "$no_unique_branches"
     cleanup_branches "$base" "$merged_branches" "$no_unique_branches"
 
     # サマリー表示
-    printf "\n\n"
+    printf '\n'
     if [ "$DELETED_COUNT" -gt 0 ]; then
-      sparkle_animate "Harvested!" 120
+      local item_word elapsed
+      if [ "$DELETED_COUNT" -eq 1 ]; then item_word="item"; else item_word="items"; fi
+      elapsed=$(elapsed_str "$start_ms")
+      if [ "$DRY_RUN" = true ]; then
+        printf '  %s %s  %s\n\n' \
+          "$(hi →)" \
+          "$(bold "Would harvest $DELETED_COUNT $item_word")" \
+          "$(dim "in $elapsed")"
+      else
+        printf '  %s %s  %s\n\n' \
+          "$(hi ✓)" \
+          "$(bold "Harvested $DELETED_COUNT $item_word")" \
+          "$(dim "in $elapsed")"
+      fi
     else
-      printf "Nothing to harvest. All growing!"
+      printf '  %s\n\n' "$(dim '· Nothing to harvest. All growing.')"
     fi
-    printf '\n\n\n'
   fi
 
   # バックグラウンドのバージョンチェックを待機して通知表示

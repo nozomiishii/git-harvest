@@ -119,36 +119,44 @@ post-merge:
 
 ## 動作内容
 
+ステータスマーカー:
+
+| マーカー | 意味 |
+|---|---|
+| `✓` | 削除済み |
+| `→` | 削除予定（dry-run） |
+| `·` | 残す（理由が続く） |
+
 ### Worktree
 
 | 状態 | 表示 | 通常 | `--all` |
 |---|---|---|---|
-| マージ済み + 変更なし | `[DELETED]` / `[WILL DELETE]` | 削除 | 削除 |
-| 走行中の claude プロセスあり | `[GROWING] (session running)` | 残す | 削除 |
-| マージ済み + 未コミット変更あり | `[GROWING] (uncommitted changes)` | 残す | 削除 |
-| マージ済み + active な Claude Code セッションあり | `[GROWING] (active claude session)` | 残す | 削除 |
-| 未マージ | `[GROWING] (not merged)` | 残す | 削除 |
-| 独自コミットなし | `[GROWING] (no unique commits)` | 残す | 削除 |
+| マージ済み + 変更なし | `✓` / `→` | 削除 | 削除 |
+| 走行中の claude プロセスあり | `·  session running` | 残す | 削除 |
+| マージ済み + 未コミット変更あり | `·  uncommitted changes` | 残す | 削除 |
+| マージ済み + active な Claude Code セッションあり | `·  active claude session` | 残す | 削除 |
+| 未マージ | `·  not merged` | 残す | 削除 |
+| 独自コミットなし | `·  no unique commits` | 残す | 削除 |
 | メインワーキングツリー | *(表示なし)* | 残す | 残す |
 
 ### ブランチ
 
 | 状態 | 表示 | 通常 | `--all` |
 |---|---|---|---|
-| マージ済み | `[DELETED]` / `[WILL DELETE]` | 削除 | 削除 |
-| マージ済み + チェックアウト中 | `[GROWING] (currently checked out)` | 残す | エラー |
-| 未マージ | `[GROWING] (not merged)` | 残す | 削除 |
-| 独自コミットなし | `[DELETED]` / `[WILL DELETE]` | 削除 | 削除 |
+| マージ済み | `✓` / `→` | 削除 | 削除 |
+| マージ済み + チェックアウト中 | `·  currently checked out` | 残す | エラー |
+| 未マージ | `·  not merged` | 残す | 削除 |
+| 独自コミットなし | `✓` / `→` | 削除 | 削除 |
 | デフォルトブランチ | *(表示なし)* | 残す | 残す |
 
-> デフォルトブランチ以外をチェックアウト中に `--all` を実行すると、何も削除せずエラー終了します。`--dry-run --all` では全リソースを `[WILL DELETE]` で表示します（エラーにならない）。
+> デフォルトブランチ以外をチェックアウト中に `--all` を実行すると、何も削除せずエラー終了します。`--dry-run --all` では全リソースを `→` で表示します（エラーにならない）。
 
 ### Claude Code 連携
 
 git-harvest は [Claude Code](https://claude.ai/code) で作業中の worktree を誤って削除しないように保護します:
 
-- **走行中セッション**: `claude` プロセスが worktree 内で生きている場合 (`~/.claude/sessions/<pid>.json` で検出)、`(session running)` で残します。
-- **active な app セッション**: Claude Code desktop app に worktree のセッションがあり、**archive されていない** 場合 (`claude-code-sessions/**/local_*.json` の `isArchived: false`)、`(active claude session)` で残します。削除させたいときは、app の Recents でセッションを選択して `A` キーで archive してください。
+- **走行中セッション**: `claude` プロセスが worktree 内で生きている場合 (`~/.claude/sessions/<pid>.json` で検出)、`session running` で残します。
+- **active な app セッション**: Claude Code desktop app に worktree のセッションがあり、**archive されていない** 場合 (`claude-code-sessions/**/local_*.json` の `isArchived: false`)、`active claude session` で残します。削除させたいときは、app の Recents でセッションを選択して `A` キーで archive してください。
 - **`--all`**: claude セッションが走行中／active でも worktree を削除します。worktree ディレクトリだけが消えるので、セッションのメタデータ自体は変更しません。
 - **Claude Code が未インストール**: 該当パスが無ければ silent skip。連携機能は無効化されますが、それ以外の挙動は従来通りです。
 
