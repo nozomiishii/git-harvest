@@ -5,9 +5,7 @@ VERSION="0.1.25" # x-release-please-version
 REPO="nozomiishii/git-harvest"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/git-harvest"
 CACHE_FILE="$CACHE_DIR/latest-version"
-SCHEMA_CHECK_CACHE_FILE="$CACHE_DIR/last-claude-schema-check"
 CHECK_INTERVAL=86400 # 24時間（秒）
-SCHEMA_CHECK_INTERVAL=604800 # 7日（秒）
 SPARKLE_FRAMES=30       # sparkle_animate のデフォルトフレーム数
 SPARKLE_INTERVAL=0.05   # sparkle/rainbow 共通の sleep 間隔（秒）
 
@@ -473,50 +471,6 @@ has_active_claude_session() {
   return 1
 }
 
-# Claude Code app の session JSON schema が認識可能か週1回チェック。
-# session ファイルは見つかったが worktreePath を抽出できない (= schema が変わった可能性) なら、
-# stderr に1行警告を出す。TTL cache で post-merge hook 連発時の rate-limit を行う。
-claude_schema_check() {
-  local app_dir
-  app_dir=$(claude_app_dir)
-  [ -n "$app_dir" ] || return 0
-  local sessions_root="$app_dir/claude-code-sessions"
-  [ -d "$sessions_root" ] || return 0
-
-  # TTL cache: 1週間以内ならスキップ
-  if [ -f "$SCHEMA_CHECK_CACHE_FILE" ]; then
-    local last_check now
-    last_check=$(stat -c %Y "$SCHEMA_CHECK_CACHE_FILE" 2>/dev/null \
-              || stat -f %m "$SCHEMA_CHECK_CACHE_FILE" 2>/dev/null || echo 0)
-    now=$(date +%s)
-    if (( now - last_check < SCHEMA_CHECK_INTERVAL )); then
-      return 0
-    fi
-  fi
-
-  local total=0 extracted=0
-  local f wp
-  while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    total=$((total + 1))
-    wp=$(sed -n 's/.*"worktreePath":"\([^"]*\)".*/\1/p' "$f" | head -1)
-    [ -n "$wp" ] && extracted=$((extracted + 1))
-  done < <(find "$sessions_root" -type f -name 'local_*.json' 2>/dev/null)
-
-  if [ "$total" -gt 0 ] && [ "$extracted" -eq 0 ]; then
-    cat >&2 <<EOF
-
-Notice: Claude Code session schema unrecognized — active session detection disabled.
-Update git-harvest if available: https://github.com/${REPO}/issues
-
-EOF
-  fi
-
-  # cache を touch して TTL を回す（警告の有無に関わらず）
-  mkdir -p "$CACHE_DIR"
-  touch "$SCHEMA_CHECK_CACHE_FILE"
-}
-
 # worktree の状態を表示・削除する (DELETED_COUNT をインクリメント)
 cleanup_worktrees() {
   local base="$1"
@@ -766,7 +720,6 @@ main() {
     wait "$UPDATE_CHECK_PID" 2>/dev/null || true
   fi
   show_update_notification
-  claude_schema_check
 }
 
 main
