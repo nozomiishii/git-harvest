@@ -375,6 +375,106 @@ has_uncommitted_changes() {
   return 1
 }
 
+# Claude CLI が走行中セッションを記録するディレクトリ。
+# 上書き用 env: GIT_HARVEST_CLAUDE_SESSIONS_DIR (テスト / power user 用)
+claude_sessions_dir() {
+  echo "${GIT_HARVEST_CLAUDE_SESSIONS_DIR:-$HOME/.claude/sessions}"
+}
+
+# Claude desktop app のデータディレクトリ。複数 OS の候補を順に試す。
+# 上書き用 env: GIT_HARVEST_CLAUDE_APP_DIR
+# 該当なしの場合は空文字を返す。
+claude_app_dir() {
+  if [ -n "${GIT_HARVEST_CLAUDE_APP_DIR:-}" ]; then
+    echo "$GIT_HARVEST_CLAUDE_APP_DIR"
+    return
+  fi
+  local c
+  for c in \
+    "$HOME/Library/Application Support/Claude" \
+    "$HOME/.config/Claude" \
+    "$HOME/.local/share/Claude" \
+    "${APPDATA:-}/Claude"; do
+    [ -n "$c" ] && [ -d "$c" ] && { echo "$c"; return; }
+  done
+  echo ""
+}
+
+# パスを canonical (symlink 解決済み) に正規化する。
+# git は worktree path を canonical で保持するが、JSON 内の cwd / worktreePath は
+# ユーザーが指定したまま記録される可能性があるため、両者を同一表記に揃える必要がある。
+# (例: macOS の /var/folders は /private/var/folders への symlink)
+canonical_path() {
+  local p="$1"
+  [ -z "$p" ] && return
+  if [ -d "$p" ]; then
+    (cd "$p" 2>/dev/null && pwd -P) 2>/dev/null || echo "$p"
+  else
+    echo "$p"
+  fi
+}
+
+# 走行中の claude プロセスがこの worktree で動いているか (0=あり, 1=なし)。
+# ~/.claude/sessions/<pid>.json の cwd が canonical 一致し、pid が生存していれば true。
+has_running_claude_session() {
+  local wt="$1"
+  local sessions_dir
+  sessions_dir=$(claude_sessions_dir)
+  [ -d "$sessions_dir" ] || return 1
+
+  local wt_canon
+  wt_canon=$(canonical_path "$wt")
+  [ -z "$wt_canon" ] && return 1
+
+  local f cwd cwd_canon pid
+  for f in "$sessions_dir"/*.json; do
+    [ -f "$f" ] || continue
+    # JSON は通常 single-line だが、pretty-print された場合にも備えて key/value 間の
+    # whitespace を許容する
+    cwd=$(sed -nE 's/.*"cwd"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$f" | head -1)
+    [ -z "$cwd" ] && continue
+    cwd_canon=$(canonical_path "$cwd")
+    [ "$cwd_canon" = "$wt_canon" ] || continue
+    pid=$(sed -nE 's/.*"pid"[[:space:]]*:[[:space:]]*([0-9]+).*/\1/p' "$f" | head -1)
+    [ -z "$pid" ] && continue
+    if kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Claude Code app の "active" (= 未 archive) セッションがこの worktree にあるか (0=あり, 1=なし)。
+# claude-code-sessions/**/local_*.json で worktreePath が canonical 一致し、
+# isArchived: true でないものが1つでもあれば true。
+has_active_claude_session() {
+  local wt="$1"
+  local app_dir
+  app_dir=$(claude_app_dir)
+  [ -n "$app_dir" ] || return 1
+  local sessions_root="$app_dir/claude-code-sessions"
+  [ -d "$sessions_root" ] || return 1
+
+  local wt_canon
+  wt_canon=$(canonical_path "$wt")
+  [ -z "$wt_canon" ] && return 1
+
+  local f wp wp_canon
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    # JSON は通常 single-line だが、pretty-print された場合にも備えて key/value 間の
+    # whitespace を許容する
+    wp=$(sed -nE 's/.*"worktreePath"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$f" | head -1)
+    [ -z "$wp" ] && continue
+    wp_canon=$(canonical_path "$wp")
+    [ "$wp_canon" = "$wt_canon" ] || continue
+    if ! grep -Eq '"isArchived"[[:space:]]*:[[:space:]]*true' "$f" 2>/dev/null; then
+      return 0
+    fi
+  done < <(find "$sessions_root" -type f -name 'local_*.json' 2>/dev/null)
+  return 1
+}
+
 # worktree の状態を表示・削除する (DELETED_COUNT をインクリメント)
 cleanup_worktrees() {
   local base="$1"
@@ -402,7 +502,7 @@ cleanup_worktrees() {
     fi
 
     if [ "$DELETE_ALL" = true ]; then
-      # --all: 全 worktree を削除対象にする
+      # --all: 全保護判定をスキップして worktree を削除する
       if [ "$DRY_RUN" = true ]; then
         printf "[WILL DELETE]  %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
@@ -411,10 +511,14 @@ cleanup_worktrees() {
         printf "[DELETED]      %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
+    elif has_running_claude_session "$wt"; then
+      printf "[GROWING]      %s (session running)\n" "$wt"
     elif echo "$merged_branches" | grep -qxF "$branch"; then
-      # マージ済み: 未コミット変更があるかチェック
+      # マージ済み: 未コミット変更 → claude active session → 削除可能 の順に判定
       if has_uncommitted_changes "$wt"; then
         printf "[GROWING]      %s (uncommitted changes)\n" "$wt"
+      elif has_active_claude_session "$wt"; then
+        printf "[GROWING]      %s (active claude session)\n" "$wt"
       elif [ "$DRY_RUN" = true ]; then
         printf "[WILL DELETE]  %s\n" "$wt"
         DELETED_COUNT=$((DELETED_COUNT + 1))

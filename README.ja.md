@@ -124,7 +124,9 @@ post-merge:
 | 状態 | 表示 | 通常 | `--all` |
 |---|---|---|---|
 | マージ済み + 変更なし | `[DELETED]` / `[WILL DELETE]` | 削除 | 削除 |
+| 走行中の claude プロセスあり | `[GROWING] (session running)` | 残す | 削除 |
 | マージ済み + 未コミット変更あり | `[GROWING] (uncommitted changes)` | 残す | 削除 |
+| マージ済み + active な Claude Code セッションあり | `[GROWING] (active claude session)` | 残す | 削除 |
 | 未マージ | `[GROWING] (not merged)` | 残す | 削除 |
 | 独自コミットなし | `[GROWING] (no unique commits)` | 残す | 削除 |
 | メインワーキングツリー | *(表示なし)* | 残す | 残す |
@@ -140,5 +142,21 @@ post-merge:
 | デフォルトブランチ | *(表示なし)* | 残す | 残す |
 
 > デフォルトブランチ以外をチェックアウト中に `--all` を実行すると、何も削除せずエラー終了します。`--dry-run --all` では全リソースを `[WILL DELETE]` で表示します（エラーにならない）。
+
+### Claude Code 連携
+
+git-harvest は [Claude Code](https://claude.ai/code) で作業中の worktree を誤って削除しないように保護します:
+
+- **走行中セッション**: `claude` プロセスが worktree 内で生きている場合 (`~/.claude/sessions/<pid>.json` で検出)、`(session running)` で残します。
+- **active な app セッション**: Claude Code desktop app に worktree のセッションがあり、**archive されていない** 場合 (`claude-code-sessions/**/local_*.json` の `isArchived: false`)、`(active claude session)` で残します。削除させたいときは、app の Recents でセッションを選択して `A` キーで archive してください。
+- **`--all`**: claude セッションが走行中／active でも worktree を削除します。worktree ディレクトリだけが消えるので、セッションのメタデータ自体は変更しません。
+- **Claude Code が未インストール**: 該当パスが無ければ silent skip。連携機能は無効化されますが、それ以外の挙動は従来通りです。
+
+テストや非標準インストール用にパスを上書きする env var:
+
+| 環境変数 | デフォルト |
+|---|---|
+| `GIT_HARVEST_CLAUDE_SESSIONS_DIR` | `~/.claude/sessions` |
+| `GIT_HARVEST_CLAUDE_APP_DIR` | `~/Library/Application Support/Claude` (macOS), `~/.config/Claude` または `~/.local/share/Claude` (Linux), `$APPDATA/Claude` (Windows, best-effort) |
 
 

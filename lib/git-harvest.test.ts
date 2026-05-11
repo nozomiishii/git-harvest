@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -8,7 +8,16 @@ const SCRIPT = join(import.meta.dir, 'git-harvest');
 
 // テスト用キャッシュディレクトリ（~/.cache への書き込みを避ける）
 const TEST_CACHE_DIR = mkdtempSync(join(tmpdir(), 'git-harvest-test-cache-'));
-const TEST_ENV = { ...process.env, NO_COLOR: '1', XDG_CACHE_HOME: TEST_CACHE_DIR };
+// Claude 関連パスを空ディレクトリに向けて、ユーザーの実 ~/.claude を見ないように隔離する
+const TEST_CLAUDE_SESSIONS_DIR = mkdtempSync(join(tmpdir(), 'git-harvest-claude-sessions-'));
+const TEST_CLAUDE_APP_DIR = mkdtempSync(join(tmpdir(), 'git-harvest-claude-app-'));
+const TEST_ENV = {
+  ...process.env,
+  NO_COLOR: '1',
+  XDG_CACHE_HOME: TEST_CACHE_DIR,
+  GIT_HARVEST_CLAUDE_SESSIONS_DIR: TEST_CLAUDE_SESSIONS_DIR,
+  GIT_HARVEST_CLAUDE_APP_DIR: TEST_CLAUDE_APP_DIR,
+};
 
 // ヘルパー: スクリプト実行（NO_COLOR=1 で ANSI エスケープを無効化）
 function run(cwd: string, args = ''): string {
@@ -934,6 +943,391 @@ describe('--all', () => {
     expect(branches(repo)).not.toContain('detached-test');
     expect(branches(repo)).toContain('main');
     expect(output).toContain('[DELETED]');
+  });
+});
+
+describe('claude session protection', () => {
+  // pid ファイルが残っていても pid が死んでいれば保護しない (stale 扱い)
+  test('does not protect when claude session pid is dead (stale file)', () => {
+    git(repo, 'checkout -b wt-stale-claude');
+    commitFile(repo, 'stale.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-stale-claude');
+    git(repo, 'commit -m "squash stale"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-stale-claude-dir');
+    git(repo, `worktree add ${wtDir} wt-stale-claude`);
+
+    // 短命プロセスを spawn して即終了させ、その pid を再利用する
+    // pid 1 は init/launchd でほぼ確実に生きているため使えない。
+    // 高い未使用 pid を狙う方が確実だが、portable に dead pid を作る方法として
+    // spawnSync で完了済みプロセスの pid を使う
+    const { spawnSync } = require('child_process') as typeof import('child_process');
+    const dead = spawnSync('true');
+    const deadPid = dead.pid!;
+
+    const sessionsDir = mkdtempSync(join(tmpdir(), 'gh-claude-sess-'));
+    writeFileSync(
+      join(sessionsDir, `${deadPid}.json`),
+      JSON.stringify({ pid: deadPid, sessionId: 'stale', cwd: wtDir, status: 'idle' })
+    );
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_SESSIONS_DIR: sessionsDir },
+      });
+      // pid が死んでいるので保護されず、merged worktree は削除される
+      expect(branches(repo)).not.toContain('wt-stale-claude');
+      expect(output).toContain('[DELETED]');
+      expect(output).not.toContain('(session running)');
+    } finally {
+      rmSync(sessionsDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // 走行中の claude プロセス (~/.claude/sessions/<pid>.json で cwd 一致 & pid alive) があれば、
+  // マージ済み worktree でも保護する
+  test('preserves merged worktree when a claude session is running in it', () => {
+    git(repo, 'checkout -b wt-claude-running');
+    commitFile(repo, 'claude-running.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-claude-running');
+    git(repo, 'commit -m "squash claude-running"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-claude-running-dir');
+    git(repo, `worktree add ${wtDir} wt-claude-running`);
+
+    // 生きた pid を持つプロセスを spawn (sleep 60s)
+    const sleepProc = spawn('sleep', ['60'], { detached: false });
+    const livePid = sleepProc.pid!;
+
+    // 走行中セッションを模した JSON を書き込む
+    const sessionsDir = mkdtempSync(join(tmpdir(), 'gh-claude-sess-'));
+    writeFileSync(
+      join(sessionsDir, `${livePid}.json`),
+      JSON.stringify({
+        pid: livePid,
+        sessionId: 'test-session',
+        cwd: wtDir,
+        status: 'idle',
+        updatedAt: Date.now(),
+      })
+    );
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_SESSIONS_DIR: sessionsDir },
+      });
+      expect(branches(repo)).toContain('wt-claude-running');
+      expect(worktrees(repo).length).toBeGreaterThan(1);
+      expect(output).toContain('[GROWING]');
+      expect(output).toContain('(session running)');
+      expect(output).not.toContain('[DELETED]');
+    } finally {
+      sleepProc.kill('SIGKILL');
+      rmSync(sessionsDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // claude-code-sessions/**/local_*.json で worktreePath 一致 & isArchived: false の
+  // セッションがあれば、マージ済み worktree でも保護する
+  test('preserves merged worktree with active (non-archived) claude app session', () => {
+    git(repo, 'checkout -b wt-claude-active');
+    commitFile(repo, 'active.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-claude-active');
+    git(repo, 'commit -m "squash active"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-claude-active-dir');
+    git(repo, `worktree add ${wtDir} wt-claude-active`);
+
+    // claude-code-sessions/<workspace>/<sub>/local_<sid>.json を模倣
+    const appDir = mkdtempSync(join(tmpdir(), 'gh-claude-app-'));
+    const sessionPath = join(appDir, 'claude-code-sessions', 'ws-uuid', 'sub-uuid');
+    mkdirSync(sessionPath, { recursive: true });
+    writeFileSync(
+      join(sessionPath, 'local_abc.json'),
+      JSON.stringify({
+        sessionId: 'local_abc',
+        worktreePath: wtDir,
+        worktreeName: 'wt-claude-active',
+        sourceBranch: 'main',
+        isArchived: false,
+        title: 'test',
+      })
+    );
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
+      });
+      expect(branches(repo)).toContain('wt-claude-active');
+      expect(worktrees(repo).length).toBeGreaterThan(1);
+      expect(output).toContain('[GROWING]');
+      expect(output).toContain('(active claude session)');
+      expect(output).not.toContain('[DELETED]');
+    } finally {
+      rmSync(appDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // isArchived: true のセッションだけなら保護しない (= 削除可)
+  test('does not protect when all claude app sessions are archived', () => {
+    git(repo, 'checkout -b wt-claude-archived');
+    commitFile(repo, 'archived.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-claude-archived');
+    git(repo, 'commit -m "squash archived"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-claude-archived-dir');
+    git(repo, `worktree add ${wtDir} wt-claude-archived`);
+
+    const appDir = mkdtempSync(join(tmpdir(), 'gh-claude-app-'));
+    const sessionPath = join(appDir, 'claude-code-sessions', 'ws', 'sub');
+    mkdirSync(sessionPath, { recursive: true });
+    writeFileSync(
+      join(sessionPath, 'local_arc.json'),
+      JSON.stringify({ worktreePath: wtDir, isArchived: true, title: 'archived' })
+    );
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
+      });
+      expect(branches(repo)).not.toContain('wt-claude-archived');
+      expect(output).toContain('[DELETED]');
+      expect(output).not.toContain('(active claude session)');
+    } finally {
+      rmSync(appDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // --all は claude セッション保護も bypass して全削除する
+  test('--all bypasses claude session protection and deletes worktree', () => {
+    git(repo, 'checkout -b wt-claude-all');
+    commitFile(repo, 'all.txt', 'work');
+    git(repo, 'checkout main');
+
+    const wtDir = join(repo, '..', 'wt-claude-all-dir');
+    git(repo, `worktree add ${wtDir} wt-claude-all`);
+
+    // active な claude session を仕込んでおく
+    const appDir = mkdtempSync(join(tmpdir(), 'gh-claude-app-'));
+    const sessionPath = join(appDir, 'claude-code-sessions', 'ws', 'sub');
+    mkdirSync(sessionPath, { recursive: true });
+    writeFileSync(
+      join(sessionPath, 'local_active.json'),
+      JSON.stringify({ worktreePath: wtDir, isArchived: false })
+    );
+
+    try {
+      const output = execSync(`bash ${SCRIPT} --all`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
+      });
+      // --all は claude 保護を無視して削除する
+      expect(branches(repo)).not.toContain('wt-claude-all');
+      expect(worktrees(repo)).toHaveLength(1);
+      expect(output).toContain('[DELETED]');
+      expect(output).not.toContain('(active claude session)');
+      expect(output).not.toContain('(session running)');
+    } finally {
+      rmSync(appDir, { recursive: true, force: true });
+    }
+  });
+
+  // 未マージ worktree でも走行中セッションがあれば、表示は (not merged) ではなく (session running) が勝つ
+  // (層 ① は merged 判定の外で動くため。設計意図の固定テスト)
+  test('shows session-running label over not-merged for unmerged worktree with running claude', () => {
+    git(repo, 'checkout -b wt-unmerged-running');
+    commitFile(repo, 'unm-run.txt', 'work');
+    git(repo, 'checkout main');
+    // merge せず未マージのまま
+
+    const wtDir = join(repo, '..', 'wt-unmerged-running-dir');
+    git(repo, `worktree add ${wtDir} wt-unmerged-running`);
+
+    const sleepProc = spawn('sleep', ['60'], { detached: false });
+    const livePid = sleepProc.pid!;
+
+    const sessionsDir = mkdtempSync(join(tmpdir(), 'gh-claude-sess-'));
+    writeFileSync(
+      join(sessionsDir, `${livePid}.json`),
+      JSON.stringify({ pid: livePid, cwd: wtDir, status: 'idle' })
+    );
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_SESSIONS_DIR: sessionsDir },
+      });
+      // worktree は残る (どちらの理由でも残る) かつ表示は走行中が勝つ
+      expect(branches(repo)).toContain('wt-unmerged-running');
+      expect(output).toContain('wt-unmerged-running-dir (session running)');
+      expect(output).not.toMatch(/wt-unmerged-running-dir \(not merged\)/);
+    } finally {
+      sleepProc.kill('SIGKILL');
+      rmSync(sessionsDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // GIT_HARVEST_CLAUDE_APP_DIR が存在しないパスを指している場合、silent skip して
+  // 既存の merge ベース挙動と同等になる
+  test('silently skips claude detection when app dir does not exist', () => {
+    git(repo, 'checkout -b wt-no-app-dir');
+    commitFile(repo, 'no-app.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-no-app-dir');
+    git(repo, 'commit -m "squash no-app"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-no-app-dir-dir');
+    git(repo, `worktree add ${wtDir} wt-no-app-dir`);
+
+    // 存在しないパスを env var に渡す
+    const fakeAppDir = join(tmpdir(), 'gh-nonexistent-app-' + Date.now());
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: fakeAppDir },
+      });
+      // claude 検出は silent skip され、merge 済み worktree は通常通り削除される
+      expect(branches(repo)).not.toContain('wt-no-app-dir');
+      expect(output).toContain('[DELETED]');
+      expect(output).not.toContain('(active claude session)');
+    } finally {
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // pretty-print された (key/value 間に空白がある) JSON でも検出できる
+  test('detects worktreePath in pretty-printed JSON (whitespace between key and value)', () => {
+    git(repo, 'checkout -b wt-pretty-json');
+    commitFile(repo, 'pretty.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-pretty-json');
+    git(repo, 'commit -m "squash pretty"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-pretty-json-dir');
+    git(repo, `worktree add ${wtDir} wt-pretty-json`);
+
+    const appDir = mkdtempSync(join(tmpdir(), 'gh-claude-app-'));
+    const sessionPath = join(appDir, 'claude-code-sessions', 'ws', 'sub');
+    mkdirSync(sessionPath, { recursive: true });
+    // pretty-print: key と value の間に space を入れる
+    const prettyJson = JSON.stringify(
+      { worktreePath: wtDir, isArchived: false, title: 'pretty' },
+      null,
+      2
+    );
+    writeFileSync(join(sessionPath, 'local_pretty.json'), prettyJson);
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
+      });
+      expect(branches(repo)).toContain('wt-pretty-json');
+      expect(output).toContain('(active claude session)');
+    } finally {
+      rmSync(appDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
+  // 複数セッションがあって、1つでも archived じゃないなら保護する (OR semantics)
+  test('preserves worktree if any session is non-archived (multiple sessions)', () => {
+    git(repo, 'checkout -b wt-claude-multi');
+    commitFile(repo, 'multi.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash wt-claude-multi');
+    git(repo, 'commit -m "squash multi"');
+    git(repo, 'push');
+
+    const wtDir = join(repo, '..', 'wt-claude-multi-dir');
+    git(repo, `worktree add ${wtDir} wt-claude-multi`);
+
+    const appDir = mkdtempSync(join(tmpdir(), 'gh-claude-app-'));
+    const sessionPath = join(appDir, 'claude-code-sessions', 'ws', 'sub');
+    mkdirSync(sessionPath, { recursive: true });
+    // archived セッション
+    writeFileSync(
+      join(sessionPath, 'local_old.json'),
+      JSON.stringify({ worktreePath: wtDir, isArchived: true })
+    );
+    // active セッション
+    writeFileSync(
+      join(sessionPath, 'local_new.json'),
+      JSON.stringify({ worktreePath: wtDir, isArchived: false })
+    );
+
+    try {
+      const output = execSync(`bash ${SCRIPT}`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: { ...TEST_ENV, GIT_HARVEST_CLAUDE_APP_DIR: appDir },
+      });
+      expect(branches(repo)).toContain('wt-claude-multi');
+      expect(output).toContain('(active claude session)');
+    } finally {
+      rmSync(appDir, { recursive: true, force: true });
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
   });
 });
 

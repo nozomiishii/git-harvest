@@ -123,7 +123,9 @@ post-merge:
 | State | Display | Default | `--all` |
 |---|---|---|---|
 | Merged + clean | `[DELETED]` / `[WILL DELETE]` | Delete | Delete |
+| Running claude session | `[GROWING] (session running)` | Keep | Delete |
 | Merged + uncommitted changes | `[GROWING] (uncommitted changes)` | Keep | Delete |
+| Merged + active Claude Code session | `[GROWING] (active claude session)` | Keep | Delete |
 | Not merged | `[GROWING] (not merged)` | Keep | Delete |
 | No unique commits | `[GROWING] (no unique commits)` | Keep | Delete |
 | Main working tree | *(not shown)* | Keep | Keep |
@@ -139,4 +141,20 @@ post-merge:
 | Default branch | *(not shown)* | Keep | Keep |
 
 > `--all` exits with an error if a non-default branch is currently checked out. `--dry-run --all` shows all resources as `[WILL DELETE]` without errors.
+
+### Claude Code integration
+
+git-harvest avoids deleting worktrees that you are still working in via [Claude Code](https://claude.ai/code):
+
+- **Running session**: if a `claude` process is alive in a worktree (detected via `~/.claude/sessions/<pid>.json`), the worktree is preserved with `(session running)`.
+- **Active app session**: if the Claude Code desktop app has a session for the worktree that is **not archived** (detected via `claude-code-sessions/**/local_*.json` with `isArchived: false`), the worktree is preserved with `(active claude session)`. To allow deletion, archive the session in the app (press `A` on the session in Recents).
+- **`--all`**: deletes worktrees regardless of running or active claude sessions; only the worktree directories are removed and the session metadata itself is not modified.
+- **No Claude Code installed**: the integration is silently skipped — git-harvest behaves as if these checks did not exist.
+
+Override paths for testing or non-standard installs:
+
+| Env var | Default |
+|---|---|
+| `GIT_HARVEST_CLAUDE_SESSIONS_DIR` | `~/.claude/sessions` |
+| `GIT_HARVEST_CLAUDE_APP_DIR` | `~/Library/Application Support/Claude` (macOS), `~/.config/Claude` or `~/.local/share/Claude` (Linux), `$APPDATA/Claude` (Windows, best-effort) |
 
