@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.27](https://github.com/nozomiishii/git-harvest/compare/v0.1.26...v0.1.27) (2026-05-11)
+
+
+### Features
+
+* redesign output with minimal format and brand color ([#139](https://github.com/nozomiishii/git-harvest/issues/139)) ([28a0465](https://github.com/nozomiishii/git-harvest/commit/28a0465edb55b4f5453d7bc2b4b3c0ef049a8b06))
+
 ## [0.1.26](https://github.com/nozomiishii/git-harvest/compare/v0.1.25...v0.1.26) (2026-05-11)
 
 
