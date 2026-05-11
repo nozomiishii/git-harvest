@@ -7,12 +7,8 @@ CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/git-harvest"
 CACHE_FILE="$CACHE_DIR/latest-version"
 CHECK_INTERVAL=86400 # 24時間（秒）
 
-# 稲光 Inabikari — git-harvest のブランドカラー
-# #C0FF39 rgb(192, 255, 57)
-# C = Crop（branch も worktree も harvest 対象）
-# 0 → FF = 育ち始め → 全力で育ちきった
-# 39 = サンキュー、収穫！
-INABIKARI='192;255;57'
+# git-harvest のブランドカラー #C0FF39 rgb(192, 255, 57)
+BRAND_COLOR='192;255;57'
 
 # カラー出力可否（非 TTY / NO_COLOR では無効）
 USE_COLOR=false
@@ -24,10 +20,10 @@ fi
 # 表示ヘルパー
 # ---------------------------------------------------------------------------
 
-# 稲光色 (truecolor)
+# ブランドカラー (truecolor)
 hi() {
   if [ "$USE_COLOR" = true ]; then
-    printf '\033[38;2;%sm%s\033[0m' "$INABIKARI" "$1"
+    printf '\033[38;2;%sm%s\033[0m' "$BRAND_COLOR" "$1"
   else
     printf '%s' "$1"
   fi
@@ -51,10 +47,10 @@ dim() {
   fi
 }
 
-# bold + 稲光（ブランド wordmark 用）
+# bold + ブランドカラー (wordmark 用)
 brand() {
   if [ "$USE_COLOR" = true ]; then
-    printf '\033[1;38;2;%sm%s\033[0m' "$INABIKARI" "$1"
+    printf '\033[1;38;2;%sm%s\033[0m' "$BRAND_COLOR" "$1"
   else
     printf '%s' "$1"
   fi
@@ -93,7 +89,7 @@ elapsed_str() {
   printf '%d.%ds' "$s" "$ds"
 }
 
-# 稲光単色のロゴ
+# ブランドカラー単色のロゴ
 print_logo() {
   local lines=(
     ' \|/                     \|/'
@@ -105,7 +101,7 @@ print_logo() {
   printf '\n'
   for line in "${lines[@]}"; do
     if [ "$USE_COLOR" = true ]; then
-      printf '\033[38;2;%sm%s\033[0m\n' "$INABIKARI" "$line"
+      printf '\033[38;2;%sm%s\033[0m\n' "$BRAND_COLOR" "$line"
     else
       printf '%s\n' "$line"
     fi
@@ -115,7 +111,7 @@ print_logo() {
 
 # ブランド wordmark を表示
 wordmark() {
-  printf '\n  %s  %s\n\n' "$(brand 稲光)" "$(brand 'git harvest')"
+  printf '\n  %s\n\n' "$(brand 'git harvest')"
 }
 
 # ✓ で removed 表示

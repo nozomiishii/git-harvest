@@ -72,7 +72,8 @@ hex に偶然刻まれた成長物語:
 
 実装メモ:
 
-- 定数は `lib/git-harvest` 冒頭の `INABIKARI='192;255;57'`
-- 使用箇所: wordmark `稲光 git harvest` / `✓` 成功マーカー / `→` will-delete マーカー / `logo` subcommand
+- 定数は `lib/git-harvest` 冒頭の `BRAND_COLOR='192;255;57'`
+- コード内では「稲光」や「Inabikari」の名前は使わず `BRAND_COLOR` / `ブランドカラー` で通す（user-facing には秘密にしておく）
+- 使用箇所: wordmark `git harvest` / `✓` 成功マーカー / `→` will-delete マーカー / `logo` subcommand
 - `·` (growing) と reason 文は dim gray、エラーは terminal default red を維持して CLI 規約（red=error / yellow=warn）と衝突させない
 - light terminal での視認性は犠牲にして dark terminal 前提（`#C0FF39` は L≈0.83 なので白背景では飛ぶ）。`NO_COLOR=1` と 非 TTY ではプレーンテキスト fallback
