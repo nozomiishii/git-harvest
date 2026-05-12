@@ -111,19 +111,19 @@ print_logo() {
 
 # ブランド wordmark を表示
 wordmark() {
-  printf '\n  %s\n\n' "$(brand 'git harvest')"
+  printf '\n%s\n' "$(brand 'git harvest')"
 }
 
 # ✓ で removed 表示
 print_removed() {
   local item="$1"
-  printf '    %s  %s\n' "$(hi ✓)" "$item"
+  printf '  %s  %s\n' "$(hi ✓)" "$item"
 }
 
 # → で would-remove 表示
 print_will_remove() {
   local item="$1"
-  printf '    %s  %s\n' "$(hi →)" "$item"
+  printf '  %s  %s\n' "$(hi →)" "$item"
 }
 
 # · で growing 表示（保護理由付き、path と reason の間に最低 2 spaces 確保）
@@ -132,9 +132,9 @@ print_growing() {
   local pad=$((38 - ${#item}))
   [ $pad -lt 2 ] && pad=2
   if [ "$USE_COLOR" = true ]; then
-    printf '    \033[2m·  %s%*s%s\033[0m\n' "$item" "$pad" '' "$reason"
+    printf '  \033[2m·  %s%*s%s\033[0m\n' "$item" "$pad" '' "$reason"
   else
-    printf '    ·  %s%*s%s\n' "$item" "$pad" '' "$reason"
+    printf '  ·  %s%*s%s\n' "$item" "$pad" '' "$reason"
   fi
 }
 
@@ -460,7 +460,7 @@ cleanup_worktrees() {
     [ "$branch" = "$base" ] && continue
 
     if [ "$found" = false ]; then
-      printf '\n  %s\n' "$(bold Worktrees)"
+      printf '\n%s\n' "$(bold Worktrees)"
       found=true
     fi
 
@@ -536,7 +536,7 @@ cleanup_branches() {
     [ "$branch" = "$base" ] && continue
 
     if [ "$found" = false ]; then
-      printf '\n  %s\n' "$(bold Branches)"
+      printf '\n%s\n' "$(bold Branches)"
       found=true
     fi
 
@@ -599,7 +599,7 @@ main() {
   wordmark
 
   if [ "$DRY_RUN" = true ]; then
-    printf '  %s\n' "$(dim 'Dry run mode - nothing will be deleted')"
+    printf '\n%s\n' "$(dim 'Dry run mode - nothing will be deleted')"
   fi
 
   local all_branches
@@ -671,7 +671,7 @@ main() {
   done <<<"$all_branches"
 
   if [ "$other_branch_count" -eq 0 ] && [ "$linked_wt_count" -eq 0 ]; then
-    printf '\n  %s\n\n' "$(dim '· Nothing to harvest. All clean.')"
+    printf '\n%s\n\n' "$(dim '· Nothing to harvest. All clean.')"
   else
     # worktree が参照中のブランチは削除できないため、worktree を先に削除する
     DELETED_COUNT=0
@@ -685,18 +685,18 @@ main() {
       if [ "$DELETED_COUNT" -eq 1 ]; then item_word="item"; else item_word="items"; fi
       elapsed=$(elapsed_str "$start_ms")
       if [ "$DRY_RUN" = true ]; then
-        printf '  %s %s  %s\n\n' \
+        printf '%s %s  %s\n\n' \
           "$(hi →)" \
           "$(bold "Would harvest $DELETED_COUNT $item_word")" \
           "$(dim "in $elapsed")"
       else
-        printf '  %s %s  %s\n\n' \
+        printf '%s %s  %s\n\n' \
           "$(hi ✓)" \
           "$(bold "Harvested $DELETED_COUNT $item_word")" \
           "$(dim "in $elapsed")"
       fi
     else
-      printf '  %s\n\n' "$(dim '· Nothing to harvest. All growing.')"
+      printf '%s\n\n' "$(dim '· Nothing to harvest. All growing.')"
     fi
   fi
 
