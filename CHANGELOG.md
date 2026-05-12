@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.28](https://github.com/nozomiishii/git-harvest/compare/v0.1.27...v0.1.28) (2026-05-12)
+
+
+### Features
+
+* tighten output spacing and left-align sections ([#141](https://github.com/nozomiishii/git-harvest/issues/141)) ([dce10d1](https://github.com/nozomiishii/git-harvest/commit/dce10d15800f40a0d11a434e982610af6a26ff6b))
+
 ## [0.1.27](https://github.com/nozomiishii/git-harvest/compare/v0.1.26...v0.1.27) (2026-05-11)
 
 
