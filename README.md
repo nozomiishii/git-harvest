@@ -11,7 +11,9 @@ English | [日本語](./README.ja.md)
 Clean up branches and worktrees.
 
 
-## Run directly without installing
+## Run directly without installing (Recommended)
+
+Always runs the latest version — no separate update step needed.
 
 ```sh
 # bun
@@ -40,7 +42,29 @@ echo "alias ghv='npx -y git-harvest@latest'" >> ~/.zshrc
 echo "alias 'ghv!'='npx -y git-harvest@latest --all'" >> ~/.zshrc
 ```
 
-## Install
+## Recommended workflow
+
+By combining with Git hooks' post-merge command, you can automatically harvest after every merge or pull.
+
+### With [lefthook](https://github.com/evilmartians/lefthook)
+
+There are many Git hook tools such as husky, pre-commit, and simple-git-hooks, but Lefthook is recommended because it is language-agnostic and easy to integrate into monorepos. Additionally, by using lefthook-local.yaml, you can run hooks only for yourself without affecting other team members.
+
+
+```yaml
+# lefthook-local.yaml
+post-merge:
+  commands:
+    git-harvest:
+      run: npx -y git-harvest@latest
+      # or: bunx git-harvest@latest
+      # or: pnpx git-harvest@latest
+```
+
+<details>
+<summary><b>Other install methods</b></summary>
+
+<br>
 
 ### Shell (macOS/Linux)
 
@@ -73,12 +97,13 @@ echo "alias 'ghv!'='git-harvest --all'" >> ~/.zshrc
 git config --global alias.harvest '!git-harvest'
 ```
 
-
-## Uninstall
+### Uninstall
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
 ```
+
+</details>
 
 ## Usage
 
@@ -94,25 +119,6 @@ git-harvest --version  # Show version
 git-harvest --dry-run  # Show what would be deleted without actually deleting
 git-harvest --all      # Delete all branches and worktrees except the default branch
 git-harvest logo       # Show the git-harvest logo
-```
-
-## Recommended workflow
-
-By combining with Git hooks' post-merge command, you can automatically harvest after every merge or pull.
-
-### With [lefthook](https://github.com/evilmartians/lefthook)
-
-There are many Git hook tools such as husky, pre-commit, and simple-git-hooks, but Lefthook is recommended because it is language-agnostic and easy to integrate into monorepos. Additionally, by using lefthook-local.yaml, you can run hooks only for yourself without affecting other team members.
-
-
-```yaml
-# lefthook-local.yaml
-post-merge:
-  commands:
-    git-harvest:
-      run: npx -y git-harvest@latest
-      # or: bunx git-harvest@latest
-      # or: pnpx git-harvest@latest
 ```
 
 
