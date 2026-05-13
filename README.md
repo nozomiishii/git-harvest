@@ -143,8 +143,8 @@ flowchart TD
     Merged -->|No| NoUnique{no unique<br/>commits?}
     NoUnique -->|Yes| KeepNoUnique["·  no unique commits"]
     NoUnique -->|No| KeepNotMerged["·  not merged"]
-    classDef keep fill:#e8f5e9,stroke:#43a047,color:#000
-    classDef delete fill:#ffebee,stroke:#e53935,color:#000
+    classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
+    classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
     class KeepMain,KeepRunning,KeepUncommitted,KeepNoUnique,KeepNotMerged keep
     class DeleteManaged,DeleteMerged delete
 ```
@@ -179,8 +179,8 @@ flowchart TD
     Deletable -->|Yes| CheckedOut{checked out in<br/>another worktree?}
     CheckedOut -->|Yes| KeepCheckedOut["·  currently checked out"]
     CheckedOut -->|No| Delete["✓  delete"]
-    classDef keep fill:#e8f5e9,stroke:#43a047,color:#000
-    classDef delete fill:#ffebee,stroke:#e53935,color:#000
+    classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
+    classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
     class KeepDefault,KeepNotMerged,KeepCheckedOut keep
     class Delete delete
 ```
