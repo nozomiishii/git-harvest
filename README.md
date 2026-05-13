@@ -159,7 +159,7 @@ flowchart TD
 | 6 | Not merged | `·  not merged` | Keep | Delete |
 | - | Main working tree | *(not shown)* | Keep | Keep |
 
-Row 2 is **path-regime**: worktrees under `.claude/worktrees/` are treated as Claude-managed workspaces and aggressively deleted when no active session backs them (i.e. the iPhone session was archived or the local CLI exited). Worktrees outside this path fall through to rows 3+ — the original conservative logic — to avoid touching anything Claude didn't create.
+Row 2 is **path-regime**: worktrees under `.claude/worktrees/` are treated as Claude-managed workspaces and aggressively deleted when no active session backs them (i.e. the session was archived or the local CLI exited). Worktrees outside this path fall through to rows 3+ — the original conservative logic — to avoid touching anything Claude didn't create.
 
 **Deletion behavior under `.claude/worktrees/`**: the worktree is removed with `--force` even when it has uncommitted changes or unmerged commits. The following are preserved, however:
 
@@ -203,7 +203,7 @@ git-harvest reads these paths from [Claude Code](https://claude.ai/code):
 |---|---|
 | `~/.claude/sessions/<pid>.json` | Detecting a running Claude session (`cwd` matches worktree path AND `pid` is alive) |
 
-Archiving or deleting a session from the iPhone Claude Code Agent View / remote control removes the corresponding `~/.claude/sessions/<pid>.json`. git-harvest interprets the missing session file as "the user no longer needs this".
+Archiving or deleting a session from Claude Code Agent View or the claude app remote control removes the corresponding `~/.claude/sessions/<pid>.json`. git-harvest interprets the missing session file as "the user no longer needs this".
 
 **`--all`** bypasses every guard and force-removes worktrees. Only the worktree directories are removed; session metadata is left untouched.
 
