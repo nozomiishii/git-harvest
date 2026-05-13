@@ -126,19 +126,64 @@ Status markers:
 | `→` | Will be removed (dry-run) |
 | `·` | Kept (followed by reason) |
 
-### Worktrees
+### Worktree decision flow
 
-| State | Display | Default | `--all` |
-|---|---|---|---|
-| Merged + clean | `✓` / `→` | Delete | Delete |
-| Running claude session | `·  session running` | Keep | Delete |
-| Merged + uncommitted changes | `·  uncommitted changes` | Keep | Delete |
-| Merged + active Claude Code session | `·  active claude session` | Keep | Delete |
-| Not merged | `·  not merged` | Keep | Delete |
-| No unique commits | `·  no unique commits` | Keep | Delete |
-| Main working tree | *(not shown)* | Keep | Keep |
+```mermaid
+flowchart TD
+    Start([evaluate worktree]) --> Main{main<br/>worktree?}
+    Main -->|Yes| KeepMain[keep<br/>not displayed]
+    Main -->|No| Running{running<br/>Claude session?}
+    Running -->|Yes| KeepRunning["·  session running"]
+    Running -->|No| ManagedPath{under<br/>.claude/worktrees/?}
+    ManagedPath -->|Yes| DeleteManaged["✓  delete<br/>(forces through uncommitted / unmerged)"]
+    ManagedPath -->|No| Merged{merged?}
+    Merged -->|Yes| Uncommitted{uncommitted<br/>changes?}
+    Uncommitted -->|Yes| KeepUncommitted["·  uncommitted changes"]
+    Uncommitted -->|No| DeleteMerged["✓  delete"]
+    Merged -->|No| NoUnique{no unique<br/>commits?}
+    NoUnique -->|Yes| KeepNoUnique["·  no unique commits"]
+    NoUnique -->|No| KeepNotMerged["·  not merged"]
+    classDef keep fill:#e8f5e9,stroke:#43a047,color:#000
+    classDef delete fill:#ffebee,stroke:#e53935,color:#000
+    class KeepMain,KeepRunning,KeepUncommitted,KeepNoUnique,KeepNotMerged keep
+    class DeleteManaged,DeleteMerged delete
+```
 
-### Branches
+| Order | Condition | Display | Default | `--all` |
+|---|---|---|---|---|
+| 1 | Running Claude session (`~/.claude/sessions/<pid>.json` matches `cwd` and `pid` is alive) | `·  session running` | Keep | Delete |
+| 2 | Path is under `.claude/worktrees/` and no running session | `✓` / `→` | **Delete** (forces through uncommitted / unmerged commits) | Delete |
+| 3 | Merged + uncommitted changes | `·  uncommitted changes` | Keep | Delete |
+| 4 | Merged + clean | `✓` / `→` | Delete | Delete |
+| 5 | No unique commits | `·  no unique commits` | Keep | Delete |
+| 6 | Not merged | `·  not merged` | Keep | Delete |
+| - | Main working tree | *(not shown)* | Keep | Keep |
+
+Row 2 is **path-regime**: worktrees under `.claude/worktrees/` are treated as Claude-managed workspaces and aggressively deleted when no active session backs them (i.e. the iPhone session was archived or the local CLI exited). Worktrees outside this path fall through to rows 3+ — the original conservative logic — to avoid touching anything Claude didn't create.
+
+**Deletion behavior under `.claude/worktrees/`**: the worktree is removed with `--force` even when it has uncommitted changes or unmerged commits. The following are preserved, however:
+
+- **Conversation history**: stays on the Claude Code side, so `claude --resume <session-id>` can pick up where you left off.
+- **Unmerged commits**: the branch ref is retained (`cleanup_branches` protects unmerged branches), so `git checkout <branch>` recovers them.
+
+The only thing genuinely lost is **uncommitted changes**, so commit before closing a Claude session. Conversely, keeping the session open is a way to protect WIP that you can't commit yet.
+
+### Branch decision flow
+
+```mermaid
+flowchart TD
+    Start([evaluate branch]) --> Default{default<br/>branch?}
+    Default -->|Yes| KeepDefault[keep<br/>not displayed]
+    Default -->|No| Deletable{merged<br/>or<br/>no unique commits?}
+    Deletable -->|No| KeepNotMerged["·  not merged"]
+    Deletable -->|Yes| CheckedOut{checked out in<br/>another worktree?}
+    CheckedOut -->|Yes| KeepCheckedOut["·  currently checked out"]
+    CheckedOut -->|No| Delete["✓  delete"]
+    classDef keep fill:#e8f5e9,stroke:#43a047,color:#000
+    classDef delete fill:#ffebee,stroke:#e53935,color:#000
+    class KeepDefault,KeepNotMerged,KeepCheckedOut keep
+    class Delete delete
+```
 
 | State | Display | Default | `--all` |
 |---|---|---|---|
@@ -150,19 +195,23 @@ Status markers:
 
 > `--all` exits with an error if a non-default branch is currently checked out. `--dry-run --all` shows all resources as `→` without errors.
 
-### Claude Code integration
+### Claude Code integration details
 
-git-harvest avoids deleting worktrees that you are still working in via [Claude Code](https://claude.ai/code):
+git-harvest reads these paths from [Claude Code](https://claude.ai/code):
 
-- **Running session**: if a `claude` process is alive in a worktree (detected via `~/.claude/sessions/<pid>.json`), the worktree is preserved with `session running`.
-- **Active app session**: if the Claude Code desktop app has a session for the worktree that is **not archived** (detected via `claude-code-sessions/**/local_*.json` with `isArchived: false`), the worktree is preserved with `active claude session`. To allow deletion, archive the session in the app (press `A` on the session in Recents).
-- **`--all`**: deletes worktrees regardless of running or active claude sessions; only the worktree directories are removed and the session metadata itself is not modified.
-- **No Claude Code installed**: the integration is silently skipped — git-harvest behaves as if these checks did not exist.
+| Path | Used for |
+|---|---|
+| `~/.claude/sessions/<pid>.json` | Detecting a running Claude session (`cwd` matches worktree path AND `pid` is alive) |
+
+Archiving or deleting a session from the iPhone Claude Code Agent View / remote control removes the corresponding `~/.claude/sessions/<pid>.json`. git-harvest interprets the missing session file as "the user no longer needs this".
+
+**`--all`** bypasses every guard and force-removes worktrees. Only the worktree directories are removed; session metadata is left untouched.
+
+**Without Claude Code installed**, worktrees under `.claude/worktrees/` are still subject to the path-regime delete. If you happen to create worktrees under that path manually without using Claude, they will be deleted — but most users without Claude won't adopt that path convention, so the impact is limited.
 
 Override paths for testing or non-standard installs:
 
 | Env var | Default |
 |---|---|
 | `GIT_HARVEST_CLAUDE_SESSIONS_DIR` | `~/.claude/sessions` |
-| `GIT_HARVEST_CLAUDE_APP_DIR` | `~/Library/Application Support/Claude` (macOS), `~/.config/Claude` or `~/.local/share/Claude` (Linux), `$APPDATA/Claude` (Windows, best-effort) |
 

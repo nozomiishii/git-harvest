@@ -340,25 +340,6 @@ claude_sessions_dir() {
   echo "${GIT_HARVEST_CLAUDE_SESSIONS_DIR:-$HOME/.claude/sessions}"
 }
 
-# Claude desktop app のデータディレクトリ。複数 OS の候補を順に試す。
-# 上書き用 env: GIT_HARVEST_CLAUDE_APP_DIR
-# 該当なしの場合は空文字を返す。
-claude_app_dir() {
-  if [ -n "${GIT_HARVEST_CLAUDE_APP_DIR:-}" ]; then
-    echo "$GIT_HARVEST_CLAUDE_APP_DIR"
-    return
-  fi
-  local c
-  for c in \
-    "$HOME/Library/Application Support/Claude" \
-    "$HOME/.config/Claude" \
-    "$HOME/.local/share/Claude" \
-    "${APPDATA:-}/Claude"; do
-    [ -n "$c" ] && [ -d "$c" ] && { echo "$c"; return; }
-  done
-  echo ""
-}
-
 # パスを canonical (symlink 解決済み) に正規化する。
 # git は worktree path を canonical で保持するが、JSON 内の cwd / worktreePath は
 # ユーザーが指定したまま記録される可能性があるため、両者を同一表記に揃える必要がある。
@@ -403,35 +384,15 @@ has_running_claude_session() {
   return 1
 }
 
-# Claude Code app の "active" (= 未 archive) セッションがこの worktree にあるか (0=あり, 1=なし)。
-# claude-code-sessions/**/local_*.json で worktreePath が canonical 一致し、
-# isArchived: true でないものが1つでもあれば true。
-has_active_claude_session() {
+# worktree が Claude Code 管理下のパス (.claude/worktrees/) 配下にあるか (0=あり, 1=なし)。
+# EnterWorktree / 既存 Claude Code CLI が作る worktree はすべてこのパス規約に従う。
+# 走行中セッションが無い場合、このパス配下の worktree は積極的な harvest 対象とする。
+is_claude_managed_worktree() {
   local wt="$1"
-  local app_dir
-  app_dir=$(claude_app_dir)
-  [ -n "$app_dir" ] || return 1
-  local sessions_root="$app_dir/claude-code-sessions"
-  [ -d "$sessions_root" ] || return 1
-
-  local wt_canon
-  wt_canon=$(canonical_path "$wt")
-  [ -z "$wt_canon" ] && return 1
-
-  local f wp wp_canon
-  while IFS= read -r f; do
-    [ -f "$f" ] || continue
-    # JSON は通常 single-line だが、pretty-print された場合にも備えて key/value 間の
-    # whitespace を許容する
-    wp=$(sed -nE 's/.*"worktreePath"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$f" | head -1)
-    [ -z "$wp" ] && continue
-    wp_canon=$(canonical_path "$wp")
-    [ "$wp_canon" = "$wt_canon" ] || continue
-    if ! grep -Eq '"isArchived"[[:space:]]*:[[:space:]]*true' "$f" 2>/dev/null; then
-      return 0
-    fi
-  done < <(find "$sessions_root" -type f -name 'local_*.json' 2>/dev/null)
-  return 1
+  case "$wt" in
+    */.claude/worktrees/*) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # ---------------------------------------------------------------------------
@@ -478,13 +439,24 @@ cleanup_worktrees() {
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
     elif has_running_claude_session "$wt"; then
+      # 走行中の Claude CLI セッション (~/.claude/sessions/<pid>.json) で保護
       print_growing "$rel" "session running"
+    elif is_claude_managed_worktree "$wt"; then
+      # .claude/worktrees/ 配下で active な Claude セッションが無いもの = harvest 対象
+      # uncommitted や未マージ commits があっても --force で削除する
+      # (commits は branch ref に残り、cleanup_branches で保護される)
+      if [ "$DRY_RUN" = true ]; then
+        print_will_remove "$rel"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      else
+        git worktree remove --force "$wt"
+        print_removed "$rel"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+      fi
     elif echo "$merged_branches" | grep -qxF "$branch"; then
-      # マージ済み: 未コミット変更 → claude active session → 削除可能 の順に判定
+      # fallback (.claude/worktrees/ 外): マージ済み + 変更なし → 削除、変更あり → 保護
       if has_uncommitted_changes "$wt"; then
         print_growing "$rel" "uncommitted changes"
-      elif has_active_claude_session "$wt"; then
-        print_growing "$rel" "active claude session"
       elif [ "$DRY_RUN" = true ]; then
         print_will_remove "$rel"
         DELETED_COUNT=$((DELETED_COUNT + 1))
