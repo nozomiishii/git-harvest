@@ -42,7 +42,7 @@ echo "alias 'ghv!'='npx -y git-harvest@latest --all'" >> ~/.zshrc
 
 ## Install
 
-### Shell (macOS/Linux) (recommended)
+### Shell (macOS/Linux)
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
