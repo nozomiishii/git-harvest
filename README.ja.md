@@ -169,6 +169,20 @@ flowchart TD
 
 完全に失われるのは **uncommitted changes** だけなので、Claude session を閉じる前に commit を済ませることを推奨します。逆に言うと、uncommitted で守りたいものがあれば Claude session を開いたままにしておけば保護されます。
 
+#### iPhone の "Disconnected" 表示について
+
+Remote Control session で iPhone / claude app に表示される **"Disconnected"** は、いったん終了して resume できない pause 状態ではなく、**session が完全に終わった状態** です ([公式 docs](https://code.claude.com/docs/en/remote-control#limitations) 参照):
+
+> **Local process must keep running**: Remote Control runs as a local process. If you close the terminal, quit VS Code, or otherwise stop the `claude` process, the session ends.
+>
+> **Extended network outage**: if your machine is awake but unable to reach the network for more than roughly 10 minutes, the session times out and the process exits.
+
+つまり Disconnected の session は **local process が exit 済み = session 終了済み**。iPhone の一覧に残っているのは server-side の bookkeeping のみで、メッセージを送っても届きません。
+
+git-harvest はこの実態に合わせて **active な local process があるか (= `~/.claude/sessions/<pid>.json` 一致)** だけを判定信号にしており、iPhone 表示の Connected / Disconnected / Archived を区別しません。Disconnected の worktree も path-regime で削除対象になります。
+
+会話履歴 (`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`) は別途残るため、`claude --resume <session-id>` で続きから新しい session を起動できます (worktree dir は別途 `git worktree add` か `EnterWorktree` で再作成)。
+
 ### Branch の判定フロー
 
 ```mermaid

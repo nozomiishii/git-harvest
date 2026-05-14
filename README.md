@@ -168,6 +168,20 @@ Row 2 is **path-regime**: worktrees under `.claude/worktrees/` are treated as Cl
 
 The only thing genuinely lost is **uncommitted changes**, so commit before closing a Claude session. Conversely, keeping the session open is a way to protect WIP that you can't commit yet.
 
+#### About the "Disconnected" indicator on iPhone
+
+A Remote Control session shown as **"Disconnected"** on iPhone / the claude app is **not a paused-and-resumable state**. It means the session has fully ended — the [official docs](https://code.claude.com/docs/en/remote-control#limitations) make this explicit:
+
+> **Local process must keep running**: Remote Control runs as a local process. If you close the terminal, quit VS Code, or otherwise stop the `claude` process, the session ends.
+>
+> **Extended network outage**: if your machine is awake but unable to reach the network for more than roughly 10 minutes, the session times out and the process exits.
+
+So a Disconnected session means **the local process has already exited and the session is over**. What remains on iPhone is server-side bookkeeping — messages sent there don't reach anything.
+
+git-harvest mirrors this reality by only checking for an **active local process** (a matching entry in `~/.claude/sessions/<pid>.json` with a live `pid`). It does not distinguish Connected / Disconnected / Archived on the iPhone side. Disconnected worktrees are therefore subject to the path-regime delete.
+
+The conversation history (`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`) is kept separately, so `claude --resume <session-id>` can start a new session from where you left off. The worktree dir itself needs to be recreated separately (via `git worktree add` or `EnterWorktree`).
+
 ### Branch decision flow
 
 ```mermaid
