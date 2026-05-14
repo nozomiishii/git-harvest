@@ -11,7 +11,9 @@
 branch と worktree を自動で整理するツール
 
 
-## インストールせずに直接実行
+## インストールせずに直接実行 (推奨)
+
+常に最新版が走るので、アップデート作業は不要です。
 
 ```sh
 # bun
@@ -40,7 +42,29 @@ echo "alias ghv='npx -y git-harvest@latest'" >> ~/.zshrc
 echo "alias 'ghv!'='npx -y git-harvest@latest --all'" >> ~/.zshrc
 ```
 
-## インストール
+## おすすめの運用法
+
+Git hooksのpost-mergeコマンドと合わせることで、Mergeやpullした際に自動で収穫もできます。
+
+### [lefthook](https://github.com/evilmartians/lefthook)との連携
+
+Git Hooks にはhusky、pre-commit、simple-git-hooks など様々なツールがありますが、Lefthook が言語に依存せず monorepo にも組み込みやすいのでおすすめです。さらに lefthook-local.yaml を使えば、チーム開発で他のメンバーに影響を与えず自分だけ実行する運用も可能です。
+
+
+```yaml
+# lefthook-local.yaml
+post-merge:
+  commands:
+    git-harvest:
+      run: npx -y git-harvest@latest
+      # or: bunx git-harvest@latest
+      # or: pnpx git-harvest@latest
+```
+
+<details>
+<summary><b>その他のインストール方法</b></summary>
+
+<br>
 
 ### Shell (macOS/Linux)
 
@@ -73,12 +97,13 @@ echo "alias 'ghv!'='git-harvest --all'" >> ~/.zshrc
 git config --global alias.harvest '!git-harvest'
 ```
 
-
-## アンインストール
+### アンインストール
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
 ```
+
+</details>
 
 
 ## 使い方
@@ -95,25 +120,6 @@ git-harvest --version  # バージョンを表示
 git-harvest --dry-run  # 実際には削除せず、削除対象を表示
 git-harvest --all      # デフォルトブランチ以外の全ブランチ・worktree を削除
 git-harvest logo       # git-harvest のロゴを表示
-```
-
-## おすすめの運用法
-
-Git hooksのpost-mergeコマンドと合わせることで、Mergeやpullした際に自動で収穫もできます。
-
-### [lefthook](https://github.com/evilmartians/lefthook)との連携
-
-Git Hooks にはhusky、pre-commit、simple-git-hooks など様々なツールがありますが、Lefthook が言語に依存せず monorepo にも組み込みやすいのでおすすめです。さらに lefthook-local.yaml を使えば、チーム開発で他のメンバーに影響を与えず自分だけ実行する運用も可能です。
-
-
-```yaml
-# lefthook-local.yaml
-post-merge:
-  commands:
-    git-harvest:
-      run: npx -y git-harvest@latest
-      # or: bunx git-harvest@latest
-      # or: pnpx git-harvest@latest
 ```
 
 
