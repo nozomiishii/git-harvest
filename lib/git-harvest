@@ -387,10 +387,12 @@ has_running_claude_session() {
 # worktree が Claude Code 管理下のパス (.claude/worktrees/) 配下にあるか (0=あり, 1=なし)。
 # EnterWorktree / 既存 Claude Code CLI が作る worktree はすべてこのパス規約に従う。
 # 走行中セッションが無い場合、このパス配下の worktree は積極的な harvest 対象とする。
+# `?*` で末尾に最低1文字を要求し、`.claude/worktrees/` 自体や `.claude/worktrees`
+# (末尾スラッシュなし) を誤って managed と判定して --force 削除するのを防ぐ。
 is_claude_managed_worktree() {
   local wt="$1"
   case "$wt" in
-    */.claude/worktrees/*) return 0 ;;
+    */.claude/worktrees/?*) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -428,6 +430,15 @@ cleanup_worktrees() {
     local rel
     rel=$(relpath "$wt")
 
+    # 判定順 (README の表と一致):
+    #   1. --all                       → 強制削除
+    #   2. running session             → 保護 "session running"
+    #   3. .claude/worktrees/ 配下     → --force 削除 (path-regime)
+    #   --- 以下は fallback (.claude/worktrees/ 外の従来挙動) ---
+    #   4. merged + uncommitted        → 保護 "uncommitted changes"
+    #   5. merged + clean              → 削除
+    #   6. no unique commits           → 保護 "no unique commits"
+    #   7. それ以外                    → 保護 "not merged"
     if [ "$DELETE_ALL" = true ]; then
       # --all: 全保護判定をスキップして worktree を削除する
       if [ "$DRY_RUN" = true ]; then

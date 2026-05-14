@@ -1186,6 +1186,36 @@ describe('claude session protection', () => {
     expect(output).not.toMatch(/wt-cm-empty[^\n]*no unique commits/);
   });
 
+  // --dry-run では path-regime 削除対象を `→` で示すだけで worktree dir は残す
+  test('dry-run shows claude-managed worktree as will-remove without deleting it', () => {
+    git(repo, 'checkout -b wt-cm-dry');
+    commitFile(repo, 'cm.txt', 'work');
+    git(repo, 'checkout main');
+    // 未マージのまま (path-regime 経路に入ることを保証)
+
+    const wtDir = join(repo, '.claude', 'worktrees', 'wt-cm-dry');
+    git(repo, `worktree add ${wtDir} wt-cm-dry`);
+
+    try {
+      const output = execSync(`bash ${SCRIPT} --dry-run`, {
+        cwd: repo,
+        encoding: 'utf-8',
+        env: TEST_ENV,
+      });
+      // → で will-remove 表示される
+      expect(output).toMatch(/→\s+[^\n]*wt-cm-dry/);
+      // dry-run なので実削除は走らない
+      expect(worktrees(repo).length).toBeGreaterThan(1);
+      expect(branches(repo)).toContain('wt-cm-dry');
+    } finally {
+      try {
+        git(repo, `worktree remove --force ${wtDir}`);
+      } catch {
+        // ignore
+      }
+    }
+  });
+
   // .claude/worktrees/ 配下でも、走行中の Claude session があれば保護する
   test('preserves claude-managed worktree when claude session is running', () => {
     git(repo, 'checkout -b wt-cm-running');
