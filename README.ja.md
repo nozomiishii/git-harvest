@@ -127,19 +127,78 @@ post-merge:
 | `→` | 削除予定（dry-run） |
 | `·` | 残す（理由が続く） |
 
-### Worktree
+### Worktree の判定フロー
 
-| 状態 | 表示 | 通常 | `--all` |
-|---|---|---|---|
-| マージ済み + 変更なし | `✓` / `→` | 削除 | 削除 |
-| 走行中の claude プロセスあり | `·  session running` | 残す | 削除 |
-| マージ済み + 未コミット変更あり | `·  uncommitted changes` | 残す | 削除 |
-| マージ済み + active な Claude Code セッションあり | `·  active claude session` | 残す | 削除 |
-| 未マージ | `·  not merged` | 残す | 削除 |
-| 独自コミットなし | `·  no unique commits` | 残す | 削除 |
-| メインワーキングツリー | *(表示なし)* | 残す | 残す |
+```mermaid
+flowchart TD
+    Start([worktree を評価]) --> Main{メイン<br/>worktree?}
+    Main -->|Yes| KeepMain[残す<br/>表示なし]
+    Main -->|No| Running{走行中の<br/>Claude session?}
+    Running -->|Yes| KeepRunning["·  session running"]
+    Running -->|No| ManagedPath{.claude/worktrees/<br/>配下?}
+    ManagedPath -->|Yes| DeleteManaged["✓  削除<br/>uncommitted / 未マージも含めて --force"]
+    ManagedPath -->|No| Merged{マージ済み?}
+    Merged -->|Yes| Uncommitted{未コミット<br/>変更あり?}
+    Uncommitted -->|Yes| KeepUncommitted["·  uncommitted changes"]
+    Uncommitted -->|No| DeleteMerged["✓  削除"]
+    Merged -->|No| NoUnique{独自 commits<br/>なし?}
+    NoUnique -->|Yes| KeepNoUnique["·  no unique commits"]
+    NoUnique -->|No| KeepNotMerged["·  not merged"]
+    classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
+    classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
+    class KeepMain,KeepRunning,KeepUncommitted,KeepNoUnique,KeepNotMerged keep
+    class DeleteManaged,DeleteMerged delete
+```
 
-### ブランチ
+| 判定順 | 条件 | 表示 | 通常 | `--all` |
+|---|---|---|---|---|
+| 1 | 走行中の Claude session (`~/.claude/sessions/<pid>.json` で `cwd` 一致 + pid alive) | `·  session running` | 残す | 削除 |
+| 2 | path が `.claude/worktrees/` 配下 + 走行中 session 無し | `✓` / `→` | **削除** (uncommitted / 未マージ commits 含む) | 削除 |
+| 3 | マージ済み + 未コミット変更あり | `·  uncommitted changes` | 残す | 削除 |
+| 4 | マージ済み + 変更なし | `✓` / `→` | 削除 | 削除 |
+| 5 | 独自コミットなし | `·  no unique commits` | 残す | 削除 |
+| 6 | 未マージ | `·  not merged` | 残す | 削除 |
+| - | メインワーキングツリー | *(表示なし)* | 残す | 残す |
+
+判定 2 は **path-regime**（パスベース判定）です。`.claude/worktrees/` 配下の worktree は Claude Code が管理する workspace と見なし、active session が無い = archive された or 閉じられた = 不要、として積極的に削除します。Claude が管理しないパス（手動の `git worktree add` で別の場所に作った等）は判定 3 以降の従来ロジックで保守的に扱います。
+
+**`.claude/worktrees/` 配下の削除挙動**: uncommitted changes や未マージ commits があっても `--force` で削除されます。ただし以下は失われません:
+
+- **会話履歴**: Claude Code 側に残るので `claude --resume <session-id>` で再開可能
+- **未マージ commits**: branch ref として残るので `git checkout <branch>` で復活可能（cleanup_branches は未マージ branch を保護する）
+
+完全に失われるのは **uncommitted changes** だけなので、Claude session を閉じる前に commit を済ませることを推奨します。逆に言うと、uncommitted で守りたいものがあれば Claude session を開いたままにしておけば保護されます。
+
+#### iPhone の "Disconnected" 表示について
+
+Remote Control session で iPhone / claude app に表示される **"Disconnected"** は、いったん終了して resume できない pause 状態ではなく、**session が完全に終わった状態** です ([公式 docs](https://code.claude.com/docs/en/remote-control#limitations) 参照):
+
+> **Local process must keep running**: Remote Control runs as a local process. If you close the terminal, quit VS Code, or otherwise stop the `claude` process, the session ends.
+>
+> **Extended network outage**: if your machine is awake but unable to reach the network for more than roughly 10 minutes, the session times out and the process exits.
+
+つまり Disconnected の session は **local process が exit 済み = session 終了済み**。iPhone の一覧に残っているのは server-side の bookkeeping のみで、メッセージを送っても届きません。
+
+git-harvest はこの実態に合わせて **active な local process があるか (= `~/.claude/sessions/<pid>.json` 一致)** だけを判定信号にしており、iPhone 表示の Connected / Disconnected / Archived を区別しません。Disconnected の worktree も path-regime で削除対象になります。
+
+会話履歴 (`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`) は別途残るため、`claude --resume <session-id>` で続きから新しい session を起動できます (worktree dir は別途 `git worktree add` か `EnterWorktree` で再作成)。
+
+### Branch の判定フロー
+
+```mermaid
+flowchart TD
+    Start([branch を評価]) --> Default{デフォルト<br/>ブランチ?}
+    Default -->|Yes| KeepDefault[残す<br/>表示なし]
+    Default -->|No| Deletable{マージ済み<br/>または<br/>独自 commits なし?}
+    Deletable -->|No| KeepNotMerged["·  not merged"]
+    Deletable -->|Yes| CheckedOut{他の worktree で<br/>チェックアウト中?}
+    CheckedOut -->|Yes| KeepCheckedOut["·  currently checked out"]
+    CheckedOut -->|No| Delete["✓  削除"]
+    classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
+    classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
+    class KeepDefault,KeepNotMerged,KeepCheckedOut keep
+    class Delete delete
+```
 
 | 状態 | 表示 | 通常 | `--all` |
 |---|---|---|---|
@@ -151,20 +210,24 @@ post-merge:
 
 > デフォルトブランチ以外をチェックアウト中に `--all` を実行すると、何も削除せずエラー終了します。`--dry-run --all` では全リソースを `→` で表示します（エラーにならない）。
 
-### Claude Code 連携
+### Claude Code 連携の詳細
 
-git-harvest は [Claude Code](https://claude.ai/code) で作業中の worktree を誤って削除しないように保護します:
+git-harvest は [Claude Code](https://claude.ai/code) の以下のパスを参照します:
 
-- **走行中セッション**: `claude` プロセスが worktree 内で生きている場合 (`~/.claude/sessions/<pid>.json` で検出)、`session running` で残します。
-- **active な app セッション**: Claude Code desktop app に worktree のセッションがあり、**archive されていない** 場合 (`claude-code-sessions/**/local_*.json` の `isArchived: false`)、`active claude session` で残します。削除させたいときは、app の Recents でセッションを選択して `A` キーで archive してください。
-- **`--all`**: claude セッションが走行中／active でも worktree を削除します。worktree ディレクトリだけが消えるので、セッションのメタデータ自体は変更しません。
-- **Claude Code が未インストール**: 該当パスが無ければ silent skip。連携機能は無効化されますが、それ以外の挙動は従来通りです。
+| パス | 用途 |
+|---|---|
+| `~/.claude/sessions/<pid>.json` | 走行中 Claude session の検出（`cwd` で worktreePath を一致確認 + `kill -0 pid` で生存確認） |
+
+Claude Code Agent View や claude app の remote control から session を archive / delete すると、対応する `~/.claude/sessions/<pid>.json` が削除されます。git-harvest はその「session ファイルが無くなった」状態を「user がもう要らない意思を示した」として扱います。
+
+**`--all`** は全ガードを無視して強制削除します。worktree dir だけが消え、セッションのメタデータには触りません。
+
+**Claude Code が未インストール**の場合は該当パスが無いため `.claude/worktrees/` 配下の worktree も path-regime で削除されます。手動で `.claude/worktrees/X` を作る運用をしているなら、Claude を入れていなくても削除される点に注意してください (使ってない方は通常そういう path 規約は採用しないので影響は限定的)。
 
 テストや非標準インストール用にパスを上書きする env var:
 
 | 環境変数 | デフォルト |
 |---|---|
 | `GIT_HARVEST_CLAUDE_SESSIONS_DIR` | `~/.claude/sessions` |
-| `GIT_HARVEST_CLAUDE_APP_DIR` | `~/Library/Application Support/Claude` (macOS), `~/.config/Claude` または `~/.local/share/Claude` (Linux), `$APPDATA/Claude` (Windows, best-effort) |
 
 
