@@ -2,10 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
+        "matcher": "startup",
         "hooks": [
           {
             "type": "command",
-            "command": "bun install"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/startup.sh\""
           }
         ]
       }
