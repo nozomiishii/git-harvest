@@ -9,14 +9,6 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/startup.sh\""
           }
         ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun install"
-          }
-        ]
       }
     ]
   }
