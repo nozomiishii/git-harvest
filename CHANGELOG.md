@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0](https://github.com/nozomiishii/git-harvest/compare/v0.1.28...v0.2.0) (2026-05-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove --update self-update command ([#149](https://github.com/nozomiishii/git-harvest/issues/149))
+
+### Features
+
+* prune .claude/worktrees/ when no claude session is active ([#147](https://github.com/nozomiishii/git-harvest/issues/147)) ([a364d1f](https://github.com/nozomiishii/git-harvest/commit/a364d1f00b849dca35fafe858c3154714e5e9229))
+* remove --update self-update command ([#149](https://github.com/nozomiishii/git-harvest/issues/149)) ([48a0bcb](https://github.com/nozomiishii/git-harvest/commit/48a0bcbb3d5d7352c1a32d3f60eb7720d5893e73))
+
+
+### Miscellaneous
+
+* add startup hook for session sync ([#150](https://github.com/nozomiishii/git-harvest/issues/150)) ([ec47611](https://github.com/nozomiishii/git-harvest/commit/ec47611dfb4fd0917b33121f3ebf4c1dae7fb6e9))
+* drop "(recommended)" from Shell install heading ([#146](https://github.com/nozomiishii/git-harvest/issues/146)) ([dbb9b35](https://github.com/nozomiishii/git-harvest/commit/dbb9b3597059aee4b37e3b534ce324a4b0e7a14a))
+* restructure README to recommend direct execution ([#148](https://github.com/nozomiishii/git-harvest/issues/148)) ([c9bbf78](https://github.com/nozomiishii/git-harvest/commit/c9bbf7816be73f8c69c7032067cfb5feda8dbc8b))
+* update actions/create-github-app-token action to v3.2.0 ([#151](https://github.com/nozomiishii/git-harvest/issues/151)) ([ee0da55](https://github.com/nozomiishii/git-harvest/commit/ee0da55eccd5c228bbfff651dafde1bea1a629eb))
+* update nozomiishii to v1.0.3 ([#145](https://github.com/nozomiishii/git-harvest/issues/145)) ([5c5b5f4](https://github.com/nozomiishii/git-harvest/commit/5c5b5f4133847f8a2acb982195976799b5096393))
+* update nozomiishii/workflows action to v3.1.1 ([#143](https://github.com/nozomiishii/git-harvest/issues/143)) ([9cbb973](https://github.com/nozomiishii/git-harvest/commit/9cbb973de323c0b91ce1557a067e22e1ce3b0d66))
+
 ## [0.1.28](https://github.com/nozomiishii/git-harvest/compare/v0.1.27...v0.1.28) (2026-05-12)
 
 
