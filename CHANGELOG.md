@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.1](https://github.com/nozomiishii/git-harvest/compare/v0.2.0...v0.2.1) (2026-05-20)
+
+
+### Bug Fixes
+
+* handle git worktree lock (protect by default, force-remove with --all) ([#157](https://github.com/nozomiishii/git-harvest/issues/157)) ([f67aa02](https://github.com/nozomiishii/git-harvest/commit/f67aa027015882f46db71218d1274816d52919c0))
+
+
+### Miscellaneous
+
+* lock file maintenance ([#154](https://github.com/nozomiishii/git-harvest/issues/154)) ([60cd5c5](https://github.com/nozomiishii/git-harvest/commit/60cd5c5c6db8f439f9a394a2584b8f24b6e4e041))
+* update dependency @types/bun to v1.3.14 ([#152](https://github.com/nozomiishii/git-harvest/issues/152)) ([468eeb2](https://github.com/nozomiishii/git-harvest/commit/468eeb27bcc7cfd7df5f695cc8e61cfd03127ea8))
+
 ## [0.2.0](https://github.com/nozomiishii/git-harvest/compare/v0.1.28...v0.2.0) (2026-05-16)
 
 
