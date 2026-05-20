@@ -1,5 +1,5 @@
 import { execSync, spawn } from 'child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
@@ -84,8 +84,14 @@ afterEach(() => {
     const wts = worktrees(repo);
     for (const wt of wts) {
       if (wt !== repo) {
+        // locked worktree はテスト失敗時に残りうるため、unlock してから -f -f で除去する
         try {
-          git(repo, `worktree remove --force ${wt}`);
+          git(repo, `worktree unlock ${wt}`);
+        } catch {
+          // ignore (ロックされていない場合)
+        }
+        try {
+          git(repo, `worktree remove --force --force ${wt}`);
         } catch {
           // ignore
         }
@@ -825,6 +831,133 @@ describe('--all', () => {
     expect(branches(repo)).not.toContain('detached-test');
     expect(branches(repo)).toContain('main');
     expect(output).toContain('✓');
+  });
+});
+
+// NOTE: worktree ディレクトリ名・ブランチ名に "locked" の部分文字列を含めないこと。
+// status 文字列 "locked" を toContain で検証するため、パスに紛れると false positive になる。
+describe('worktree lock', () => {
+  // マージ済み（=本来削除対象）の locked worktree を通常モードで保護し、harvest を中断させない
+  test('protects locked merged worktree and continues harvesting (no abort)', () => {
+    // マージ済みブランチの worktree を作って lock する（lock しなければ削除される対象）
+    git(repo, 'checkout -b feat-lk');
+    commitFile(repo, 'lk.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash feat-lk');
+    git(repo, 'commit -m "squash feat-lk"');
+    git(repo, 'push');
+    const wtDir = join(repo, '..', 'wt-lk-dir');
+    git(repo, `worktree add ${wtDir} feat-lk`);
+    git(repo, `worktree lock ${wtDir}`);
+
+    // 別途マージ済みブランチ（worktree なし）。中断しなければ削除されるはず
+    git(repo, 'checkout -b merged-after');
+    commitFile(repo, 'maf.txt', 'work');
+    git(repo, 'checkout main');
+    git(repo, 'merge --squash merged-after');
+    git(repo, 'commit -m "squash merged-after"');
+    git(repo, 'push');
+
+    const output = run(repo);
+    // locked worktree は保護され残る
+    expect(worktrees(repo)).toHaveLength(2);
+    expect(branches(repo)).toContain('feat-lk');
+    expect(output).toContain('·');
+    expect(output).toContain('locked');
+    // 中断していない証拠: cleanup_branches まで到達してマージ済みブランチが削除される
+    expect(branches(repo)).not.toContain('merged-after');
+    expect(output).toContain('Harvested');
+
+    // cleanup
+    git(repo, `worktree unlock ${wtDir}`);
+    git(repo, `worktree remove --force ${wtDir}`);
+  });
+
+  // .claude/worktrees/ 配下（managed path = 通常は --force 削除対象）でも lock が優先される
+  test('lock takes precedence over .claude/worktrees managed path', () => {
+    git(repo, 'checkout -b feat-mgd');
+    commitFile(repo, 'mgd.txt', 'work');
+    git(repo, 'checkout main');
+    mkdirSync(join(repo, '.claude', 'worktrees'), { recursive: true });
+    const wtDir = join(repo, '.claude', 'worktrees', 'mgd');
+    git(repo, `worktree add ${wtDir} feat-mgd`);
+    git(repo, `worktree lock ${wtDir}`);
+
+    const output = run(repo);
+    expect(worktrees(repo)).toHaveLength(2);
+    expect(output).toContain('locked');
+
+    git(repo, `worktree unlock ${wtDir}`);
+    git(repo, `worktree remove --force ${wtDir}`);
+  });
+
+  // dry-run でも lock を保護として表示し、削除しない
+  test('shows locked status in dry-run without removing', () => {
+    git(repo, 'checkout -b feat-dry');
+    commitFile(repo, 'd.txt', 'work');
+    git(repo, 'checkout main');
+    const wtDir = join(repo, '..', 'wt-dry-dir');
+    git(repo, `worktree add ${wtDir} feat-dry`);
+    git(repo, `worktree lock ${wtDir}`);
+
+    const output = run(repo, '-n');
+    expect(output).toContain('·');
+    expect(output).toContain('locked');
+    expect(worktrees(repo)).toHaveLength(2);
+
+    git(repo, `worktree unlock ${wtDir}`);
+    git(repo, `worktree remove --force ${wtDir}`);
+  });
+
+  // --all は lock を貫通して削除し、(was locked) の痕跡を残す
+  test('--all force-removes locked worktree and shows (was locked)', () => {
+    git(repo, 'checkout -b feat-all');
+    commitFile(repo, 'a.txt', 'work');
+    git(repo, 'checkout main');
+    const wtDir = join(repo, '..', 'wt-all-dir');
+    git(repo, `worktree add ${wtDir} feat-all`);
+    git(repo, `worktree lock --reason "keep me" ${wtDir}`);
+
+    const output = run(repo, '--all');
+    expect(worktrees(repo)).toHaveLength(1);
+    expect(branches(repo)).not.toContain('feat-all');
+    expect(output).toContain('✓');
+    expect(output).toContain('was locked');
+  });
+
+  // --all --dry-run は lock を would-remove 表示するが削除しない
+  test('--all --dry-run shows would-remove for locked worktree without removing', () => {
+    git(repo, 'checkout -b feat-adry');
+    commitFile(repo, 'ad.txt', 'work');
+    git(repo, 'checkout main');
+    const wtDir = join(repo, '..', 'wt-adry-dir');
+    git(repo, `worktree add ${wtDir} feat-adry`);
+    git(repo, `worktree lock ${wtDir}`);
+
+    const output = run(repo, '--dry-run --all');
+    expect(output).toContain('→');
+    expect(output).toContain('was locked');
+    expect(worktrees(repo)).toHaveLength(2);
+
+    git(repo, `worktree unlock ${wtDir}`);
+    git(repo, `worktree remove --force ${wtDir}`);
+  });
+
+  // --reason 付きで lock した worktree も通常モードで検出・保護する
+  test('detects lock created with --reason in normal mode', () => {
+    git(repo, 'checkout -b feat-rsn');
+    commitFile(repo, 'r.txt', 'work');
+    git(repo, 'checkout main');
+    const wtDir = join(repo, '..', 'wt-rsn-dir');
+    git(repo, `worktree add ${wtDir} feat-rsn`);
+    git(repo, `worktree lock --reason "WIP do not touch" ${wtDir}`);
+
+    const output = run(repo);
+    expect(output).toContain('locked');
+    expect(worktrees(repo)).toHaveLength(2);
+
+    git(repo, `worktree unlock ${wtDir}`);
+    git(repo, `worktree remove --force ${wtDir}`);
   });
 });
 
