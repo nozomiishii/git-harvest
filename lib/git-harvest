@@ -168,6 +168,7 @@ Options:
   -v, --version  Show version
   -n, --dry-run  Show what would be deleted without actually deleting
   --all          Delete all branches and worktrees except the default branch
+                 (also force-removes locked worktrees; normally locked ones are kept)
 
 Subcommands:
   logo           Show the git-harvest logo
@@ -278,6 +279,21 @@ is_claude_managed_worktree() {
   esac
 }
 
+# worktree が `git worktree lock` でロックされているか (0=あり, 1=なし)。
+# lock は「このツリーは触るな」というユーザーの明示的な意思表示。通常モードでは最上位の
+# 保護シグナルとし、--all のみ `-f -f` で貫通する。
+# `git worktree list --porcelain` はロックされたツリーのブロックに `locked`
+# (理由付きなら `locked <reason>`) 行を出すので、対象 worktree のブロックを見る。
+# パスにスペースが含まれても壊れないよう、`worktree ` 以降を substr で丸ごと取る。
+is_locked_worktree() {
+  local wt="$1"
+  git worktree list --porcelain | awk -v target="$wt" '
+    /^worktree / { cur = substr($0, 10) }
+    /^locked/    { if (cur == target) found = 1 }
+    END          { exit found ? 0 : 1 }
+  '
+}
+
 # ---------------------------------------------------------------------------
 # 整理ロジック
 # ---------------------------------------------------------------------------
@@ -312,24 +328,32 @@ cleanup_worktrees() {
     rel=$(relpath "$wt")
 
     # 判定順 (README の表と一致):
-    #   1. --all                       → 強制削除
-    #   2. running session             → 保護 "session running"
-    #   3. .claude/worktrees/ 配下     → --force 削除 (path-regime)
+    #   1. --all                       → 強制削除 (-f -f, lock も貫通)
+    #   2. locked                      → 保護 "locked" (git worktree lock)
+    #   3. running session             → 保護 "session running"
+    #   4. .claude/worktrees/ 配下     → --force 削除 (path-regime)
     #   --- 以下は fallback (.claude/worktrees/ 外の従来挙動) ---
-    #   4. merged + uncommitted        → 保護 "uncommitted changes"
-    #   5. merged + clean              → 削除
-    #   6. no unique commits           → 保護 "no unique commits"
-    #   7. それ以外                    → 保護 "not merged"
+    #   5. merged + uncommitted        → 保護 "uncommitted changes"
+    #   6. merged + clean              → 削除
+    #   7. no unique commits           → 保護 "no unique commits"
+    #   8. それ以外                    → 保護 "not merged"
     if [ "$DELETE_ALL" = true ]; then
-      # --all: 全保護判定をスキップして worktree を削除する
+      # --all: 全保護判定 (lock 含む) をスキップして worktree を削除する。
+      # locked worktree は `-f -f` でないと消せないため二重 force を使う。
+      # lock を破った場合は痕跡として "(was locked)" を表示する。
+      local label="$rel"
+      if is_locked_worktree "$wt"; then label="$rel (was locked)"; fi
       if [ "$DRY_RUN" = true ]; then
-        print_will_remove "$rel"
+        print_will_remove "$label"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       else
-        git worktree remove --force "$wt"
-        print_removed "$rel"
+        git worktree remove --force --force "$wt"
+        print_removed "$label"
         DELETED_COUNT=$((DELETED_COUNT + 1))
       fi
+    elif is_locked_worktree "$wt"; then
+      # git worktree lock による明示的保護。--all 以外では最優先で保護する。
+      print_growing "$rel" "locked"
     elif has_running_claude_session "$wt"; then
       # 走行中の Claude CLI セッション (~/.claude/sessions/<pid>.json) で保護
       print_growing "$rel" "session running"

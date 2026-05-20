@@ -138,7 +138,9 @@ Status markers:
 flowchart TD
     Start([evaluate worktree]) --> Main{main<br/>worktree?}
     Main -->|Yes| KeepMain[keep<br/>not displayed]
-    Main -->|No| Running{running<br/>Claude session?}
+    Main -->|No| Locked{git worktree<br/>lock?}
+    Locked -->|Yes| KeepLocked["·  locked"]
+    Locked -->|No| Running{running<br/>Claude session?}
     Running -->|Yes| KeepRunning["·  session running"]
     Running -->|No| ManagedPath{under<br/>.claude/worktrees/?}
     ManagedPath -->|Yes| DeleteManaged["✓  delete<br/>(forces through uncommitted / unmerged)"]
@@ -151,21 +153,24 @@ flowchart TD
     NoUnique -->|No| KeepNotMerged["·  not merged"]
     classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
     classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
-    class KeepMain,KeepRunning,KeepUncommitted,KeepNoUnique,KeepNotMerged keep
+    class KeepMain,KeepLocked,KeepRunning,KeepUncommitted,KeepNoUnique,KeepNotMerged keep
     class DeleteManaged,DeleteMerged delete
 ```
 
 | Order | Condition | Display | Default | `--all` |
 |---|---|---|---|---|
-| 1 | Running Claude session (`~/.claude/sessions/<pid>.json` matches `cwd` and `pid` is alive) | `·  session running` | Keep | Delete |
-| 2 | Path is under `.claude/worktrees/` and no running session | `✓` / `→` | **Delete** (forces through uncommitted / unmerged commits) | Delete |
-| 3 | Merged + uncommitted changes | `·  uncommitted changes` | Keep | Delete |
-| 4 | Merged + clean | `✓` / `→` | Delete | Delete |
-| 5 | No unique commits | `·  no unique commits` | Keep | Delete |
-| 6 | Not merged | `·  not merged` | Keep | Delete |
+| 1 | Locked with `git worktree lock` | `·  locked` | Keep | Delete (forced through with `-f -f`, shown as `(was locked)`) |
+| 2 | Running Claude session (`~/.claude/sessions/<pid>.json` matches `cwd` and `pid` is alive) | `·  session running` | Keep | Delete |
+| 3 | Path is under `.claude/worktrees/` and no running session | `✓` / `→` | **Delete** (forces through uncommitted / unmerged commits) | Delete |
+| 4 | Merged + uncommitted changes | `·  uncommitted changes` | Keep | Delete |
+| 5 | Merged + clean | `✓` / `→` | Delete | Delete |
+| 6 | No unique commits | `·  no unique commits` | Keep | Delete |
+| 7 | Not merged | `·  not merged` | Keep | Delete |
 | - | Main working tree | *(not shown)* | Keep | Keep |
 
-Row 2 is **path-regime**: worktrees under `.claude/worktrees/` are treated as Claude-managed workspaces and aggressively deleted when no active session backs them (i.e. the session was archived or the local CLI exited). Worktrees outside this path fall through to rows 3+ — the original conservative logic — to avoid touching anything Claude didn't create.
+Row 1 (lock) is the top-priority guard. `git worktree lock` is an explicit "don't touch this" signal, so the default mode keeps it regardless of running session or `.claude/worktrees/` membership. Only `--all` breaks through it with `git worktree remove --force --force`, leaving a `✓ <path> (was locked)` trace.
+
+Row 3 is **path-regime**: worktrees under `.claude/worktrees/` are treated as Claude-managed workspaces and aggressively deleted when no active session backs them (i.e. the session was archived or the local CLI exited). Worktrees outside this path fall through to rows 4+ — the original conservative logic — to avoid touching anything Claude didn't create.
 
 **Deletion behavior under `.claude/worktrees/`**: the worktree is removed with `--force` even when it has uncommitted changes or unmerged commits. The following are preserved, however:
 

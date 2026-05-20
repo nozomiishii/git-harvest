@@ -139,7 +139,9 @@ git-harvest logo       # git-harvest のロゴを表示
 flowchart TD
     Start([worktree を評価]) --> Main{メイン<br/>worktree?}
     Main -->|Yes| KeepMain[残す<br/>表示なし]
-    Main -->|No| Running{走行中の<br/>Claude session?}
+    Main -->|No| Locked{git worktree<br/>lock?}
+    Locked -->|Yes| KeepLocked["·  locked"]
+    Locked -->|No| Running{走行中の<br/>Claude session?}
     Running -->|Yes| KeepRunning["·  session running"]
     Running -->|No| ManagedPath{.claude/worktrees/<br/>配下?}
     ManagedPath -->|Yes| DeleteManaged["✓  削除<br/>uncommitted / 未マージも含めて --force"]
@@ -152,21 +154,24 @@ flowchart TD
     NoUnique -->|No| KeepNotMerged["·  not merged"]
     classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
     classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
-    class KeepMain,KeepRunning,KeepUncommitted,KeepNoUnique,KeepNotMerged keep
+    class KeepMain,KeepLocked,KeepRunning,KeepUncommitted,KeepNoUnique,KeepNotMerged keep
     class DeleteManaged,DeleteMerged delete
 ```
 
 | 判定順 | 条件 | 表示 | 通常 | `--all` |
 |---|---|---|---|---|
-| 1 | 走行中の Claude session (`~/.claude/sessions/<pid>.json` で `cwd` 一致 + pid alive) | `·  session running` | 残す | 削除 |
-| 2 | path が `.claude/worktrees/` 配下 + 走行中 session 無し | `✓` / `→` | **削除** (uncommitted / 未マージ commits 含む) | 削除 |
-| 3 | マージ済み + 未コミット変更あり | `·  uncommitted changes` | 残す | 削除 |
-| 4 | マージ済み + 変更なし | `✓` / `→` | 削除 | 削除 |
-| 5 | 独自コミットなし | `·  no unique commits` | 残す | 削除 |
-| 6 | 未マージ | `·  not merged` | 残す | 削除 |
+| 1 | `git worktree lock` でロック済み | `·  locked` | 残す | 削除 (`-f -f` で貫通、`(was locked)` 表示) |
+| 2 | 走行中の Claude session (`~/.claude/sessions/<pid>.json` で `cwd` 一致 + pid alive) | `·  session running` | 残す | 削除 |
+| 3 | path が `.claude/worktrees/` 配下 + 走行中 session 無し | `✓` / `→` | **削除** (uncommitted / 未マージ commits 含む) | 削除 |
+| 4 | マージ済み + 未コミット変更あり | `·  uncommitted changes` | 残す | 削除 |
+| 5 | マージ済み + 変更なし | `✓` / `→` | 削除 | 削除 |
+| 6 | 独自コミットなし | `·  no unique commits` | 残す | 削除 |
+| 7 | 未マージ | `·  not merged` | 残す | 削除 |
 | - | メインワーキングツリー | *(表示なし)* | 残す | 残す |
 
-判定 2 は **path-regime**（パスベース判定）です。`.claude/worktrees/` 配下の worktree は Claude Code が管理する workspace と見なし、active session が無い = archive された or 閉じられた = 不要、として積極的に削除します。Claude が管理しないパス（手動の `git worktree add` で別の場所に作った等）は判定 3 以降の従来ロジックで保守的に扱います。
+判定 1 の lock は最上位の保護です。`git worktree lock` は「このツリーは触るな」という明示的な意思表示なので、通常モードでは session running や `.claude/worktrees/` 配下かどうかに関わらず保護します。`--all` のみ `git worktree remove --force --force` で lock を貫通して削除し、その際は `✓ <path> (was locked)` と痕跡を残します。
+
+判定 3 は **path-regime**（パスベース判定）です。`.claude/worktrees/` 配下の worktree は Claude Code が管理する workspace と見なし、active session が無い = archive された or 閉じられた = 不要、として積極的に削除します。Claude が管理しないパス（手動の `git worktree add` で別の場所に作った等）は判定 4 以降の従来ロジックで保守的に扱います。
 
 **`.claude/worktrees/` 配下の削除挙動**: uncommitted changes や未マージ commits があっても `--force` で削除されます。ただし以下は失われません:
 
