@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.3](https://github.com/nozomiishii/git-harvest/compare/v0.2.2...v0.2.3) (2026-05-21)
+
+
+### Bug Fixes
+
+* grant workflows permission to release app token for non-head releases ([#161](https://github.com/nozomiishii/git-harvest/issues/161)) ([8016fb0](https://github.com/nozomiishii/git-harvest/commit/8016fb068b468d61dc5e2f4a8bfac85db9151333))
+
+
+### Miscellaneous
+
+* update nozomiishii ([#162](https://github.com/nozomiishii/git-harvest/issues/162)) ([1f49e3c](https://github.com/nozomiishii/git-harvest/commit/1f49e3c989ff326005fb8af6c7102b87f985a1b7))
+
 ## [0.2.2](https://github.com/nozomiishii/git-harvest/compare/v0.2.1...v0.2.2) (2026-05-20)
 
 
