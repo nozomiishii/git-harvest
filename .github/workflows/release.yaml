@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write  # required by release-please to create git tags and draft GitHub releases
+      issues: write  # kept to match release-please's documented permission set (avoids divergence-debugging later)
       pull-requests: write  # required by release-please to open and update the release PR
 
     outputs:
@@ -50,7 +51,13 @@ jobs:
           client-id: ${{ steps.secrets.outputs.APP_ID }}
           private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
           permission-contents: write
+          permission-issues: write
           permission-pull-requests: write
+          # GitHub requires workflows:write to create a release/tag on a commit that is
+          # not the current branch head. release-please tags the (already-merged, now
+          # non-head) release commit, so without this the create-release call returns
+          # 403 "Resource not accessible by integration".
+          permission-workflows: write
 
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
