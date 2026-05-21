@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="0.2.1" # x-release-please-version
+VERSION="0.2.2" # x-release-please-version
 
 # git-harvest のブランドカラー #C0FF39 rgb(192, 255, 57)
 BRAND_COLOR='192;255;57'

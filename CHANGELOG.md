@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.2](https://github.com/nozomiishii/git-harvest/compare/v0.2.1...v0.2.2) (2026-05-20)
+
+
+### Bug Fixes
+
+* scope release app token permissions and pin op cli version ([#158](https://github.com/nozomiishii/git-harvest/issues/158)) ([1e80d4d](https://github.com/nozomiishii/git-harvest/commit/1e80d4d82fdef59f1551e238f54718b47a4c6ab9))
+
+
+### Miscellaneous
+
+* unset stale core.hooksPath in worktree startup hook ([#160](https://github.com/nozomiishii/git-harvest/issues/160)) ([d903942](https://github.com/nozomiishii/git-harvest/commit/d90394207970af1974249bbdafc39d3052acafa3))
+
 ## [0.2.1](https://github.com/nozomiishii/git-harvest/compare/v0.2.0...v0.2.1) (2026-05-20)
 
 
