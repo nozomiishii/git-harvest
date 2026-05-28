@@ -6,6 +6,10 @@ English | [日本語](./README.ja.md)
 <div align="center">
   <img src="demo/logo.gif" alt="logo" width="480" />
 </div>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/git-harvest"><img src="https://img.shields.io/npm/v/git-harvest.svg" alt="npm version" /></a>
+</p>
 <br>
 
 Clean up branches and worktrees.
