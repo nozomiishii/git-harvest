@@ -15,17 +15,17 @@ English | [日本語](./README.ja.md)
 Clean up branches and worktrees.
 
 
-## Run directly without installing (Recommended)
+## Try it out (`--dry-run`)
 
-Always runs the latest version — no separate update step needed.
-
-Try it safely with `--dry-run` first — shows what would be deleted without deleting anything:
+See what would be deleted without deleting anything:
 
 ```sh
 npx -y git-harvest@latest --dry-run
 ```
 
-Run it for real:
+## Run directly without installing (Recommended)
+
+Always runs the latest version — no separate update step needed.
 
 ```sh
 # bun
