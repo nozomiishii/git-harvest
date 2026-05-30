@@ -19,6 +19,14 @@ Clean up branches and worktrees.
 
 Always runs the latest version — no separate update step needed.
 
+Try it safely with `--dry-run` first — shows what would be deleted without deleting anything:
+
+```sh
+npx -y git-harvest@latest --dry-run
+```
+
+Run it for real:
+
 ```sh
 # bun
 bunx git-harvest@latest
@@ -44,6 +52,14 @@ echo "alias 'ghv!'='pnpx git-harvest@latest --all'" >> ~/.zshrc
 # npm
 echo "alias ghv='npx -y git-harvest@latest'" >> ~/.zshrc
 echo "alias 'ghv!'='npx -y git-harvest@latest --all'" >> ~/.zshrc
+```
+
+`git harvest`
+```sh
+# Git subcommand — run as `git harvest` (no install)
+git config --global alias.harvest '!pnpm dlx git-harvest@latest'
+# or: git config --global alias.harvest '!bunx git-harvest@latest'
+# or: git config --global alias.harvest '!npx -y git-harvest@latest'
 ```
 
 ## Recommended workflow
