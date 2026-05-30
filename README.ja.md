@@ -15,6 +15,14 @@
 branch と worktree を自動で整理するツール
 
 
+## お試し (`--dry-run`)
+
+削除対象を表示するだけで、実際には何も削除しません:
+
+```sh
+npx -y git-harvest@latest --dry-run
+```
+
 ## インストールせずに直接実行 (推奨)
 
 常に最新版が走るので、アップデート作業は不要です。
@@ -44,6 +52,14 @@ echo "alias 'ghv!'='pnpx git-harvest@latest --all'" >> ~/.zshrc
 # npm
 echo "alias ghv='npx -y git-harvest@latest'" >> ~/.zshrc
 echo "alias 'ghv!'='npx -y git-harvest@latest --all'" >> ~/.zshrc
+```
+
+`git harvest`
+```sh
+# git サブコマンド — `git harvest` として実行 (インストール不要)
+git config --global alias.harvest '!pnpm dlx git-harvest@latest'
+# または: git config --global alias.harvest '!bunx git-harvest@latest'
+# または: git config --global alias.harvest '!npx -y git-harvest@latest'
 ```
 
 ## おすすめの運用法
