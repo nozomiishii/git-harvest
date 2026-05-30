@@ -34,7 +34,7 @@
     "@nozomiishii/lefthook-config": "1.2.0",
     "@types/bun": "1.3.14",
     "lefthook": "2.1.8",
-    "release-please": "17.6.0"
+    "release-please": "17.6.1"
   },
   "publishConfig": {
     "access": "public",
