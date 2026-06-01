@@ -5,8 +5,8 @@
     "": {
       "name": "git-harvest",
       "devDependencies": {
-        "@nozomiishii/commitlint-config": "1.4.0",
-        "@nozomiishii/lefthook-config": "1.4.0",
+        "@nozomiishii/commitlint-config": "1.5.0",
+        "@nozomiishii/lefthook-config": "1.5.0",
         "@types/bun": "1.3.14",
         "lefthook": "2.1.8",
         "release-please": "17.6.1",
@@ -18,9 +18,9 @@
 
     "@babel/helper-validator-identifier": ["@babel/helper-validator-identifier@7.29.7", "", {}, "sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg=="],
 
-    "@commitlint/cli": ["@commitlint/cli@21.0.1", "", { "dependencies": { "@commitlint/format": "^21.0.1", "@commitlint/lint": "^21.0.1", "@commitlint/load": "^21.0.1", "@commitlint/read": "^21.0.1", "@commitlint/types": "^21.0.1", "tinyexec": "^1.0.0", "yargs": "^18.0.0" }, "bin": { "commitlint": "cli.js" } }, "sha512-8vq10krmbJwBkvzXKhbs4o4JQEVscd3pqOlWuDUaDBwbeL694/P33UC29tZQFTAgPU9fVJ2+f2m3zw16yKWxHg=="],
+    "@commitlint/cli": ["@commitlint/cli@21.0.2", "", { "dependencies": { "@commitlint/format": "^21.0.1", "@commitlint/lint": "^21.0.2", "@commitlint/load": "^21.0.2", "@commitlint/read": "^21.0.2", "@commitlint/types": "^21.0.1", "tinyexec": "^1.0.0", "yargs": "^18.0.0" }, "bin": { "commitlint": "cli.js" } }, "sha512-YMmfLbqBg+ZRvvmPhc+cilSQFrh/AgzVgCT1U/OifmUZEwPbvCtA8rN//YNaF9d5eoZphxVMGYtmwA2QgQORgg=="],
 
-    "@commitlint/config-conventional": ["@commitlint/config-conventional@21.0.1", "", { "dependencies": { "@commitlint/types": "^21.0.1", "conventional-changelog-conventionalcommits": "^9.2.0" } }, "sha512-gRorrkfWOh/+V5X8GYWWbQvrzPczopGMS4CCNrQdHkK4xWElv82BDvIsDhJZWTlI7TazOlYea6VATufCsFs+sw=="],
+    "@commitlint/config-conventional": ["@commitlint/config-conventional@21.0.2", "", { "dependencies": { "@commitlint/types": "^21.0.1", "conventional-changelog-conventionalcommits": "^9.2.0" } }, "sha512-P/ZRhryQmkj0Z0dY9FOoRwe3xkwJyyAdtXwt01NT2kuZttcG2CNYp1q5Ci3u+nDT2jcbJRw2kt13Czl1qKNPfg=="],
 
     "@commitlint/config-validator": ["@commitlint/config-validator@21.0.1", "", { "dependencies": { "@commitlint/types": "^21.0.1", "ajv": "^8.11.0" } }, "sha512-Zd2UFdndeMMaW2O96HK0tdfT4gOImUvidMpAd/pws2zZ4m1nrAZ/9b/v2JYuE8fs86GpXv9F7LNaIuCIWhY+pA=="],
 
@@ -64,9 +64,9 @@
 
     "@jsep-plugin/regex": ["@jsep-plugin/regex@1.0.4", "", { "peerDependencies": { "jsep": "^0.4.0||^1.0.0" } }, "sha512-q7qL4Mgjs1vByCaTnDFcBnV9HS7GVPJX5vyVoCgZHNSC9rjwIlmbXG5sUuorR5ndfHAIlJ8pVStxvjXHbNvtUg=="],
 
-    "@nozomiishii/commitlint-config": ["@nozomiishii/commitlint-config@1.4.0", "", { "dependencies": { "@commitlint/cli": "21.0.1", "@commitlint/config-conventional": "21.0.1", "@commitlint/types": "21.0.1" }, "bin": { "nozo-commitlint": "./bin/nozo-commitlint.js", "nozo-commitlint-init": "./bin/nozo-commitlint-init.js" } }, "sha512-XdGdCJgZr2zLEj73XR3vxD4VQNg/guwavgXbgwX+KfQ+uyZrff2w0VQ0gIHYza3NZgFCK7iIqxqBR31AYw151w=="],
+    "@nozomiishii/commitlint-config": ["@nozomiishii/commitlint-config@1.5.0", "", { "dependencies": { "@commitlint/cli": "21.0.2", "@commitlint/config-conventional": "21.0.2", "@commitlint/types": "21.0.1" }, "bin": { "nozo-commitlint": "./bin/nozo-commitlint.js", "nozo-commitlint-init": "./bin/nozo-commitlint-init.js" } }, "sha512-FaYlFCnD/+FQ4/0Zs1RBK1JacDu5N7zO4cGdOKlw50uUogT6wjge2NCdDzSUdEKIxZD7HXAaA2MmCWeE9c290Q=="],
 
-    "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@1.4.0", "", { "dependencies": { "git-harvest": "0.2.2" }, "peerDependencies": { "lefthook": "2.1.8" }, "bin": { "nozo-git-harvest": "./bin/nozo-git-harvest.js", "nozo-lefthook-init": "./bin/nozo-lefthook-init.js" } }, "sha512-yrNHywlEn/8quxnspReAeWMYqXxpJtnnGpk9LokrURd4W9ErTGL6AcSALS6QQIbAyXRfonqBXD25+PcaZe7VoA=="],
+    "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@1.5.0", "", { "dependencies": { "git-harvest": "0.2.2" }, "peerDependencies": { "lefthook": "2.1.9" }, "bin": { "nozo-git-harvest": "./bin/nozo-git-harvest.js", "nozo-lefthook-init": "./bin/nozo-lefthook-init.js" } }, "sha512-Rz6dGZcJVY3NDmBNn6GQSf6dF4g/X3mVWrEOQK5UZezp/cV1MMjY8blMdMIN1LvpB25/ZaBgJITFKiaC4fDI4w=="],
 
     "@octokit/auth-token": ["@octokit/auth-token@4.0.0", "", {}, "sha512-tY/msAuJo6ARbK6SPIxZrPBms3xPbfwBrulZe0Wtr/DIY9lje2HeV1uoebShn6mx7SjCHif6EjMvoREj+gZ+SA=="],
 
