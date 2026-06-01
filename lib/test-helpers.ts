@@ -34,6 +34,7 @@ export function makeOriginRepo(): OriginRepo {
   execSync(`git init --bare -b main ${bare}`);
   const repo = mkdtempSync(path.join(tmpdir(), 'git-harvest-work-'));
   execSync(`git clone ${bare} ${repo}`);
+  setIdentity(repo);
   commitFile(repo, 'README.md', 'init');
   tgit(repo, 'push');
 
@@ -91,6 +92,7 @@ export function makeSessionsDir(): SessionsDir {
 export function makeSimpleRepo(): TempRepo {
   const repo = mkdtempSync(path.join(tmpdir(), 'git-harvest-git-'));
   execSync('git init -b main', { cwd: repo });
+  setIdentity(repo);
   tgit(repo, 'commit --allow-empty -m init');
 
   return {
@@ -148,4 +150,13 @@ function listWorktrees(cwd: string): string[] {
     .split('\n')
     .filter((line) => line.startsWith('worktree '))
     .map((line) => line.replace('worktree ', ''));
+}
+
+// CLI サブプロセスが回す git（merge-detect の commit-tree 等）にも identity が要る。
+// tgit の per-command -c だけだと CLI 側に届かず、暗黙 identity の無い環境（CI 等）で
+// commit-tree が失敗し squash 検出が落ちるため、repo の local config に永続化する。
+function setIdentity(cwd: string): void {
+  execSync('git config user.email test@test.com', { cwd });
+  execSync('git config user.name Test', { cwd });
+  execSync('git config commit.gpgsign false', { cwd });
 }
