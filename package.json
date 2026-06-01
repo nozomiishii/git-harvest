@@ -48,9 +48,7 @@
     "prepare": "lefthook install --force",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "install:local": "bash install.sh",
-    "uninstall:local": "bash uninstall.sh"
+    "typecheck": "tsc --noEmit"
   },
   "type": "module"
 }

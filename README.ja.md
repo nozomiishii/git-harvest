@@ -81,46 +81,6 @@ post-merge:
       # or: pnpx git-harvest@latest
 ```
 
-<details>
-<summary><b>その他のインストール方法 (Apple Silicon Mac・Node 不要)</b></summary>
-
-<br>
-
-単体バイナリ 1 個をインストールするので Node は不要です。今は Apple Silicon Mac 専用です。Linux・Intel Mac・Windows では上の npm 経路を使ってください。
-
-### Shell
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
-```
-
-ターミナルを再起動するか `source ~/.zshrc` を実行すると git-harvest が使えるようになります。
-
-### (任意) エイリアスを設定
-
-エイリアスを設定するとより手軽に実行できます。両方設定しても片方だけでも設定できます:
-
-`ghv` / `ghv!`
-```sh
-# シェルエイリアス
-echo "alias ghv='git-harvest'" >> ~/.zshrc
-echo "alias 'ghv!'='git-harvest --yolo'" >> ~/.zshrc
-```
-
-`git harvest`
-```sh
-# Git サブコマンド — `git harvest` で実行可能
-git config --global alias.harvest '!git-harvest'
-```
-
-### アンインストール
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
-```
-
-</details>
-
 
 ## 使い方
 

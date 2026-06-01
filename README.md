@@ -81,46 +81,6 @@ post-merge:
       # or: pnpx git-harvest@latest
 ```
 
-<details>
-<summary><b>Other install methods (Apple Silicon Mac, no Node)</b></summary>
-
-<br>
-
-These install a single standalone binary, so Node is not required. They are Apple Silicon Mac only for now — on Linux, Intel Mac, or Windows use the npm path above.
-
-### Shell
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
-```
-
-Restart your terminal or run `source ~/.zshrc` to start using git-harvest.
-
-### (Optional) Set up aliases
-
-Set up aliases for quicker access. You can use both or just the one you prefer:
-
-`ghv` / `ghv!`
-```sh
-# Shell alias
-echo "alias ghv='git-harvest'" >> ~/.zshrc
-echo "alias 'ghv!'='git-harvest --yolo'" >> ~/.zshrc
-```
-
-`git harvest`
-```sh
-# Git subcommand — run as `git harvest`
-git config --global alias.harvest '!git-harvest'
-```
-
-### Uninstall
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
-```
-
-</details>
-
 ## Usage
 
 ```sh

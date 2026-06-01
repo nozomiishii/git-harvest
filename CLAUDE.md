@@ -13,7 +13,7 @@
 マージ済みブランチと worktree を自動で整理する CLI ツール。
 
 - 本番コード: `lib/*.ts`（TypeScript。エントリは `lib/cli.ts`）
-- ビルド: `bun build`。npm 向けは ESM バンドル `dist/git-harvest`、curl 向けは darwin-arm64 単体バイナリ
+- ビルド: `tsdown`。npm 向け ESM バンドルを `dist/git-harvest` に出力
 - テスト: `vitest run`。テストは `lib/*.test.ts`、共有ヘルパは `lib/test-helpers.ts`
 - 設定: `vitest.config.ts` / `eslint.config.ts` / `tsconfig.json`
 - デモ: `demo/` — VHS + Docker でロゴ GIF を生成（`bash demo/create.sh`）

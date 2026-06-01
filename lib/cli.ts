@@ -284,7 +284,7 @@ function lowerThreshold(current: Stage, candidate: Stage): Stage {
 }
 
 // package.json の version を読む。静的 import なのでビルド時にインライン化され、
-// package.json が隣に無い単体配布（curl）でも正しく出る。release-please とずれない。
+// dist/git-harvest 単体でも正しく出る。release-please とずれない。
 function readVersion(): string {
   return pkg.version;
 }
@@ -294,5 +294,5 @@ function stripOriginPrefix(ref: string): string {
   return ref.replace(/^refs\/remotes\/origin\//, '');
 }
 
-// 実行エントリ。ビルド成果物 dist/git-harvest を node が shebang で直接実行する。
+// 実行エントリ。npm publish した dist/git-harvest を node が shebang で実行する。
 await main(process.argv.slice(2));
