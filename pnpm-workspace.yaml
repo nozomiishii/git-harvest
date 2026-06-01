@@ -1,0 +1,7 @@
+# 依存の postinstall（build script）は走らせない。ネイティブバイナリは
+# optionalDependencies 経由で入るため不要で、third-party script の実行も避ける。
+allowBuilds:
+  '@swc/core': false
+  esbuild: false
+  lefthook: false
+  unrs-resolver: false
