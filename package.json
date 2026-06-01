@@ -1,6 +1,7 @@
 {
   "name": "git-harvest",
   "version": "0.2.2",
+  "packageManager": "pnpm@11.4.0",
   "author": "Nozomi Ishii",
   "repository": {
     "type": "git",
