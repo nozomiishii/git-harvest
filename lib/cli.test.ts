@@ -1,7 +1,8 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { expect, onTestFinished, test, vi } from 'vitest';
 import {
   assertDefined,
@@ -12,12 +13,17 @@ import {
   tgit,
 } from './test-helpers';
 
-// CLI 全体の統合テスト。lib/cli.ts を `bun` で直接起動し、実 git リポジトリに対する
+// CLI 全体の統合テスト。lib/cli.ts を `node --import tsx` で直接起動し、実 git リポジトリに対する
 // end-to-end の挙動（invariant / 閾値 / --yolo / fail-closed / dry-run 一致）を確認する。
 // 起動は spawnSync 経由で必ず非 TTY になるので、--yolo の --yes 必須テストもここで賄える。
 
 // このファイル（lib/ 配下）のディレクトリ。cli.ts は同階層。
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), 'cli.ts');
+
+// tsx の絶対 file:// URL。node --import はファイルURLを受け付けるため、
+// 子プロセスの cwd がどこであっても解決できる。
+const require = createRequire(import.meta.url);
+const TSX_LOADER = pathToFileURL(require.resolve('tsx')).href;
 
 // committed（base に未取り込みの独自コミットを持つ）branch + worktree を作る。返り値は worktree path。
 function addCommittedWorktree(repo: string, root: string, branch: string, dir: string): string {
@@ -59,7 +65,9 @@ function makeRepo(): OriginRepo {
   return origin;
 }
 
-// cli を起動する。NO_COLOR で ANSI を無効化し、FORCE_COLOR を外して bun の tty 警告を抑える。
+// cli を起動する。NO_COLOR で ANSI を無効化し、FORCE_COLOR を外す。
+// node --import tsx で TypeScript ソースを直接実行する（extensionless import と
+// package.json import の両方を tsx が解決する）。
 // spawnSync は exit code に関わらず stdout / stderr を別々に返すので、成功時の stderr 警告も拾える。
 // sessionsDir で Claude session 検出の対象を空ディレクトリへ隔離する。
 function run(
@@ -75,7 +83,7 @@ function run(
   onTestFinished(() => {
     vi.unstubAllEnvs();
   });
-  const r = spawnSync('bun', [CLI, ...args], { cwd, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, ['--import', TSX_LOADER, CLI, ...args], { cwd, encoding: 'utf8' });
 
   return { status: r.status ?? 1, stderr: r.stderr, stdout: r.stdout };
 }

@@ -1,4 +1,3 @@
-import { ExecaError } from 'execa';
 import { expect, test } from 'vitest';
 import { git, gitExitOk, gitText } from './git';
 import { makeSimpleRepo } from './test-helpers';
@@ -12,22 +11,22 @@ test('gitText returns trimmed stdout', async () => {
   expect(branch).toBe('main');
 });
 
-// git は成功時 resolve し exitCode 0 を返す
+// git は成功時 resolve し stdout を文字列で返す
 test('git resolves on success', async () => {
   using r = makeSimpleRepo();
 
   const result = await git(['rev-parse', 'HEAD'], { cwd: r.path });
 
-  expect(result.exitCode).toBe(0);
+  expect(result.stdout).toBeTypeOf('string');
 });
 
-// git は失敗時に ExecaError で reject する
-test('git rejects on failure', async () => {
+// git は失敗時に stderr テキストを message に含む GitError で reject する（TRAP 2 ロック）
+test('git rejects on failure with stderr in message', async () => {
   using r = makeSimpleRepo();
 
   await expect(
     git(['rev-parse', '--verify', 'nonexistent-branch'], { cwd: r.path }),
-  ).rejects.toThrow(ExecaError);
+  ).rejects.toThrow(/not a git repository|fatal/i);
 });
 
 // gitExitOk は終了コード 0 で true を返す

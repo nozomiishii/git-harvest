@@ -1,8 +1,33 @@
 {
   "name": "git-harvest",
   "version": "0.2.2",
-  "type": "module",
+  "author": "Nozomi Ishii",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nozomiishii/git-harvest.git"
+  },
+  "devDependencies": {
+    "@nozomiishii/commitlint-config": "1.3.0",
+    "@nozomiishii/eslint-config": "1.5.0",
+    "@nozomiishii/lefthook-config": "1.3.0",
+    "@nozomiishii/tsconfig": "1.5.0",
+    "@types/bun": "1.3.14",
+    "lefthook": "2.1.8",
+    "release-please": "17.6.1",
+    "tsx": "4.22.4",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
+  },
+  "bin": {
+    "git-harvest": "dist/git-harvest"
+  },
   "description": "Clean up branches and worktrees",
+  "files": [
+    "dist/git-harvest",
+    "README*.md",
+    "LICENSE"
+  ],
+  "homepage": "https://github.com/nozomiishii/git-harvest",
   "keywords": [
     "git",
     "cli",
@@ -10,21 +35,11 @@
     "branch",
     "worktree"
   ],
-  "homepage": "https://github.com/nozomiishii/git-harvest",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/nozomiishii/git-harvest.git"
-  },
   "license": "MIT",
-  "author": "Nozomi Ishii",
-  "bin": {
-    "git-harvest": "dist/git-harvest"
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
-  "files": [
-    "dist/git-harvest",
-    "README*.md",
-    "LICENSE"
-  ],
   "scripts": {
     "build": "bun build lib/cli.ts --target=node --format=esm --banner '#!/usr/bin/env node' --outfile dist/git-harvest",
     "build:binary": "bun build lib/cli.ts --compile --target=bun-darwin-arm64 --outfile git-harvest-darwin-arm64",
@@ -36,22 +51,5 @@
     "install:local": "bash install.sh",
     "uninstall:local": "bash uninstall.sh"
   },
-  "devDependencies": {
-    "@nozomiishii/commitlint-config": "1.3.0",
-    "@nozomiishii/eslint-config": "1.5.0",
-    "@nozomiishii/lefthook-config": "1.3.0",
-    "@nozomiishii/tsconfig": "1.5.0",
-    "@types/bun": "1.3.14",
-    "lefthook": "2.1.8",
-    "release-please": "17.6.1",
-    "typescript": "6.0.3",
-    "vitest": "4.1.7"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
-  "dependencies": {
-    "execa": "9.6.1"
-  }
+  "type": "module"
 }
