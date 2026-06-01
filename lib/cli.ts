@@ -284,7 +284,7 @@ function lowerThreshold(current: Stage, candidate: Stage): Stage {
 }
 
 // package.json の version を読む。静的 import なのでビルド時にインライン化され、
-// package.json が隣に無い単体配布（curl / Homebrew）でも正しく出る。release-please とずれない。
+// package.json が隣に無い単体配布（curl）でも正しく出る。release-please とずれない。
 function readVersion(): string {
   return pkg.version;
 }

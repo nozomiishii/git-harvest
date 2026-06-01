@@ -88,12 +88,6 @@ post-merge:
 
 These install a single standalone binary, so Node is not required. They are Apple Silicon Mac only for now — on Linux, Intel Mac, or Windows use the npm path above.
 
-### Homebrew
-
-```sh
-brew install nozomiishii/tap/git-harvest
-```
-
 ### Shell
 
 ```sh

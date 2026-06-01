@@ -88,12 +88,6 @@ post-merge:
 
 単体バイナリ 1 個をインストールするので Node は不要です。今は Apple Silicon Mac 専用です。Linux・Intel Mac・Windows では上の npm 経路を使ってください。
 
-### Homebrew
-
-```sh
-brew install nozomiishii/tap/git-harvest
-```
-
 ### Shell
 
 ```sh

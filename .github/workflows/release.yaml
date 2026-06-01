@@ -97,7 +97,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
   # darwin-arm64 単体バイナリを upload + draft release を publish
-  # macOS runner で native ビルドし cross-compile リスクを避ける（Homebrew / curl 配布用）
+  # macOS runner で native ビルドし cross-compile リスクを避ける（curl 配布用）
   upload-assets:
     needs: create-draft-release
     if: needs.create-draft-release.outputs.release_created == 'true'
@@ -169,84 +169,6 @@ jobs:
       # 二重ビルド（prepack）と CI 不要な lefthook install（prepare）を避けるため scripts は無効化する。
       - name: Publish to npm
         run: npm publish --ignore-scripts
-
-  # 公開済みリリースの darwin-arm64 バイナリの sha256 を計算し
-  # homebrew-tap の formula 更新 PR を作る（mislav のサイレント失敗を避け PR 方式で可視化）
-  homebrew-bump:
-    needs: [create-draft-release, upload-assets]
-    if: needs.create-draft-release.outputs.release_created == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read  # required by gh release download to fetch the published binary from this repo
-
-    steps:
-      - name: Load secrets from 1Password
-        id: secrets
-        uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4
-        with:
-          # renovate: datasource=docker depName=1password/op versioning=semver
-          version: "2.34.0"
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          APP_ID: op://github-app/nozomiishii-release/username
-          APP_PRIVATE_KEY: op://github-app/nozomiishii-release/credential
-
-      # homebrew-tap だけにスコープを絞った App token（fork せず tap 内にブランチを切る）
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ steps.secrets.outputs.APP_ID }}
-          private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
-          owner: nozomiishii
-          repositories: homebrew-tap
-          permission-contents: write
-          permission-pull-requests: write
-
-      - name: Checkout homebrew-tap
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          repository: nozomiishii/homebrew-tap
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: Compute formula version and sha256
-        id: formula
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ needs.create-draft-release.outputs.tag_name }}
-        run: |
-          gh release download "${TAG_NAME}" \
-            --repo nozomiishii/git-harvest \
-            -p git-harvest-darwin-arm64 \
-            -D "${RUNNER_TEMP}"
-          SHA=$(shasum -a 256 "${RUNNER_TEMP}/git-harvest-darwin-arm64" | awk '{print $1}')
-          VERSION="${TAG_NAME#v}"
-          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-
-      # url は #{version} 由来なので触らず、version 行と sha256 行だけ書き換える
-      - name: Bump formula
-        env:
-          VERSION: ${{ steps.formula.outputs.version }}
-          SHA: ${{ steps.formula.outputs.sha }}
-        run: |
-          sed -i -E "s/^  version \".*\"/  version \"${VERSION}\"/" Formula/git-harvest.rb
-          sed -i -E "s/^  sha256 \".*\"/  sha256 \"${SHA}\"/" Formula/git-harvest.rb
-
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          commit-message: "chore: update git-harvest formula to v${{ steps.formula.outputs.version }}"
-          title: "chore: update git-harvest formula to v${{ steps.formula.outputs.version }}"
-          body: |
-            Automated formula bump for git-harvest v${{ steps.formula.outputs.version }}.
-
-            - version: `${{ steps.formula.outputs.version }}`
-            - sha256: `${{ steps.formula.outputs.sha }}`
-          branch: update-git-harvest-${{ steps.formula.outputs.version }}
-          base: main
 
   # publish 後に次の release PR を作成/更新
   release-pr:
