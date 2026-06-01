@@ -16,8 +16,12 @@ IMAGE_NAME="git-harvest-vhs"
 DOCKERFILE="$PROJECT_ROOT/demo/Dockerfile"
 
 # ----------------------------------------------------------
-# 1. Docker イメージをビルド
+# 1. git-harvest バンドルと Docker イメージをビルド
 # ----------------------------------------------------------
+# Dockerfile が dist/git-harvest（gitignore された生成物）を COPY するので先にビルドする。
+echo "Building git-harvest bundle..."
+(cd "$PROJECT_ROOT" && pnpm run build)
+
 echo "Building Docker image..."
 docker build \
   -t "$IMAGE_NAME" \
