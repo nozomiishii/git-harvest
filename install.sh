@@ -7,6 +7,19 @@ REPO="nozomiishii/git-harvest"
 BIN_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"
 
 # ---------------------------------------------------------------------------
+# Require Apple Silicon Mac (this installer ships a darwin-arm64 standalone binary)
+# ---------------------------------------------------------------------------
+require_apple_silicon() {
+  if [ "$(uname -s)" != "Darwin" ] || [ "$(uname -m)" != "arm64" ]; then
+    echo "Error: this standalone binary is for Apple Silicon Macs only." >&2
+    echo "For Intel Mac / Linux / others, please use npm:" >&2
+    echo "  npm i -g git-harvest" >&2
+    echo "  (or: npx git-harvest / pnpm dlx git-harvest / bunx git-harvest)" >&2
+    exit 1
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Download script from GitHub Releases
 # ---------------------------------------------------------------------------
 download() {
@@ -19,16 +32,16 @@ download() {
     base_url="https://github.com/${REPO}/releases/download/${version}"
   fi
 
-  local script_url="${base_url}/git-harvest"
+  local binary_url="${base_url}/git-harvest-darwin-arm64"
 
   mkdir -p "$BIN_DIR"
 
   echo "Downloading git-harvest..."
 
   if command -v curl >/dev/null; then
-    curl -fsSL "$script_url" -o "$BIN_DIR/git-harvest"
+    curl -fsSL "$binary_url" -o "$BIN_DIR/git-harvest"
   elif command -v wget >/dev/null; then
-    wget -qO "$BIN_DIR/git-harvest" "$script_url"
+    wget -qO "$BIN_DIR/git-harvest" "$binary_url"
   else
     echo "Error: curl or wget is required" >&2
     exit 1
@@ -72,6 +85,7 @@ BLOCK
 # Main
 # ---------------------------------------------------------------------------
 main() {
+  require_apple_silicon
   download
   configure_shell
 
