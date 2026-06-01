@@ -8,12 +8,12 @@
     "url": "https://github.com/nozomiishii/git-harvest.git"
   },
   "devDependencies": {
-    "@nozomiishii/commitlint-config": "1.3.0",
+    "@nozomiishii/commitlint-config": "1.5.0",
     "@nozomiishii/eslint-config": "1.5.0",
-    "@nozomiishii/lefthook-config": "1.3.0",
+    "@nozomiishii/lefthook-config": "1.5.0",
     "@nozomiishii/tsconfig": "1.5.0",
     "@types/node": "24.12.2",
-    "lefthook": "2.1.8",
+    "lefthook": "2.1.9",
     "release-please": "17.6.1",
     "tsdown": "0.22.1",
     "tsx": "4.22.4",
