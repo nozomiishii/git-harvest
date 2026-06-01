@@ -11,6 +11,7 @@
         "@nozomiishii/commitlint-config": "1.3.0",
         "@nozomiishii/eslint-config": "1.5.0",
         "@nozomiishii/lefthook-config": "1.3.0",
+        "@nozomiishii/tsconfig": "1.5.0",
         "@types/bun": "1.3.14",
         "lefthook": "2.1.8",
         "release-please": "17.6.1",
@@ -245,6 +246,8 @@
     "@nozomiishii/eslint-config": ["@nozomiishii/eslint-config@1.5.0", "", { "dependencies": { "@eslint-community/eslint-plugin-eslint-comments": "4.7.2", "@eslint-react/eslint-plugin": "5.8.6", "@eslint/config-inspector": "3.0.4", "@eslint/js": "10.0.1", "@next/eslint-plugin-next": "16.2.6", "@stylistic/eslint-plugin": "5.10.0", "@swc-node/register": "1.11.1", "@types/node": "24.12.2", "@vitest/eslint-plugin": "1.6.18", "eslint-config-flat-gitignore": "2.3.0", "eslint-config-prettier": "10.1.8", "eslint-import-resolver-typescript": "4.4.4", "eslint-plugin-better-tailwindcss": "4.5.0", "eslint-plugin-de-morgan": "2.1.2", "eslint-plugin-import-x": "4.16.2", "eslint-plugin-jsdoc": "63.0.0", "eslint-plugin-jsonc": "3.2.0", "eslint-plugin-jsx-a11y-x": "0.2.0", "eslint-plugin-n": "18.0.1", "eslint-plugin-package-json": "1.2.0", "eslint-plugin-perfectionist": "5.9.0", "eslint-plugin-playwright": "2.10.4", "eslint-plugin-react-hooks": "7.1.1", "eslint-plugin-react-refresh": "0.5.2", "eslint-plugin-regexp": "3.1.0", "eslint-plugin-storybook": "10.4.1", "eslint-plugin-tsdoc": "0.5.2", "eslint-plugin-unicorn": "64.0.0", "eslint-typegen": "2.3.1", "globals": "17.6.0", "jsonc-eslint-parser": "3.1.0", "tailwindcss": "4.3.0", "typescript-eslint": "8.60.0" }, "peerDependencies": { "eslint": "10.4.0", "typescript": "6.0.3" }, "bin": { "nozo-eslint-init": "./bin/nozo-eslint-init.js" } }, "sha512-H5JDAzscGXDdgmWGH9f7JtJUXbzOGRLaHc9UStoA0vK+oNSOqlwUZEkSa9FEydFWnEI5pm0RMoDc3kG2mx7dTA=="],
 
     "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@1.3.0", "", { "dependencies": { "git-harvest": "0.2.2" }, "peerDependencies": { "lefthook": "2.1.8" }, "bin": { "nozo-git-harvest": "./bin/nozo-git-harvest.js", "nozo-lefthook-init": "./bin/nozo-lefthook-init.js" } }, "sha512-k/6ubWGdmyUrdWN7+nw5bT6CPs8BHJcMV0tD04gCMOOeICc+B/Nk9go6JwQoBF3h8my0bVTQ2iA/vzt91hXpvg=="],
+
+    "@nozomiishii/tsconfig": ["@nozomiishii/tsconfig@1.5.0", "", {}, "sha512-pQtp1qhFTsvA0GwpEyD5WuTZykCP/cZVRfCSq+UU5+VZfnlPq2rY3SDJ0CL6dDMjvdCC/ak96ZUwgubA16TRNw=="],
 
     "@octokit/auth-token": ["@octokit/auth-token@4.0.0", "", {}, "sha512-tY/msAuJo6ARbK6SPIxZrPBms3xPbfwBrulZe0Wtr/DIY9lje2HeV1uoebShn6mx7SjCHif6EjMvoREj+gZ+SA=="],
 

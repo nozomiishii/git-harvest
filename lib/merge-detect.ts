@@ -11,7 +11,7 @@ import { git, gitExitOk, gitText } from './git';
 export async function classifyBranch(
   base: string,
   branch: string,
-  opts: { cwd?: string } = {},
+  opts: { cwd?: string | undefined } = {},
 ): Promise<Classification> {
   const cwd = opts.cwd;
 
