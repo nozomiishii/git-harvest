@@ -165,8 +165,8 @@ jobs:
           node-version: lts/*
           registry-url: https://registry.npmjs.org
 
-      # prepare（lefthook install）/ prepack（build）は publish 環境で落ちうるため scripts は無効化する。
-      # 配布物 dist/git-harvest は上の Build bundle で生成済み。
+      # prepare/prepack は npm publish でも走る。配布物は上の Build bundle で生成済みなので、
+      # 二重ビルド（prepack）と CI 不要な lefthook install（prepare）を避けるため scripts は無効化する。
       - name: Publish to npm
         run: npm publish --ignore-scripts
 
