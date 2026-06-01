@@ -5,3 +5,9 @@ allowBuilds:
   esbuild: false
   lefthook: false
   unrs-resolver: false
+
+# pnpm 既定の minimumReleaseAge（新しすぎる公開を弾く supply-chain cooldown）から
+# 自前スコープを除外する。自分で publish した信頼済みパッケージなので待たない。
+# third-party への cooldown は維持する。
+minimumReleaseAgeExclude:
+  - '@nozomiishii/*'
