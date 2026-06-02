@@ -36,41 +36,8 @@ export async function classifyBranch(
   // 2) branch が base の祖先なら取り込み済み = merged。
   if (await gitExitOk(['merge-base', '--is-ancestor', branch, base], { cwd })) return 'merged';
 
-  // 3) 仮想 squash: branch の tree を merge-base 上に乗せた commit を作り、
-  //    git cherry で base に対する + 行がゼロなら内容は取り込み済み = merged。
-  let mergeBase: string;
-
-  try {
-    mergeBase = await gitText(['merge-base', base, branch], { cwd });
-  } catch {
-    mergeBase = '';
-  }
-
-  if (mergeBase) {
-    let squash: string;
-
-    try {
-      squash = await gitText(['commit-tree', `${branch}^{tree}`, '-p', mergeBase, '-m', '_'], { cwd });
-    } catch {
-      squash = '';
-    }
-
-    if (squash) {
-      let cherry: string;
-
-      try {
-        cherry = await gitText(['cherry', base, squash], { cwd });
-      } catch {
-        cherry = '';
-      }
-
-      if (cherry) {
-        const added = cherry.split('\n').filter((line) => line.startsWith('+')).length;
-
-        if (added === 0) return 'merged';
-      }
-    }
-  }
+  // 3) 仮想 squash で内容が base に取り込み済みなら merged。
+  if (await isSquashMerged(base, branch, cwd)) return 'merged';
 
   // 4) log --cherry-pick --right-only が空 = base 側に同等 commit がある = merged。
   try {
@@ -85,4 +52,34 @@ export async function classifyBranch(
   }
 
   return 'other';
+}
+
+// 仮想 squash 判定: branch の tree を merge-base 上に乗せた commit を作り、
+// git cherry で base に対する + 行がゼロなら内容は取り込み済み = merged。
+// 途中のどの git が失敗・空でも squash 判定はできないので false（呼び出し側が次の段へ）。
+async function isSquashMerged(base: string, branch: string, cwd: string | undefined): Promise<boolean> {
+  const mergeBase = await tryGitText(['merge-base', base, branch], cwd);
+
+  if (!mergeBase) return false;
+
+  const squash = await tryGitText(['commit-tree', `${branch}^{tree}`, '-p', mergeBase, '-m', '_'], cwd);
+
+  if (!squash) return false;
+
+  const cherry = await tryGitText(['cherry', base, squash], cwd);
+
+  if (!cherry) return false;
+
+  const added = cherry.split('\n').filter((line) => line.startsWith('+')).length;
+
+  return added === 0;
+}
+
+// gitText を実行し、失敗時は空文字を返す（フォールバック判定用に例外を握りつぶす）。
+async function tryGitText(args: string[], cwd: string | undefined): Promise<string> {
+  try {
+    return await gitText(args, { cwd });
+  } catch {
+    return '';
+  }
 }
