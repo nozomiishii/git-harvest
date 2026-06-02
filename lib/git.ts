@@ -1,5 +1,5 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 export type GitOptions = {
   // git を実行するディレクトリ。省略時はカレント。
@@ -17,7 +17,7 @@ export class GitError extends Error {
 
   constructor(stderr: string, stdout: string, code: null | number, fallback: string) {
     super(stderr.trim() || fallback);
-    this.name = 'GitError';
+    this.name = "GitError";
     this.code = code;
     this.stderr = stderr;
     this.stdout = stdout;
@@ -29,14 +29,14 @@ export class GitError extends Error {
 // デフォルト 1MB を超えることがあるため。
 export async function git(args: string[], options: GitOptions = {}) {
   try {
-    return await execFileAsync('git', args, {
+    return await execFileAsync("git", args, {
       ...cwdOption(options),
-      encoding: 'utf8',
+      encoding: "utf8",
       maxBuffer: 64 * 1024 * 1024,
     });
   } catch (error: unknown) {
     const { code, stderr, stdout } = extractGitError(error);
-    const message = error instanceof Error && error.message ? error.message : 'git command failed';
+    const message = error instanceof Error && error.message ? error.message : "git command failed";
 
     throw new GitError(stderr, stdout, code, message);
   }
@@ -72,8 +72,8 @@ function extractGitError(error: unknown): { code: null | number; stderr: string;
   const e = error as { code?: number | string; stderr?: string; stdout?: string };
 
   return {
-    code: typeof e.code === 'number' ? e.code : null,
-    stderr: typeof e.stderr === 'string' ? e.stderr : '',
-    stdout: typeof e.stdout === 'string' ? e.stdout : '',
+    code: typeof e.code === "number" ? e.code : null,
+    stderr: typeof e.stderr === "string" ? e.stderr : "",
+    stdout: typeof e.stdout === "string" ? e.stdout : "",
   };
 }

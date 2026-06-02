@@ -24,9 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write  # required by release-please to create git tags and draft GitHub releases
-      issues: write  # kept to match release-please's documented permission set (avoids divergence-debugging later)
-      pull-requests: write  # required by release-please to open and update the release PR
+      contents: write # required by release-please to create git tags and draft GitHub releases
+      issues: write # kept to match release-please's documented permission set (avoids divergence-debugging later)
+      pull-requests: write # required by release-please to open and update the release PR
 
     outputs:
       release_created: ${{ steps.detect.outputs.release_created }}
@@ -109,7 +109,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write  # required by gh release edit to publish the draft release
+      contents: write # required by gh release edit to publish the draft release
 
     steps:
       - name: Publish Release
@@ -125,8 +125,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read  # required by actions/checkout to fetch the tagged release commit
-      id-token: write  # required by npm publish to mint an OIDC token for provenance
+      contents: read # required by actions/checkout to fetch the tagged release commit
+      id-token: write # required by npm publish to mint an OIDC token for provenance
 
     steps:
       - name: Checkout code
@@ -163,8 +163,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write  # required by release-please to push release PR branches
-      pull-requests: write  # required by release-please to open and update the release PR
+      contents: write # required by release-please to push release PR branches
+      pull-requests: write # required by release-please to open and update the release PR
 
     steps:
       - name: Load secrets from 1Password

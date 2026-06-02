@@ -1,5 +1,5 @@
-import type { ActionResult, CleanupResult } from './types';
-import { BRAND_COLOR } from './brand';
+import type { ActionResult, CleanupResult } from "./types";
+import { BRAND_COLOR } from "./brand";
 
 // 1 リソースの処理結果を 1 行文字列にする（末尾改行なし）。
 //   removed      → ✓（ブランドカラー）
@@ -8,17 +8,17 @@ import { BRAND_COLOR } from './brand';
 //   failed       → error（red）
 export function formatResult(r: ActionResult): string {
   switch (r.action) {
-    case 'failed': {
+    case "failed": {
       return `  ${red(`✗  ${r.name}: ${r.error}`)}`;
     }
-    case 'kept': {
+    case "kept": {
       return `  ${dim(`·  ${padReason(r.name, r.reason)}`)}`;
     }
-    case 'removed': {
-      return `  ${brand('✓')}  ${r.name}`;
+    case "removed": {
+      return `  ${brand("✓")}  ${r.name}`;
     }
-    case 'would-remove': {
-      return `  ${brand('→')}  ${r.name}`;
+    case "would-remove": {
+      return `  ${brand("→")}  ${r.name}`;
     }
   }
 }
@@ -30,14 +30,14 @@ export function formatSummary(worktree: CleanupResult, branch: CleanupResult): s
   const sections: string[] = [];
 
   if (worktree.results.length > 0) {
-    sections.push(['Worktrees', ...worktree.results.map((r) => formatResult(r))].join('\n'));
+    sections.push(["Worktrees", ...worktree.results.map((r) => formatResult(r))].join("\n"));
   }
 
   if (branch.results.length > 0) {
-    sections.push(['Branches', ...branch.results.map((r) => formatResult(r))].join('\n'));
+    sections.push(["Branches", ...branch.results.map((r) => formatResult(r))].join("\n"));
   }
 
-  return sections.join('\n\n');
+  return sections.join("\n\n");
 }
 
 // 着色可否。TTY かつ NO_COLOR 未設定のときだけ着色、それ以外プレーン。
@@ -60,7 +60,7 @@ function dim(s: string): string {
 function padReason(name: string, reason: string): string {
   const pad = Math.max(2, 38 - name.length);
 
-  return `${name}${' '.repeat(pad)}${reason}`;
+  return `${name}${" ".repeat(pad)}${reason}`;
 }
 
 // 端末デフォルト red（error 用）。CLI 規約 red=error を維持する。

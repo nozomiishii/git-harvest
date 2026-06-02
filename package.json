@@ -1,6 +1,58 @@
 {
   "name": "git-harvest",
   "version": "0.2.3",
+  "description": "Clean up branches and worktrees",
+  "keywords": [
+    "git",
+    "cli",
+    "cleanup",
+    "branch",
+    "worktree"
+  ],
+  "homepage": "https://github.com/nozomiishii/git-harvest",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nozomiishii/git-harvest.git"
+  },
+  "license": "MIT",
+  "author": "Nozomi Ishii",
+  "type": "module",
+  "bin": {
+    "git-harvest": "dist/git-harvest"
+  },
+  "files": [
+    "dist/git-harvest",
+    "README*.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsx lib/cli.ts --dry-run",
+    "format": "pnpm prettier . --check",
+    "format:fix": "pnpm prettier . --write",
+    "prepack": "tsdown",
+    "prepare": "lefthook install --force",
+    "prettier": "prettier --ignore-unknown --cache",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@nozomiishii/commitlint-config": "1.5.0",
+    "@nozomiishii/eslint-config": "1.5.0",
+    "@nozomiishii/lefthook-config": "1.5.0",
+    "@nozomiishii/prettier-config": "1.5.0",
+    "@nozomiishii/tsconfig": "1.5.0",
+    "@types/node": "24.12.2",
+    "eslint": "10.4.0",
+    "lefthook": "2.1.9",
+    "prettier": "3.8.3",
+    "release-please": "17.6.1",
+    "tsdown": "0.22.1",
+    "tsx": "4.22.4",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
+  },
   "packageManager": "pnpm@11.4.0",
   "devEngines": {
     "runtime": {
@@ -9,55 +61,8 @@
       "onFail": "warn"
     }
   },
-  "author": "Nozomi Ishii",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/nozomiishii/git-harvest.git"
-  },
-  "devDependencies": {
-    "@nozomiishii/commitlint-config": "1.5.0",
-    "@nozomiishii/eslint-config": "1.5.0",
-    "@nozomiishii/lefthook-config": "1.5.0",
-    "@nozomiishii/tsconfig": "1.5.0",
-    "@types/node": "24.12.2",
-    "eslint": "10.4.0",
-    "lefthook": "2.1.9",
-    "release-please": "17.6.1",
-    "tsdown": "0.22.1",
-    "tsx": "4.22.4",
-    "typescript": "6.0.3",
-    "vitest": "4.1.7"
-  },
-  "bin": {
-    "git-harvest": "dist/git-harvest"
-  },
-  "description": "Clean up branches and worktrees",
-  "files": [
-    "dist/git-harvest",
-    "README*.md",
-    "LICENSE"
-  ],
-  "homepage": "https://github.com/nozomiishii/git-harvest",
-  "keywords": [
-    "git",
-    "cli",
-    "cleanup",
-    "branch",
-    "worktree"
-  ],
-  "license": "MIT",
   "publishConfig": {
     "access": "public",
     "provenance": true
-  },
-  "scripts": {
-    "build": "tsdown",
-    "dev": "tsx lib/cli.ts --dry-run",
-    "prepack": "tsdown",
-    "prepare": "lefthook install --force",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
-  },
-  "type": "module"
+  }
 }

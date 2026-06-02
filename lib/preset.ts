@@ -1,4 +1,4 @@
-import type { Flags } from './types';
+import type { Flags } from "./types";
 
 // default（bare git-harvest）: 保守的。全 scope の閾値 merged のみ削除し、
 // detached / untouched は保護、dryRun は false。
@@ -6,12 +6,12 @@ import type { Flags } from './types';
 // --yolo は defaultFlags() を土台に flags-spec.ts の PRESETS.yolo を上乗せして作る。
 export function defaultFlags(): Flags {
   return {
-    branch: 'merged',
-    claudeWorktree: 'merged',
+    branch: "merged",
+    claudeWorktree: "merged",
     claudeWorktreeDetached: false,
     claudeWorktreeUntouched: false,
     dryRun: false,
-    worktree: 'merged',
+    worktree: "merged",
     worktreeDetached: false,
     worktreeUntouched: false,
   };

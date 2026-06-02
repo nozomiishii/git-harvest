@@ -1,9 +1,9 @@
-import { realpathSync } from 'node:fs';
-import type { Classification, CleanupDecision, CleanupResult, Flags, Stage } from './types';
-import { hasRunningClaudeSession, isClaudeManagedWorktree } from './claude';
-import { gitExitOk, gitText } from './git';
-import { classifyBranch } from './merge-detect';
-import { atOrSafer } from './types';
+import { realpathSync } from "node:fs";
+import type { Classification, CleanupDecision, CleanupResult, Flags, Stage } from "./types";
+import { hasRunningClaudeSession, isClaudeManagedWorktree } from "./claude";
+import { gitExitOk, gitText } from "./git";
+import { classifyBranch } from "./merge-detect";
+import { atOrSafer } from "./types";
 
 // 1 worktree の状態をまとめた内部型。判定関数はこの型だけを見る。
 export type WorktreeInfo = {
@@ -53,25 +53,25 @@ export async function cleanupWorktrees(
     const decision = decideWorktree(wt, flags);
 
     if (!decision.remove) {
-      result.results.push({ action: 'kept', name: wt.path, reason: decision.reason });
+      result.results.push({ action: "kept", name: wt.path, reason: decision.reason });
       continue;
     }
 
     if (flags.dryRun) {
-      result.results.push({ action: 'would-remove', name: wt.path });
+      result.results.push({ action: "would-remove", name: wt.path });
       removedPaths.add(wt.path);
       continue;
     }
 
     // 実削除: 未コミット変更があるときだけ --force。
-    const args = ['worktree', 'remove'];
+    const args = ["worktree", "remove"];
 
-    if (wt.hasUncommittedChanges) args.push('--force');
+    if (wt.hasUncommittedChanges) args.push("--force");
     args.push(wt.path);
 
     try {
       await gitText(args, { cwd });
-      result.results.push({ action: 'removed', name: wt.path });
+      result.results.push({ action: "removed", name: wt.path });
       removedPaths.add(wt.path);
       didRemove = true;
     } catch (error) {
@@ -79,11 +79,11 @@ export async function cleanupWorktrees(
 
       // 手動 rm 済みの stale entry は目的達成済みの no-op として success に正規化。
       if (isStaleRemoveError(message)) {
-        result.results.push({ action: 'removed', name: wt.path });
+        result.results.push({ action: "removed", name: wt.path });
         removedPaths.add(wt.path);
         didRemove = true;
       } else {
-        result.results.push({ action: 'failed', error: message, name: wt.path });
+        result.results.push({ action: "failed", error: message, name: wt.path });
         result.failures += 1;
       }
     }
@@ -92,7 +92,7 @@ export async function cleanupWorktrees(
   // 実削除後に stale 管理情報を一度整理する（user-visible なので必須）。
   if (didRemove) {
     try {
-      await gitText(['worktree', 'prune'], { cwd });
+      await gitText(["worktree", "prune"], { cwd });
     } catch {
       // prune 失敗は致命でない。サマリーには影響させない。
     }
@@ -107,7 +107,7 @@ export async function cleanupWorktrees(
 // 全 worktree の情報を集める。base はカレント cwd 解決と branch 分類の土台。
 // cwd を省略するとカレントディレクトリ基準で git を呼ぶ。
 export async function collectWorktrees(base: string, cwd?: string): Promise<WorktreeInfo[]> {
-  const porcelain = await gitText(['worktree', 'list', '--porcelain'], { cwd });
+  const porcelain = await gitText(["worktree", "list", "--porcelain"], { cwd });
   const entries = parsePorcelain(porcelain);
 
   // カレント worktree の判定基準: cwd を canonical 化した path。
@@ -120,8 +120,7 @@ export async function collectWorktrees(base: string, cwd?: string): Promise<Work
     const wtCanon = canonicalPath(entry.path);
 
     // cwd が worktree path 配下（subdir 含む）なら current 扱い。
-    const isCurrent =
-      currentCanon === wtCanon || currentCanon.startsWith(`${wtCanon}/`);
+    const isCurrent = currentCanon === wtCanon || currentCanon.startsWith(`${wtCanon}/`);
 
     // branch があれば base に対して分類する。分類は base cwd で実行（branch は global ref）。
     let classification: Classification | null = null;
@@ -158,11 +157,11 @@ export function shouldDeleteWorktree(wt: WorktreeInfo, flags: Flags): boolean {
 //   classification === merged → merged
 //   それ以外 → committed
 export function worktreeStage(wt: WorktreeInfo): Stage {
-  if (wt.hasUncommittedChanges) return 'files-changed';
+  if (wt.hasUncommittedChanges) return "files-changed";
 
-  if (wt.classification === 'merged') return 'merged';
+  if (wt.classification === "merged") return "merged";
 
-  return 'committed';
+  return "committed";
 }
 
 // パスを canonical（symlink 解決済み）に正規化する。解決できなければ原文を返す。
@@ -181,29 +180,33 @@ function canonicalPath(p: string): string {
 // 判定順は issue の pseudo-code に厳密一致。
 function decideWorktree(wt: WorktreeInfo, flags: Flags): CleanupDecision {
   // invariant: 主 worktree / base branch の worktree は消さない。
-  if (wt.isMain || wt.isBaseBranch) return { reason: 'base worktree', remove: false };
+  if (wt.isMain || wt.isBaseBranch) return { reason: "base worktree", remove: false };
 
   // invariant: カレント worktree（cwd）は消すと自爆するので消さない。
-  if (wt.isCurrent) return { reason: 'current worktree', remove: false };
+  if (wt.isCurrent) return { reason: "current worktree", remove: false };
 
   // invariant: 走行中 session のある worktree は消さない。
-  if (wt.sessionRunning) return { reason: 'session running', remove: false };
+  if (wt.sessionRunning) return { reason: "session running", remove: false };
 
   // invariant: locked worktree は消さない。
-  if (wt.locked) return { reason: 'locked', remove: false };
+  if (wt.locked) return { reason: "locked", remove: false };
 
   // detached HEAD: branch が無く stage 分類できない。専用フラグでのみ削除。
   if (!wt.branch) {
     const deletable = wt.isClaudeManaged ? flags.claudeWorktreeDetached : flags.worktreeDetached;
 
-    return deletable ? { remove: true } : { reason: 'detached (use --worktree-detached)', remove: false };
+    return deletable
+      ? { remove: true }
+      : { reason: "detached (use --worktree-detached)", remove: false };
   }
 
   // untouched: 独自コミットなし・clean（base と同一）。ladder 外。専用フラグでのみ削除。
-  if (wt.classification === 'untouched' && !wt.hasUncommittedChanges) {
+  if (wt.classification === "untouched" && !wt.hasUncommittedChanges) {
     const deletable = wt.isClaudeManaged ? flags.claudeWorktreeUntouched : flags.worktreeUntouched;
 
-    return deletable ? { remove: true } : { reason: 'untouched (use --worktree-untouched)', remove: false };
+    return deletable
+      ? { remove: true }
+      : { reason: "untouched (use --worktree-untouched)", remove: false };
   }
 
   // stage を閾値と比較。閾値以降（より安全側）なら削除。
@@ -212,25 +215,31 @@ function decideWorktree(wt: WorktreeInfo, flags: Flags): CleanupDecision {
 
   if (atOrSafer(stage, threshold)) return { remove: true };
 
-  return stage === 'files-changed'
-    ? { reason: 'files-changed (use --worktree-files-changed)', remove: false }
-    : { reason: 'committed (use --worktree-committed)', remove: false };
+  return stage === "files-changed"
+    ? { reason: "files-changed (use --worktree-files-changed)", remove: false }
+    : { reason: "committed (use --worktree-committed)", remove: false };
 }
 
 // worktree に未コミットの変更があるか。
 // bash の has_uncommitted_changes 移植: diff HEAD / diff --cached / ls-files --others --exclude-standard。
 async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
   // 追跡ファイルの作業ツリー差分。
-  if (!(await gitExitOk(['-C', worktreePath, 'diff', '--quiet', 'HEAD']))) return true;
+  if (!(await gitExitOk(["-C", worktreePath, "diff", "--quiet", "HEAD"]))) return true;
 
   // ステージ済み差分。
-  if (!(await gitExitOk(['-C', worktreePath, 'diff', '--quiet', '--cached']))) return true;
+  if (!(await gitExitOk(["-C", worktreePath, "diff", "--quiet", "--cached"]))) return true;
 
   // 未追跡ファイル。
   try {
-    const untracked = await gitText(['-C', worktreePath, 'ls-files', '--others', '--exclude-standard']);
+    const untracked = await gitText([
+      "-C",
+      worktreePath,
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+    ]);
 
-    if (untracked !== '') return true;
+    if (untracked !== "") return true;
   } catch {
     // 取得できなければ未追跡なしとみなす。
   }
@@ -250,19 +259,19 @@ function parsePorcelain(text: string): PorcelainEntry[] {
   const entries: PorcelainEntry[] = [];
   let current: null | PorcelainEntry = null;
 
-  for (const line of text.split('\n')) {
-    if (line.startsWith('worktree ')) {
+  for (const line of text.split("\n")) {
+    if (line.startsWith("worktree ")) {
       // 新しいブロック開始。直前のブロックを確定する。
       if (current) entries.push(current);
-      current = { branch: null, locked: false, path: line.slice('worktree '.length) };
+      current = { branch: null, locked: false, path: line.slice("worktree ".length) };
       continue;
     }
 
     if (!current) continue;
 
-    if (line.startsWith('branch ')) {
-      current.branch = line.slice('branch '.length).replace(/^refs\/heads\//, '');
-    } else if (line === 'locked' || line.startsWith('locked ')) {
+    if (line.startsWith("branch ")) {
+      current.branch = line.slice("branch ".length).replace(/^refs\/heads\//, "");
+    } else if (line === "locked" || line.startsWith("locked ")) {
       current.locked = true;
     }
   }

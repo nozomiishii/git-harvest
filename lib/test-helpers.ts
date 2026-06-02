@@ -1,7 +1,7 @@
-import { execSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { execSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
 // origin（bare）付きリポジトリ。main に init コミットを push 済み。
 // dispose で全 worktree を unlock + force remove してから repo / bare を削除する。
@@ -16,7 +16,7 @@ export type TempRepo = Disposable & { path: string };
 // null/undefined を弾いて値を型 narrow して返す（テストで非 null 表明 ! を使わないため）
 export function assertDefined<T>(value: null | T | undefined): T {
   if (value === null || value === undefined) {
-    throw new Error('expected value to be defined');
+    throw new Error("expected value to be defined");
   }
 
   return value;
@@ -30,13 +30,13 @@ export function commitFile(cwd: string, filename: string, message: string): void
 }
 
 export function makeOriginRepo(): OriginRepo {
-  const bare = mkdtempSync(path.join(tmpdir(), 'git-harvest-bare-'));
+  const bare = mkdtempSync(path.join(tmpdir(), "git-harvest-bare-"));
   execSync(`git init --bare -b main ${bare}`);
-  const repo = mkdtempSync(path.join(tmpdir(), 'git-harvest-work-'));
+  const repo = mkdtempSync(path.join(tmpdir(), "git-harvest-work-"));
   execSync(`git clone ${bare} ${repo}`);
   setIdentity(repo);
-  commitFile(repo, 'README.md', 'init');
-  tgit(repo, 'push');
+  commitFile(repo, "README.md", "init");
+  tgit(repo, "push");
 
   return {
     bare,
@@ -71,7 +71,7 @@ export function makeOriginRepo(): OriginRepo {
 }
 
 export function makeSessionsDir(): SessionsDir {
-  const dir = mkdtempSync(path.join(tmpdir(), 'git-harvest-sessions-'));
+  const dir = mkdtempSync(path.join(tmpdir(), "git-harvest-sessions-"));
   const saved = process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR;
   process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR = dir;
 
@@ -90,10 +90,10 @@ export function makeSessionsDir(): SessionsDir {
 }
 
 export function makeSimpleRepo(): TempRepo {
-  const repo = mkdtempSync(path.join(tmpdir(), 'git-harvest-git-'));
-  execSync('git init -b main', { cwd: repo });
+  const repo = mkdtempSync(path.join(tmpdir(), "git-harvest-git-"));
+  execSync("git init -b main", { cwd: repo });
   setIdentity(repo);
-  tgit(repo, 'commit --allow-empty -m init');
+  tgit(repo, "commit --allow-empty -m init");
 
   return {
     path: repo,
@@ -105,7 +105,7 @@ export function makeSimpleRepo(): TempRepo {
 
 // 空の temp ディレクトリ（git リポジトリではない）。dispose で削除する。
 export function makeTempDir(): TempRepo {
-  const dir = mkdtempSync(path.join(tmpdir(), 'git-harvest-tmp-'));
+  const dir = mkdtempSync(path.join(tmpdir(), "git-harvest-tmp-"));
 
   return {
     path: dir,
@@ -119,7 +119,7 @@ export function makeTempDir(): TempRepo {
 export function tgit(cwd: string, args: string): string {
   return execSync(
     `git -c user.email=test@test.com -c user.name=Test -c commit.gpgsign=false ${args}`,
-    { cwd, encoding: 'utf8', stdio: 'pipe' },
+    { cwd, encoding: "utf8", stdio: "pipe" },
   );
 }
 
@@ -146,17 +146,17 @@ export function withNoColor(value: string | undefined): Disposable {
 
 // `git worktree list --porcelain` から worktree path 一覧を取り出す
 function listWorktrees(cwd: string): string[] {
-  return execSync('git worktree list --porcelain', { cwd, encoding: 'utf8' })
-    .split('\n')
-    .filter((line) => line.startsWith('worktree '))
-    .map((line) => line.replace('worktree ', ''));
+  return execSync("git worktree list --porcelain", { cwd, encoding: "utf8" })
+    .split("\n")
+    .filter((line) => line.startsWith("worktree "))
+    .map((line) => line.replace("worktree ", ""));
 }
 
 // CLI サブプロセスが回す git（merge-detect の commit-tree 等）にも identity が要る。
 // tgit の per-command -c だけだと CLI 側に届かず、暗黙 identity の無い環境（CI 等）で
 // commit-tree が失敗し squash 検出が落ちるため、repo の local config に永続化する。
 function setIdentity(cwd: string): void {
-  execSync('git config user.email test@test.com', { cwd });
-  execSync('git config user.name Test', { cwd });
-  execSync('git config commit.gpgsign false', { cwd });
+  execSync("git config user.email test@test.com", { cwd });
+  execSync("git config user.name Test", { cwd });
+  execSync("git config commit.gpgsign false", { cwd });
 }

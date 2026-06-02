@@ -1,7 +1,7 @@
 # 依存の postinstall（build script）は走らせない。ネイティブバイナリは
 # optionalDependencies 経由で入るため不要で、third-party script の実行も避ける。
 allowBuilds:
-  '@swc/core': false
+  "@swc/core": false
   esbuild: false
   lefthook: false
   unrs-resolver: false
@@ -10,4 +10,4 @@ allowBuilds:
 # 自前スコープを除外する。自分で publish した信頼済みパッケージなので待たない。
 # third-party への cooldown は維持する。
 minimumReleaseAgeExclude:
-  - '@nozomiishii/*'
+  - "@nozomiishii/*"

@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read  # required by actions/checkout to fetch repository code and dorny/paths-filter to diff against the base ref
+      contents: read # required by actions/checkout to fetch repository code and dorny/paths-filter to diff against the base ref
 
     steps:
       - name: Checkout code

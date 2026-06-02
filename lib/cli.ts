@@ -1,15 +1,15 @@
-import type { Flags } from './types';
-import pkg from '../package.json';
-import { cleanupBranches } from './branch';
-import { logo } from './brand';
-import { applyToken, PRESETS, renderFlagHelp } from './flags-spec';
-import { formatSummary } from './format';
-import { gitText } from './git';
-import { defaultFlags } from './preset';
-import { cleanupWorktrees } from './worktree';
+import type { Flags } from "./types";
+import pkg from "../package.json";
+import { cleanupBranches } from "./branch";
+import { logo } from "./brand";
+import { applyToken, PRESETS, renderFlagHelp } from "./flags-spec";
+import { formatSummary } from "./format";
+import { gitText } from "./git";
+import { defaultFlags } from "./preset";
+import { cleanupWorktrees } from "./worktree";
 
 // 実行モード。run 以外は副作用のない即時出力。
-type Mode = 'help' | 'logo' | 'run' | 'version';
+type Mode = "help" | "logo" | "run" | "version";
 
 // argv パース結果。flags は run / dry-run 用、mode が分岐先。
 type Parsed = {
@@ -37,20 +37,20 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   switch (parsed.mode) {
-    case 'help': {
+    case "help": {
       process.stdout.write(helpText());
 
       return;
     }
-    case 'logo': {
+    case "logo": {
       process.stdout.write(`${logo()}\n`);
 
       return;
     }
-    case 'run': {
+    case "run": {
       break;
     }
-    case 'version': {
+    case "version": {
       process.stdout.write(`git-harvest v${readVersion()}\n`);
 
       return;
@@ -87,25 +87,25 @@ export async function main(argv: string[]): Promise<void> {
 export function parseArgs(argv: string[]): Parsed {
   // logo / --help / --version は副作用なしの即時 mode。最優先で拾う。
   for (const arg of argv) {
-    if (arg === 'logo') return { flags: defaultFlags(), mode: 'logo' };
+    if (arg === "logo") return { flags: defaultFlags(), mode: "logo" };
 
-    if (arg === '-h' || arg === '--help') return { flags: defaultFlags(), mode: 'help' };
+    if (arg === "-h" || arg === "--help") return { flags: defaultFlags(), mode: "help" };
 
-    if (arg === '-v' || arg === '--version') return { flags: defaultFlags(), mode: 'version' };
+    if (arg === "-v" || arg === "--version") return { flags: defaultFlags(), mode: "version" };
   }
 
   // 常に保守的な default を土台にする。--yolo はその上に PRESETS.yolo を展開する。
   const flags = defaultFlags();
 
-  if (argv.includes('--yolo')) {
+  if (argv.includes("--yolo")) {
     for (const token of PRESETS.yolo) applyToken(flags, token);
   }
 
   for (const arg of argv) {
     // --yolo は上で展開済み。--dry-run / -n は scope を持たない共通フラグ。
-    if (arg === '--yolo') continue;
+    if (arg === "--yolo") continue;
 
-    if (arg === '--dry-run' || arg === '-n') {
+    if (arg === "--dry-run" || arg === "-n") {
       flags.dryRun = true;
       continue;
     }
@@ -116,7 +116,7 @@ export function parseArgs(argv: string[]): Parsed {
     throw new UsageError(`unknown option: ${arg}`);
   }
 
-  return { flags, mode: 'run' };
+  return { flags, mode: "run" };
 }
 
 // origin/HEAD から base（default branch）を fail-closed で解決する。
@@ -133,7 +133,7 @@ export async function resolveBase(): Promise<string | undefined> {
 
   if (!base) {
     process.stderr.write(
-      'git-harvest: cannot determine default branch (try: git remote set-head origin <branch>)\n',
+      "git-harvest: cannot determine default branch (try: git remote set-head origin <branch>)\n",
     );
     process.exitCode = 1;
 
@@ -146,9 +146,9 @@ export async function resolveBase(): Promise<string | undefined> {
 // origin/HEAD を symbolic-ref で取得し branch 名を返す。未設定 / 失敗時は空文字。
 async function fetchOriginHead(): Promise<string> {
   try {
-    return stripOriginPrefix(await gitText(['symbolic-ref', 'refs/remotes/origin/HEAD']));
+    return stripOriginPrefix(await gitText(["symbolic-ref", "refs/remotes/origin/HEAD"]));
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -199,14 +199,14 @@ function readVersion(): string {
 
 // refs/remotes/origin/ プレフィックスを落として branch 名だけにする。
 function stripOriginPrefix(ref: string): string {
-  return ref.replace(/^refs\/remotes\/origin\//, '');
+  return ref.replace(/^refs\/remotes\/origin\//, "");
 }
 
 // origin/HEAD をリモートに問い合わせて自動設定する（短タイムアウトでハングを防ぐ）。
 // 失敗は致命でないので無視する。呼び出し側が再取得し、なお空なら fail-closed する。
 async function trySetOriginHead(): Promise<void> {
   try {
-    await gitText(['-c', 'http.connectTimeout=3', 'remote', 'set-head', 'origin', '--auto']);
+    await gitText(["-c", "http.connectTimeout=3", "remote", "set-head", "origin", "--auto"]);
   } catch {
     // set-head 失敗は無視。
   }

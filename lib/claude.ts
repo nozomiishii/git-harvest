@@ -1,7 +1,7 @@
-import { realpathSync } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import path from 'node:path';
+import { realpathSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import path from "node:path";
 
 // この worktree で走行中の Claude session があるか。
 // bash の has_running_claude_session + claude_sessions_dir を移植。
@@ -28,7 +28,7 @@ export async function hasRunningClaudeSession(worktreePath: string): Promise<boo
   try {
     const names = await readdir(dir);
 
-    entries = names.filter((name) => name.endsWith('.json'));
+    entries = names.filter((name) => name.endsWith(".json"));
   } catch {
     return false;
   }
@@ -44,7 +44,7 @@ export async function hasRunningClaudeSession(worktreePath: string): Promise<boo
 // bash の is_claude_managed_worktree（glob `*/.claude/worktrees/?*`）を移植。
 // 末尾に最低1文字を要求し、`.claude/worktrees` や `.claude/worktrees/` 自体は false。
 export function isClaudeManagedWorktree(worktreePath: string): boolean {
-  const marker = '/.claude/worktrees/';
+  const marker = "/.claude/worktrees/";
   const index = worktreePath.indexOf(marker);
 
   if (index === -1) return false;
@@ -70,7 +70,7 @@ function canonicalPath(p: string): string {
 // Claude CLI が走行中セッションを記録するディレクトリ。
 // 上書き用 env: GIT_HARVEST_CLAUDE_SESSIONS_DIR（テスト / power user 用）。既定は ~/.claude/sessions。
 function claudeSessionsDir(): string {
-  return process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR ?? path.join(homedir(), '.claude', 'sessions');
+  return process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR ?? path.join(homedir(), ".claude", "sessions");
 }
 
 // session ファイル1件を読み、cwd が worktree と一致しかつ pid が生存しているか判定する。
@@ -82,7 +82,7 @@ async function isSessionAlive(file: string, worktreeCanon: string): Promise<bool
     const fileStat = await stat(file);
 
     if (!fileStat.isFile()) return false;
-    raw = await readFile(file, 'utf8');
+    raw = await readFile(file, "utf8");
   } catch {
     return false;
   }
