@@ -147,9 +147,9 @@ git-harvest --worktree-untouched         # untouched な通常 path worktree を
 git-harvest --claude-worktree-untouched  # untouched な .claude/worktrees/ worktree を削除
 ```
 
-detached worktree の独自コミットは branch から到達できないため、削除すると per-worktree reflog ごと消え恒久喪失しうります。`--worktree-detached` / `--claude-worktree-detached` / `--yolo` はこの警告を出します。
+detached worktree の独自コミットは branch から到達できないため、削除すると per-worktree reflog ごと消え恒久喪失しえます。この注意は `--help` の `--worktree-detached` / `--claude-worktree-detached` / `--yolo` に出ます。
 
-nuke:
+nuke — まず `git-harvest --dry-run` で確認してから:
 
 ```sh
 git-harvest --yolo   # invariant 以外を全部削除（未コミット込み）

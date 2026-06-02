@@ -1,11 +1,11 @@
-import type { Flags, Stage } from './types';
+import type { Flags } from './types';
 import pkg from '../package.json';
 import { cleanupBranches } from './branch';
 import { logo } from './brand';
+import { applyToken, PRESETS, renderFlagHelp } from './flags-spec';
 import { formatSummary } from './format';
 import { gitText } from './git';
-import { defaultFlags, yoloFlags } from './preset';
-import { SAFETY } from './types';
+import { defaultFlags } from './preset';
 import { cleanupWorktrees } from './worktree';
 
 // 実行モード。run 以外は副作用のない即時出力。
@@ -15,7 +15,6 @@ type Mode = 'help' | 'logo' | 'run' | 'version';
 type Parsed = {
   flags: Flags;
   mode: Mode;
-  yolo: boolean; // --yolo 指定（土台 preset の選択と件数警告に使う）
 };
 
 // 未知フラグ用エラー。main の catch で usage を出して終了コード 1 にする。
@@ -58,7 +57,7 @@ export async function main(argv: string[]): Promise<void> {
     }
   }
 
-  const { flags, yolo } = parsed;
+  const { flags } = parsed;
 
   // base を一度だけ解決し、以降の判定の土台にする。解決前に削除へ進まない。
   const base = await resolveBase();
@@ -68,19 +67,6 @@ export async function main(argv: string[]): Promise<void> {
 
   // worktree を整理し、生き残った worktree path を branch 判定に渡す。
   const worktreeResult = await cleanupWorktrees(base, flags);
-
-  // --yolo で未コミット変更を持つ worktree が削除対象に含まれれば件数を警告する。
-  if (yolo) {
-    const dirtyCount = worktreeResult.results.filter(
-      (r) => r.action === 'removed' || r.action === 'would-remove',
-    ).length;
-
-    if (dirtyCount > 0) {
-      process.stderr.write(
-        `git-harvest: --yolo targets ${String(dirtyCount)} worktree(s); uncommitted changes may be lost\n`,
-      );
-    }
-  }
 
   const branchResult = await cleanupBranches(base, flags, worktreeResult.survivingPaths);
 
@@ -97,74 +83,40 @@ export async function main(argv: string[]): Promise<void> {
 }
 
 // argv（process.argv.slice(2) 相当）を Flags + mode に落とす。
-// --yolo は yoloFlags() を土台に他フラグを反映、個別フラグは閾値を危険側へ下げる。
+// --yolo は PRESETS.yolo（フラグ束）を default に上乗せ、個別フラグは applyToken が閾値を危険側へ下げる。
 export function parseArgs(argv: string[]): Parsed {
   // logo / --help / --version は副作用なしの即時 mode。最優先で拾う。
   for (const arg of argv) {
-    if (arg === 'logo') return { flags: defaultFlags(), mode: 'logo', yolo: false };
+    if (arg === 'logo') return { flags: defaultFlags(), mode: 'logo' };
 
-    if (arg === '-h' || arg === '--help') return { flags: defaultFlags(), mode: 'help', yolo: false };
+    if (arg === '-h' || arg === '--help') return { flags: defaultFlags(), mode: 'help' };
 
-    if (arg === '-v' || arg === '--version') return { flags: defaultFlags(), mode: 'version', yolo: false };
+    if (arg === '-v' || arg === '--version') return { flags: defaultFlags(), mode: 'version' };
   }
 
-  // --yolo があるかを先に判定し、土台 preset を決める。
-  const yolo = argv.includes('--yolo');
-  const flags = yolo ? yoloFlags() : defaultFlags();
+  // 常に保守的な default を土台にする。--yolo はその上に PRESETS.yolo を展開する。
+  const flags = defaultFlags();
+
+  if (argv.includes('--yolo')) {
+    for (const token of PRESETS.yolo) applyToken(flags, token);
+  }
 
   for (const arg of argv) {
-    switch (arg) {
-      case '--branch-committed': {
-        flags.branch = lowerThreshold(flags.branch, 'committed');
-        break;
-      }
-      case '--claude-worktree-committed': {
-        flags.claudeWorktree = lowerThreshold(flags.claudeWorktree, 'committed');
-        break;
-      }
-      case '--claude-worktree-detached': {
-        flags.claudeWorktreeDetached = true;
-        break;
-      }
-      case '--claude-worktree-files-changed': {
-        flags.claudeWorktree = lowerThreshold(flags.claudeWorktree, 'files-changed');
-        break;
-      }
-      case '--claude-worktree-untouched': {
-        flags.claudeWorktreeUntouched = true;
-        break;
-      }
-      case '--dry-run':
-      case '-n': {
-        flags.dryRun = true;
-        break;
-      }
-      case '--worktree-committed': {
-        flags.worktree = lowerThreshold(flags.worktree, 'committed');
-        break;
-      }
-      case '--worktree-detached': {
-        flags.worktreeDetached = true;
-        break;
-      }
-      case '--worktree-files-changed': {
-        flags.worktree = lowerThreshold(flags.worktree, 'files-changed');
-        break;
-      }
-      case '--worktree-untouched': {
-        flags.worktreeUntouched = true;
-        break;
-      }
-      case '--yolo': {
-        break;
-      } // 土台は決定済み。
-      default: {
-        throw new UsageError(`unknown option: ${arg}`);
-      }
+    // --yolo は上で展開済み。--dry-run / -n は scope を持たない共通フラグ。
+    if (arg === '--yolo') continue;
+
+    if (arg === '--dry-run' || arg === '-n') {
+      flags.dryRun = true;
+      continue;
     }
+
+    // 残りは scope フラグ。applyToken が一致すれば適用、未知なら usage エラー。
+    if (applyToken(flags, arg)) continue;
+
+    throw new UsageError(`unknown option: ${arg}`);
   }
 
-  return { flags, mode: 'run', yolo };
+  return { flags, mode: 'run' };
 }
 
 // origin/HEAD から base（default branch）を fail-closed で解決する。
@@ -228,24 +180,7 @@ Options:
   -v, --version                     Show version
   -n, --dry-run                     Show what would be deleted without deleting
 
-  Worktree threshold (normal path), deletes the stage and everything safer:
-  --worktree-files-changed          Delete from files-changed (everything, uncommitted included)
-  --worktree-committed              Delete from committed (committed and merged)
-
-  Worktree threshold (.claude/worktrees/ path):
-  --claude-worktree-files-changed   Delete from files-changed (everything)
-  --claude-worktree-committed       Delete from committed
-
-  Branch threshold (branches have no files-changed):
-  --branch-committed                Delete from committed (everything)
-
-  Off-ladder worktrees (kept by default):
-  --worktree-detached               Delete detached normal-path worktrees
-                                    WARNING: a detached worktree's commits are unreachable;
-                                    removal can lose them permanently (no reflog recovery).
-  --claude-worktree-detached        Delete detached .claude/worktrees/ worktrees (same warning)
-  --worktree-untouched              Delete untouched normal-path worktrees
-  --claude-worktree-untouched       Delete untouched .claude/worktrees/ worktrees
+${renderFlagHelp()}
 
   --yolo                            Delete everything except invariants (main/default, current cwd,
                                     locked, running session, checked-out). Uncommitted included.
@@ -260,11 +195,6 @@ Invariants are always protected (cannot be overridden by any flag or --yolo):
   worktree with a running Claude session, current HEAD branch,
   branch checked out in a surviving worktree.
 `;
-}
-
-// 閾値を「より危険側（SAFETY index が小さい側）」へ下げる。複数指定 / --yolo 併用でも危険側が勝つ。
-function lowerThreshold(current: Stage, candidate: Stage): Stage {
-  return SAFETY.indexOf(candidate) < SAFETY.indexOf(current) ? candidate : current;
 }
 
 // package.json の version を読む。静的 import なのでビルド時にインライン化され、

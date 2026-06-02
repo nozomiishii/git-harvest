@@ -145,9 +145,9 @@ git-harvest --worktree-untouched         # Delete untouched normal-path worktree
 git-harvest --claude-worktree-untouched  # Delete untouched .claude/worktrees/ worktrees
 ```
 
-A detached worktree's commits are unreachable from any branch, so removing it can lose them permanently with no reflog recovery. `--worktree-detached` / `--claude-worktree-detached` / `--yolo` print this warning.
+A detached worktree's commits are unreachable from any branch, so removing it can lose them permanently with no reflog recovery. `--help` flags this caution on `--worktree-detached` / `--claude-worktree-detached` / `--yolo`.
 
-The nuke:
+The nuke — preview it first with `git-harvest --dry-run`:
 
 ```sh
 git-harvest --yolo   # Delete everything except invariants, uncommitted included

@@ -287,7 +287,7 @@ test('--yolo removes everything (incl. uncommitted) except invariants', () => {
   tgit(repo.path, `worktree add ${claudeWt} feat-y-claude`);
   writeFileSync(path.join(claudeWt, 'cdirty.txt'), 'claude dirty\n');
 
-  const { status, stderr } = run(repo.path, ['--yolo'], sess.path);
+  const { status } = run(repo.path, ['--yolo'], sess.path);
 
   expect(status).toBe(0);
   // 通常 path / claude path とも、dirty 込みで全部消える。
@@ -298,8 +298,6 @@ test('--yolo removes everything (incl. uncommitted) except invariants', () => {
   // invariant: カレント worktree と base branch だけ残る。
   expect(existsSync(repo.path)).toBe(true);
   expect(branches(repo.path)).toStrictEqual(['main']);
-  // 未コミット worktree を含むので件数警告が出る。
-  expect(stderr).toContain('uncommitted changes may be lost');
 });
 
 // locked worktree は --yolo でも残る
