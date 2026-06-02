@@ -15,7 +15,7 @@ type Mode = 'help' | 'logo' | 'run' | 'version';
 type Parsed = {
   flags: Flags;
   mode: Mode;
-  yolo: boolean; // --yolo 指定（非対話 + --yes 必須判定に使う）
+  yolo: boolean; // --yolo 指定（土台 preset の選択と件数警告に使う）
 };
 
 // 未知フラグ用エラー。main の catch で usage を出して終了コード 1 にする。
@@ -59,16 +59,6 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   const { flags, yolo } = parsed;
-
-  // --yolo は破壊的。非対話（非 TTY）で --yes が無ければ暴発防止に拒否する。
-  if (yolo && !process.stdout.isTTY && !flags.yes) {
-    process.stderr.write(
-      'git-harvest: --yolo in a non-interactive context requires --yes (refusing to run)\n',
-    );
-    process.exitCode = 1;
-
-    return;
-  }
 
   // base を一度だけ解決し、以降の判定の土台にする。解決前に削除へ進まない。
   const base = await resolveBase();
@@ -165,11 +155,6 @@ export function parseArgs(argv: string[]): Parsed {
         flags.worktreeUntouched = true;
         break;
       }
-      case '--yes':
-      case '-y': {
-        flags.yes = true;
-        break;
-      }
       case '--yolo': {
         break;
       } // 土台は決定済み。
@@ -242,7 +227,6 @@ Options:
   -h, --help                        Show this help
   -v, --version                     Show version
   -n, --dry-run                     Show what would be deleted without deleting
-  -y, --yes                         Confirm non-interactively (required by --yolo in hooks/non-TTY)
 
   Worktree threshold (normal path), deletes the stage and everything safer:
   --worktree-files-changed          Delete from files-changed (everything, uncommitted included)
@@ -266,7 +250,7 @@ Options:
   --yolo                            Delete everything except invariants (main/default, current cwd,
                                     locked, running session, checked-out). Uncommitted included.
                                     WARNING: removes uncommitted changes and detached commits
-                                    without confirmation. Requires --yes in hooks/non-TTY.
+                                    without any confirmation prompt.
 
 Subcommands:
   logo                              Show the git-harvest logo

@@ -32,7 +32,6 @@ export type Flags = {
   worktree: Stage;                  // 通常 path worktree の閾値
   worktreeDetached: boolean;        // detached な通常 worktree を消すか
   worktreeUntouched: boolean;       // untouched な通常 worktree を消すか
-  yes: boolean;                     // 非対話で危険操作を許可（--yolo の前提）
 };
 
 // stage が閾値以降（threshold を含むそれより安全側）か。true なら削除対象。

@@ -113,7 +113,6 @@ worktree / branch は commit ライフサイクルの段階を進みます。
 git-harvest --help     # ヘルプを表示
 git-harvest --version  # バージョンを表示
 git-harvest --dry-run  # 実際には削除せず削除対象を表示 (別名: -n)
-git-harvest --yes      # 非対話で確認をスキップ。hook / 非 TTY での --yolo に必須 (別名: -y)
 git-harvest logo       # git-harvest のロゴを表示
 ```
 
@@ -156,7 +155,7 @@ nuke:
 git-harvest --yolo   # invariant 以外を全部削除（未コミット込み）
 ```
 
-`--yolo` は通常 path も `.claude/worktrees/` path も、未コミット変更も detached コミットも含めて worktree / branch を全部消し、下記 invariant だけを残します。確認プロンプトなしで消すため、hook など非 TTY 文脈では `--yes` が無いと実行を拒否します。
+`--yolo` は通常 path も `.claude/worktrees/` path も、未コミット変更も detached コミットも含めて worktree / branch を全部消し、下記 invariant だけを残します。確認プロンプトは一切なく消します。安全弁は名前だけです。
 
 `--all` は廃止しました。代わりに `--yolo` を使ってください。挙動が変わった点に注意。旧 `--all` は `-f -f` で `git worktree lock` を貫通削除しましたが、`--yolo` は locked worktree を残します（消すなら先に `git worktree unlock`）。
 

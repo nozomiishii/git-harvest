@@ -111,7 +111,6 @@ Each resource is classified by its most at-risk (earliest) stage; uncommitted ch
 git-harvest --help     # Show help
 git-harvest --version  # Show version
 git-harvest --dry-run  # Show what would be deleted without deleting (alias: -n)
-git-harvest --yes      # Confirm non-interactively, required by --yolo in hooks/non-TTY (alias: -y)
 git-harvest logo       # Show the git-harvest logo
 ```
 
@@ -154,7 +153,7 @@ The nuke:
 git-harvest --yolo   # Delete everything except invariants, uncommitted included
 ```
 
-`--yolo` removes every worktree and branch — normal path and `.claude/worktrees/` path, uncommitted changes and detached commits included — leaving only the invariants below. It removes them without a confirmation prompt, so in hooks or any non-TTY context it refuses to run unless `--yes` is also passed.
+`--yolo` removes every worktree and branch — normal path and `.claude/worktrees/` path, uncommitted changes and detached commits included — leaving only the invariants below. It removes them without any confirmation prompt — the name is the only warning.
 
 `--all` is gone; use `--yolo`. Note the behavior changed: the old `--all` forced through `git worktree lock` with `-f -f`, while `--yolo` keeps locked worktrees (run `git worktree unlock` first to remove one).
 

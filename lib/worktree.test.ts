@@ -36,7 +36,6 @@ function defaultFlags(overrides: Partial<Flags> = {}): Flags {
     worktree: 'merged',
     worktreeDetached: false,
     worktreeUntouched: false,
-    yes: false,
     ...overrides,
   };
 }

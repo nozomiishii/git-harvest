@@ -15,7 +15,6 @@ import {
 
 // CLI 全体の統合テスト。lib/cli.ts を `node --import tsx` で直接起動し、実 git リポジトリに対する
 // end-to-end の挙動（invariant / 閾値 / --yolo / fail-closed / dry-run 一致）を確認する。
-// 起動は spawnSync 経由で必ず非 TTY になるので、--yolo の --yes 必須テストもここで賄える。
 
 // このファイル（lib/ 配下）のディレクトリ。cli.ts は同階層。
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), 'cli.ts');
@@ -269,8 +268,8 @@ test('--worktree-files-changed removes an edited merged worktree', () => {
   expect(existsSync(mergedWt)).toBe(false);
 });
 
-// --yes 付き --yolo は通常 path / claude path とも未コミット込みで消し、invariant だけ残す
-test('--yolo --yes removes everything (incl. uncommitted) except invariants', () => {
+// --yolo は通常 path / claude path とも未コミット込みで消し、invariant だけ残す
+test('--yolo removes everything (incl. uncommitted) except invariants', () => {
   using root = makeTempDir();
   using repo = makeRepo();
   using sess = makeTempDir();
@@ -288,7 +287,7 @@ test('--yolo --yes removes everything (incl. uncommitted) except invariants', ()
   tgit(repo.path, `worktree add ${claudeWt} feat-y-claude`);
   writeFileSync(path.join(claudeWt, 'cdirty.txt'), 'claude dirty\n');
 
-  const { status, stderr } = run(repo.path, ['--yolo', '--yes'], sess.path);
+  const { status, stderr } = run(repo.path, ['--yolo'], sess.path);
 
   expect(status).toBe(0);
   // 通常 path / claude path とも、dirty 込みで全部消える。
@@ -303,21 +302,6 @@ test('--yolo --yes removes everything (incl. uncommitted) except invariants', ()
   expect(stderr).toContain('uncommitted changes may be lost');
 });
 
-// 非 TTY（spawnSync 経由）で --yes 無しの --yolo は拒否し、何も消さない
-test('--yolo refuses in a non-TTY context without --yes', () => {
-  using root = makeTempDir();
-  using repo = makeRepo();
-  using sess = makeTempDir();
-  const mergedWt = addMergedWorktree(repo.path, root.path, 'feat-noyes', 'wt-noyes');
-  const { status, stderr } = run(repo.path, ['--yolo'], sess.path);
-
-  expect(status).toBe(1);
-  expect(stderr).toContain('requires --yes');
-  // 拒否なので worktree / branch は残る。
-  expect(existsSync(mergedWt)).toBe(true);
-  expect(branches(repo.path)).toContain('feat-noyes');
-});
-
 // locked worktree は --yolo でも残る
 test('--yolo keeps a locked worktree', () => {
   using root = makeTempDir();
@@ -325,7 +309,7 @@ test('--yolo keeps a locked worktree', () => {
   using sess = makeTempDir();
   const wt = addCommittedWorktree(repo.path, root.path, 'feat-locked', 'wt-locked');
   tgit(repo.path, `worktree lock ${wt}`);
-  const { status } = run(repo.path, ['--yolo', '--yes'], sess.path);
+  const { status } = run(repo.path, ['--yolo'], sess.path);
 
   expect(status).toBe(0);
   expect(existsSync(wt)).toBe(true);
@@ -343,7 +327,7 @@ test('--yolo keeps a worktree with a running session', () => {
 
   try {
     writeSession(sess.path, assertDefined(sleepProc.pid), wt);
-    const { status } = run(repo.path, ['--yolo', '--yes'], sess.path);
+    const { status } = run(repo.path, ['--yolo'], sess.path);
 
     expect(status).toBe(0);
     expect(existsSync(wt)).toBe(true);
@@ -360,7 +344,7 @@ test('--yolo keeps the current worktree and current HEAD branch', () => {
   using sess = makeTempDir();
   // committed worktree を作り、そこを cwd にして起動する。
   const wt = addCommittedWorktree(repo.path, root.path, 'feat-current', 'wt-current');
-  const { status } = run(wt, ['--yolo', '--yes'], sess.path);
+  const { status } = run(wt, ['--yolo'], sess.path);
 
   expect(status).toBe(0);
   // カレント worktree は消えない（消すと自爆する）。
