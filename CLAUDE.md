@@ -11,6 +11,7 @@
 ## アーキテクチャ概要
 
 マージ済みブランチと worktree を自動で整理する CLI ツール。
+ファイルの責務と全体の流れは [docs/architecture.md](docs/architecture.md) を参照。
 
 - 本番コード: `lib/*.ts`（TypeScript。エントリは `lib/cli.ts`）
 - ビルド: `tsdown`。npm 向け ESM バンドルを `dist/git-harvest` に出力
