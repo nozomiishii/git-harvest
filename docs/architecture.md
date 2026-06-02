@@ -20,7 +20,7 @@
 出力   format.ts       結果を着色済み文字列に整形（stdout 書き込みは cli）
        brand.ts        ブランドカラー・ロゴ定数
 
-基盤   types.ts        Stage / Flags / SAFETY / ActionResult など共通の型と定数
+基盤   types.ts        Stage / Flags / SAFETY / ActionResult / CleanupDecision など共通の型と定数
        git.ts          git 実行ラッパー（throw 版 git / bool 版 gitExitOk / text 版 gitText）
 ```
 
@@ -31,7 +31,7 @@
 | 入口 | `cli.ts` | 背骨。argv を Flags + Mode に落とし、base を解決し、worktree→branch の順で cleanup を起動して終了コードを決める。help 全文もここ |
 | 設定 | `flags-spec.ts` `preset.ts` | フラグ仕様をデータ駆動で一元定義。parse / help / preset がこの1配列を参照。`preset.ts` は初期値だけ |
 | 検出・分類 | `merge-detect.ts` `claude.ts` | branch のマージ判定（4段フォールバック）と、worktree を消してよいかの保護条件を供給 |
-| 実行 | `worktree.ts` `branch.ts` | リソースを列挙→判定→削除→集約。worktree と branch でほぼ同じ流れ |
+| 実行 | `worktree.ts` `branch.ts` | リソースを列挙→判定→削除→集約。削除可否と保護理由は `decideWorktree` / `decideBranch` が `CleanupDecision` で1か所に返す（`shouldDelete*` はその真偽だけの薄い wrapper）。worktree と branch でほぼ同じ流れ |
 | 出力 | `format.ts` `brand.ts` | `ActionResult` / `CleanupResult` を端末文字列へ。副作用のない純粋関数 |
 | 基盤 | `types.ts` `git.ts` | 全体共通の型・定数と git 実行の低レベルラッパー。他の lib に依存しない葉 |
 
@@ -42,7 +42,7 @@
 - `parseArgs` が argv を `Flags` + Mode にする
 - `resolveBase` が base ブランチを決める
 - `cleanupWorktrees` → `cleanupBranches` の順で各リソースを処理する
-- 各 cleanup は内部で「列挙 → 状態収集 → 削除判定（`shouldDelete*`）→ 実削除 → `ActionResult` に集約」を回す
+- 各 cleanup は内部で「列挙 → 状態収集 → 削除判定（`decide*` が `CleanupDecision` を返す）→ 実削除 → `ActionResult` に集約」を回す
 - 削除判定は `merge-detect`（branch のマージ）と `claude`（worktree の保護）に問い合わせる
 - 集約結果を `format` が文字列にし、`cli` が stdout へ書く
 
