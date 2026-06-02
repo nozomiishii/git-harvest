@@ -21,7 +21,7 @@
 
 ## 動作内容
 
-- 各リソースの状態と挙動（通常 / `--all`）は `README.ja.md` の「動作内容」セクションの表を参照
+- 各リソースの状態と挙動は `README.ja.md` の「動作内容」セクションの表を参照
 - マージ検出は4段階フォールバック（first-parent → ancestor → 仮想 squash → cherry-pick）。詳細は `lib/merge-detect.ts` の `classifyBranch()` を参照
 
 ## ブランドカラー
