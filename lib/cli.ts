@@ -123,27 +123,12 @@ export function parseArgs(argv: string[]): Parsed {
 // bash default_branch / samples の resolve_base 移植。main/master へ自動 fallback しない。
 //   symbolic-ref で取得 → 空なら set-head --auto して再取得 → なお空なら stderr ヒント + 終了コード 1。
 export async function resolveBase(): Promise<string | undefined> {
-  let base: string;
+  let base = await fetchOriginHead();
 
-  try {
-    base = stripOriginPrefix(await gitText(['symbolic-ref', 'refs/remotes/origin/HEAD']));
-  } catch {
-    base = '';
-  }
-
-  // 未設定ならリモートに問い合わせて自動設定（短タイムアウトでハングを防ぐ）。失敗は無視。
+  // 未設定ならリモートに問い合わせて自動設定し、もう一度取得する。
   if (!base) {
-    try {
-      await gitText(['-c', 'http.connectTimeout=3', 'remote', 'set-head', 'origin', '--auto']);
-    } catch {
-      // set-head 失敗は致命でない。再取得で空なら下で fail-closed する。
-    }
-
-    try {
-      base = stripOriginPrefix(await gitText(['symbolic-ref', 'refs/remotes/origin/HEAD']));
-    } catch {
-      base = '';
-    }
+    await trySetOriginHead();
+    base = await fetchOriginHead();
   }
 
   if (!base) {
@@ -156,6 +141,15 @@ export async function resolveBase(): Promise<string | undefined> {
   }
 
   return base;
+}
+
+// origin/HEAD を symbolic-ref で取得し branch 名を返す。未設定 / 失敗時は空文字。
+async function fetchOriginHead(): Promise<string> {
+  try {
+    return stripOriginPrefix(await gitText(['symbolic-ref', 'refs/remotes/origin/HEAD']));
+  } catch {
+    return '';
+  }
 }
 
 // help 全文。冒頭に progression model（issue の help 必須要素）を置き、全フラグとサブコマンドを列挙する。
@@ -206,6 +200,16 @@ function readVersion(): string {
 // refs/remotes/origin/ プレフィックスを落として branch 名だけにする。
 function stripOriginPrefix(ref: string): string {
   return ref.replace(/^refs\/remotes\/origin\//, '');
+}
+
+// origin/HEAD をリモートに問い合わせて自動設定する（短タイムアウトでハングを防ぐ）。
+// 失敗は致命でないので無視する。呼び出し側が再取得し、なお空なら fail-closed する。
+async function trySetOriginHead(): Promise<void> {
+  try {
+    await gitText(['-c', 'http.connectTimeout=3', 'remote', 'set-head', 'origin', '--auto']);
+  } catch {
+    // set-head 失敗は無視。
+  }
 }
 
 // 実行エントリ。npm publish した dist/git-harvest を node が shebang で実行する。

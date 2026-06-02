@@ -58,9 +58,7 @@ function dim(s: string): string {
 
 // name と reason の間隔。bash print_growing と同じく column 38 を狙い、最低 2 spaces。
 function padReason(name: string, reason: string): string {
-  let pad = 38 - name.length;
-
-  if (pad < 2) pad = 2;
+  const pad = Math.max(2, 38 - name.length);
 
   return `${name}${' '.repeat(pad)}${reason}`;
 }

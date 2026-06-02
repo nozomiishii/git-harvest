@@ -34,40 +34,7 @@ export async function hasRunningClaudeSession(worktreePath: string): Promise<boo
   }
 
   for (const name of entries) {
-    const file = path.join(dir, name);
-
-    let raw: string;
-
-    try {
-      const fileStat = await stat(file);
-
-      if (!fileStat.isFile()) continue;
-      raw = await readFile(file, 'utf8');
-    } catch {
-      continue;
-    }
-
-    // JSON は通常 single-line だが pretty-print にも備えて key/value 間の空白を許容する。
-    const cwdMatch = /"cwd"\s*:\s*"([^"]*)"/.exec(raw);
-    const cwd = cwdMatch?.[1];
-
-    if (!cwd) continue;
-
-    if (canonicalPath(cwd) !== worktreeCanon) continue;
-
-    const pidMatch = /"pid"\s*:\s*(\d+)/.exec(raw);
-    const pid = pidMatch?.[1];
-
-    if (!pid) continue;
-
-    // process.kill(pid, 0) は実際にはシグナルを送らず生存確認のみ。投げなければ生存。
-    try {
-      process.kill(Number(pid), 0);
-
-      return true;
-    } catch {
-      // プロセス不在（ESRCH）など。死亡とみなして次の session を見る。
-    }
+    if (await isSessionAlive(path.join(dir, name), worktreeCanon)) return true;
   }
 
   return false;
@@ -104,4 +71,42 @@ function canonicalPath(p: string): string {
 // 上書き用 env: GIT_HARVEST_CLAUDE_SESSIONS_DIR（テスト / power user 用）。既定は ~/.claude/sessions。
 function claudeSessionsDir(): string {
   return process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR ?? path.join(homedir(), '.claude', 'sessions');
+}
+
+// session ファイル1件を読み、cwd が worktree と一致しかつ pid が生存しているか判定する。
+// 読み込み失敗・cwd 不一致・プロセス不在はすべて「対象セッションでない」として false。
+async function isSessionAlive(file: string, worktreeCanon: string): Promise<boolean> {
+  let raw: string;
+
+  try {
+    const fileStat = await stat(file);
+
+    if (!fileStat.isFile()) return false;
+    raw = await readFile(file, 'utf8');
+  } catch {
+    return false;
+  }
+
+  // JSON は通常 single-line だが pretty-print にも備えて key/value 間の空白を許容する。
+  const cwdMatch = /"cwd"\s*:\s*"([^"]*)"/.exec(raw);
+  const cwd = cwdMatch?.[1];
+
+  if (!cwd) return false;
+
+  if (canonicalPath(cwd) !== worktreeCanon) return false;
+
+  const pidMatch = /"pid"\s*:\s*(\d+)/.exec(raw);
+  const pid = pidMatch?.[1];
+
+  if (!pid) return false;
+
+  // process.kill(pid, 0) は実際にはシグナルを送らず生存確認のみ。投げなければ生存。
+  try {
+    process.kill(Number(pid), 0);
+
+    return true;
+  } catch {
+    // プロセス不在（ESRCH）など。死亡とみなす。
+    return false;
+  }
 }

@@ -35,23 +35,17 @@ export async function git(args: string[], options: GitOptions = {}) {
       maxBuffer: 64 * 1024 * 1024,
     });
   } catch (error: unknown) {
-    const e = error as NodeJS.ErrnoException & { code?: number | string; stderr?: string; stdout?: string };
-    const stderr = typeof e.stderr === 'string' ? e.stderr : '';
-    const stdout = typeof e.stdout === 'string' ? e.stdout : '';
-    const code = typeof e.code === 'number' ? e.code : null;
+    const { code, stderr, stdout } = extractGitError(error);
+    const message = error instanceof Error && error.message ? error.message : 'git command failed';
 
-    throw new GitError(stderr, stdout, code, e.message || 'git command failed');
+    throw new GitError(stderr, stdout, code, message);
   }
 }
 
 // git の終了コードが 0 か否かだけ返す。判定用なので reject しない。
 export async function gitExitOk(args: string[], options: GitOptions = {}): Promise<boolean> {
   try {
-    await execFileAsync('git', args, {
-      ...cwdOption(options),
-      encoding: 'utf8',
-      maxBuffer: 64 * 1024 * 1024,
-    });
+    await git(args, options);
 
     return true;
   } catch {
@@ -70,4 +64,16 @@ export async function gitText(args: string[], options: GitOptions = {}): Promise
 // cwd 未指定時はキー自体を渡さず「省略」に倒す。
 function cwdOption(options: GitOptions): { cwd?: string } {
   return options.cwd === undefined ? {} : { cwd: options.cwd };
+}
+
+// execFile の reject エラーから GitError 用のフィールド（stderr / stdout / code）を取り出す。
+// execFile は失敗時 code を string（ENOENT 等）で持つことがあるため、number のときだけ採用する。
+function extractGitError(error: unknown): { code: null | number; stderr: string; stdout: string } {
+  const e = error as { code?: number | string; stderr?: string; stdout?: string };
+
+  return {
+    code: typeof e.code === 'number' ? e.code : null,
+    stderr: typeof e.stderr === 'string' ? e.stderr : '',
+    stdout: typeof e.stdout === 'string' ? e.stdout : '',
+  };
 }
