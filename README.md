@@ -89,22 +89,6 @@ git-harvest
 
 Bare `git-harvest` is the safe default: it deletes only merged worktrees and branches. Riskier stages need an explicit flag.
 
-### Progression model
-
-A worktree or branch moves through commit lifecycle stages:
-
-```
-untouched
-  ↓
-files-changed  →  committed  →  merged
-  ↑
-  └─ editing sends it back to files-changed (from any stage)
-```
-
-Each resource is classified by its most at-risk (earliest) stage; uncommitted changes win over the branch's commit state. A flag deletes that stage and everything safer, and `merged` is the safe default because merged work is fully recoverable.
-
-`untouched` (no unique commits, identical to base) and `detached` (a worktree with no branch) sit off this ladder. They are kept by default and removed only by their own flag or `--yolo`.
-
 ### Options
 
 ```sh
@@ -171,6 +155,49 @@ These are always protected and cannot be overridden by any flag or `--yolo`:
 
 ## What it does
 
+A worktree or branch moves through commit lifecycle stages:
+
+```
+untouched
+  ↓
+files-changed  →  committed  →  merged
+  ↑
+  └─ editing sends it back to files-changed (from any stage)
+```
+
+Each resource is classified by its most at-risk (earliest) stage; uncommitted changes win over the branch's commit state. `merged` is the safe default because merged work is fully recoverable. `untouched` (no unique commits, identical to base) and `detached` (a worktree with no branch) sit off this ladder — kept by default, removed only by their own flag or `--yolo`.
+
+### Deletion thresholds
+
+A flag lowers a scope's threshold to a riskier stage and deletes that stage and everything safer (`·` kept, `✓` deleted):
+
+| Stage | If deleted | (default) | `--*-committed` | `--*-files-changed` |
+|---|---|---|---|---|
+| files-changed | lost for good | · | · | ✓ |
+| committed | reflog recovery (fiddly) | · | ✓ | ✓ |
+| merged | fully recoverable | ✓ | ✓ | ✓ |
+
+`--*` is `--worktree-*` for normal-path worktrees and `--claude-worktree-*` for worktrees under `.claude/worktrees/`.
+
+### Presets
+
+The default deletes only `merged`; `--yolo` is the bundle of every flag below.
+
+| Scope | Stage | Flag | default | `--yolo` |
+|---|---|---|---|---|
+| normal worktree | files-changed | `--worktree-files-changed` | · | ✓ |
+| normal worktree | committed | `--worktree-committed` | · | ✓ |
+| normal worktree | merged | *(default)* | ✓ | ✓ |
+| normal worktree | detached | `--worktree-detached` | · | ✓ |
+| normal worktree | untouched | `--worktree-untouched` | · | ✓ |
+| claude worktree | files-changed | `--claude-worktree-files-changed` | · | ✓ |
+| claude worktree | committed | `--claude-worktree-committed` | · | ✓ |
+| claude worktree | merged | *(default)* | ✓ | ✓ |
+| claude worktree | detached | `--claude-worktree-detached` | · | ✓ |
+| claude worktree | untouched | `--claude-worktree-untouched` | · | ✓ |
+| branch | committed | `--branch-committed` | · | ✓ |
+| branch | merged | *(default)* | ✓ | ✓ |
+
 Status markers:
 
 | Marker | Meaning |
@@ -179,7 +206,7 @@ Status markers:
 | `→` | Will be removed (dry-run) |
 | `·` | Kept (followed by reason) |
 
-The default judges by stage (threshold `merged` everywhere). A flag lowers the threshold and flips a kept node to delete, so each kept node below notes which flag removes it. Invariants cannot be moved by any flag. `detached` and `untouched` sit off the SAFETY ladder and need their own flag (or `--yolo`).
+Each kept node below notes which flag removes it. Invariants cannot be moved by any flag.
 
 ### Worktree decision flow
 
