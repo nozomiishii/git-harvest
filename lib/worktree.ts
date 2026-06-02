@@ -1,5 +1,5 @@
 import { realpathSync } from 'node:fs';
-import type { Classification, CleanupResult, Flags, Stage } from './types';
+import type { Classification, CleanupDecision, CleanupResult, Flags, Stage } from './types';
 import { hasRunningClaudeSession, isClaudeManagedWorktree } from './claude';
 import { gitExitOk, gitText } from './git';
 import { classifyBranch } from './merge-detect';
@@ -50,8 +50,10 @@ export async function cleanupWorktrees(
     // 主 worktree は表示も削除もしない（bash 同様、サマリー対象外）。
     if (wt.isMain) continue;
 
-    if (!shouldDeleteWorktree(wt, flags)) {
-      result.results.push({ action: 'kept', name: wt.path, reason: keepReason(wt) });
+    const decision = decideWorktree(wt, flags);
+
+    if (!decision.remove) {
+      result.results.push({ action: 'kept', name: wt.path, reason: decision.reason });
       continue;
     }
 
@@ -145,34 +147,9 @@ export async function collectWorktrees(base: string, cwd?: string): Promise<Work
   return infos;
 }
 
-// この worktree を削除すべきか。判定順は issue の pseudo-code に厳密一致。
+// この worktree を削除すべきか（真偽だけ）。保護理由も要るときは decideWorktree を使う。
 export function shouldDeleteWorktree(wt: WorktreeInfo, flags: Flags): boolean {
-  // invariant: 主 worktree / base branch の worktree は消さない。
-  if (wt.isMain || wt.isBaseBranch) return false;
-
-  // invariant: カレント worktree（cwd）は消すと自爆するので消さない。
-  if (wt.isCurrent) return false;
-
-  // invariant: 走行中 session のある worktree は消さない。
-  if (wt.sessionRunning) return false;
-
-  // invariant: locked worktree は消さない。
-  if (wt.locked) return false;
-
-  // detached HEAD: branch が無く stage 分類できない。専用フラグでのみ削除。
-  if (!wt.branch) {
-    return wt.isClaudeManaged ? flags.claudeWorktreeDetached : flags.worktreeDetached;
-  }
-
-  // untouched: 独自コミットなし・clean（base と同一）。ladder 外。専用フラグでのみ削除。
-  if (wt.classification === 'untouched' && !wt.hasUncommittedChanges) {
-    return wt.isClaudeManaged ? flags.claudeWorktreeUntouched : flags.worktreeUntouched;
-  }
-
-  // stage を閾値と比較。閾値以降（より安全側）なら削除。
-  const threshold = wt.isClaudeManaged ? flags.claudeWorktree : flags.worktree;
-
-  return atOrSafer(worktreeStage(wt), threshold);
+  return decideWorktree(wt, flags).remove;
 }
 
 // worktree が含まれる最もリスクの高い stage を返す。
@@ -200,6 +177,46 @@ function canonicalPath(p: string): string {
   }
 }
 
+// 削除するか、しないなら保護理由は何か。削除可否と理由を1か所で決め、両者がずれないようにする。
+// 判定順は issue の pseudo-code に厳密一致。
+function decideWorktree(wt: WorktreeInfo, flags: Flags): CleanupDecision {
+  // invariant: 主 worktree / base branch の worktree は消さない。
+  if (wt.isMain || wt.isBaseBranch) return { reason: 'base worktree', remove: false };
+
+  // invariant: カレント worktree（cwd）は消すと自爆するので消さない。
+  if (wt.isCurrent) return { reason: 'current worktree', remove: false };
+
+  // invariant: 走行中 session のある worktree は消さない。
+  if (wt.sessionRunning) return { reason: 'session running', remove: false };
+
+  // invariant: locked worktree は消さない。
+  if (wt.locked) return { reason: 'locked', remove: false };
+
+  // detached HEAD: branch が無く stage 分類できない。専用フラグでのみ削除。
+  if (!wt.branch) {
+    const deletable = wt.isClaudeManaged ? flags.claudeWorktreeDetached : flags.worktreeDetached;
+
+    return deletable ? { remove: true } : { reason: 'detached (use --worktree-detached)', remove: false };
+  }
+
+  // untouched: 独自コミットなし・clean（base と同一）。ladder 外。専用フラグでのみ削除。
+  if (wt.classification === 'untouched' && !wt.hasUncommittedChanges) {
+    const deletable = wt.isClaudeManaged ? flags.claudeWorktreeUntouched : flags.worktreeUntouched;
+
+    return deletable ? { remove: true } : { reason: 'untouched (use --worktree-untouched)', remove: false };
+  }
+
+  // stage を閾値と比較。閾値以降（より安全側）なら削除。
+  const threshold = wt.isClaudeManaged ? flags.claudeWorktree : flags.worktree;
+  const stage = worktreeStage(wt);
+
+  if (atOrSafer(stage, threshold)) return { remove: true };
+
+  return stage === 'files-changed'
+    ? { reason: 'files-changed (use --worktree-files-changed)', remove: false }
+    : { reason: 'committed (use --worktree-committed)', remove: false };
+}
+
 // worktree に未コミットの変更があるか。
 // bash の has_uncommitted_changes 移植: diff HEAD / diff --cached / ls-files --others --exclude-standard。
 async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
@@ -224,26 +241,6 @@ async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
 // stale エラー（手動 rm 済みの管理情報など）を success に正規化するための判定。
 function isStaleRemoveError(message: string): boolean {
   return /is not a working tree|No such file or directory|not a valid path/i.test(message);
-}
-
-// 削除しない worktree の保護理由を簡潔に返す（invariant / 閾値どちらでも）。
-function keepReason(wt: WorktreeInfo): string {
-  if (wt.isCurrent) return 'current worktree';
-
-  if (wt.sessionRunning) return 'session running';
-
-  if (wt.locked) return 'locked';
-
-  if (!wt.branch) return 'detached (use --worktree-detached)';
-
-  if (wt.classification === 'untouched' && !wt.hasUncommittedChanges) {
-    return 'untouched (use --worktree-untouched)';
-  }
-  const stage = worktreeStage(wt);
-
-  if (stage === 'files-changed') return 'files-changed (use --worktree-files-changed)';
-
-  return 'committed (use --worktree-committed)';
 }
 
 // `git worktree list --porcelain` をパースする。

@@ -1,4 +1,4 @@
-import type { Classification, CleanupResult, Flags, Stage } from './types';
+import type { Classification, CleanupDecision, CleanupResult, Flags, Stage } from './types';
 import { gitText } from './git';
 import { classifyBranch } from './merge-detect';
 import { atOrSafer } from './types';
@@ -57,8 +57,10 @@ export async function cleanupBranches(
     // base は表示も削除もしない（サマリー対象外）。
     if (info.isBase) continue;
 
-    if (!shouldDeleteBranch(info, flags)) {
-      result.results.push({ action: 'kept', name, reason: keepReason(info) });
+    const decision = decideBranch(info, flags);
+
+    if (!decision.remove) {
+      result.results.push({ action: 'kept', name, reason: decision.reason });
       continue;
     }
 
@@ -86,19 +88,9 @@ export async function cleanupBranches(
   return result;
 }
 
-// この branch を削除すべきか。判定順は issue の pseudo-code に厳密一致。
+// この branch を削除すべきか（真偽だけ）。保護理由も要るときは decideBranch を使う。
 export function shouldDeleteBranch(info: BranchInfo, flags: Flags): boolean {
-  // invariant: base branch は消さない。
-  if (info.isBase) return false;
-
-  // invariant: 現在 HEAD は git が拒否するので消さない。
-  if (info.isCurrentHead) return false;
-
-  // invariant: 生存 worktree が参照中の branch は git が拒否するので消さない。
-  if (info.checkedOutInSurviving) return false;
-
-  // stage を閾値と比較。閾値以降（より安全側）なら削除。
-  return atOrSafer(branchStage(info.classification), flags.branch);
+  return decideBranch(info, flags).remove;
 }
 
 // porcelain から、survivingWorktreePaths の worktree が checkout 中の branch 集合を作る。
@@ -123,16 +115,26 @@ function checkedOutBranches(porcelain: string, survivingWorktreePaths: string[])
   return branches;
 }
 
+// 削除するか、しないなら保護理由は何か。削除可否と理由を1か所で決め、両者がずれないようにする。
+// 判定順は issue の pseudo-code に厳密一致。
+function decideBranch(info: BranchInfo, flags: Flags): CleanupDecision {
+  // invariant: base branch は消さない。
+  if (info.isBase) return { reason: 'base branch', remove: false };
+
+  // invariant: 現在 HEAD は git が拒否するので消さない。
+  if (info.isCurrentHead) return { reason: 'current HEAD', remove: false };
+
+  // invariant: 生存 worktree が参照中の branch は git が拒否するので消さない。
+  if (info.checkedOutInSurviving) return { reason: 'currently checked out', remove: false };
+
+  // stage を閾値と比較。閾値以降（より安全側）なら削除。
+  if (atOrSafer(branchStage(info.classification), flags.branch)) return { remove: true };
+
+  return { reason: 'committed (use --branch-committed)', remove: false };
+}
+
 // branch not found 等、削除済み相当のエラーを success に正規化する判定。
 function isAlreadyGoneError(message: string): boolean {
   return /not found|Cannot delete branch|isn't a valid branch name/i.test(message);
 }
 
-// 削除しない branch の保護理由を簡潔に返す。
-function keepReason(info: BranchInfo): string {
-  if (info.isCurrentHead) return 'current HEAD';
-
-  if (info.checkedOutInSurviving) return 'currently checked out';
-
-  return 'committed (use --branch-committed)';
-}

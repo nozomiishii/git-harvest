@@ -17,6 +17,9 @@ export type ActionResult =
 //   other     = base に未取り込みの独自コミットあり
 export type Classification = 'merged' | 'other' | 'untouched';
 
+// cleanup の削除判定。削除する（remove: true）か、しないなら保護理由（kept の reason になる）を持つ。
+export type CleanupDecision = { reason: string; remove: false } | { remove: true };
+
 export type CleanupResult = {
   failures: number; // action === 'failed' の件数
   results: ActionResult[];
