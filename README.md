@@ -25,7 +25,7 @@ npx -y git-harvest@latest --dry-run
 
 ## Run directly without installing (Recommended)
 
-Works on every platform (Linux, Intel Mac, Apple Silicon Mac, Windows). Needs Node. Always runs the latest version — no separate update step needed.
+Needs Node. Always runs the latest version — no separate update step needed.
 
 ```sh
 # bun
