@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.3](https://github.com/nozomiishii/git-harvest/compare/v0.2.2...v0.2.3) (2026-06-01)
+
+
+### Bug Fixes
+
+* grant workflows permission to release app token for non-head releases ([#161](https://github.com/nozomiishii/git-harvest/issues/161)) ([8016fb0](https://github.com/nozomiishii/git-harvest/commit/8016fb068b468d61dc5e2f4a8bfac85db9151333))
+
+
+### Miscellaneous
+
+* add npm version badge to README ([#170](https://github.com/nozomiishii/git-harvest/issues/170)) ([c91cfc9](https://github.com/nozomiishii/git-harvest/commit/c91cfc91c1f82b1e67ef171de92e115a3a63fa39))
+* lock file maintenance ([#167](https://github.com/nozomiishii/git-harvest/issues/167)) ([b5ced2c](https://github.com/nozomiishii/git-harvest/commit/b5ced2c42c1a6aedc5ffc6eb9ed5b0b9f3cd64ca))
+* lock file maintenance ([#179](https://github.com/nozomiishii/git-harvest/issues/179)) ([2a35bd4](https://github.com/nozomiishii/git-harvest/commit/2a35bd40e0200ab9c46edce2808b1c497f439929))
+* remove commit/PR format rules from CLAUDE.md ([#166](https://github.com/nozomiishii/git-harvest/issues/166)) ([9ebfa1c](https://github.com/nozomiishii/git-harvest/commit/9ebfa1c3436d2dbb375338e3f75ecf18f041f211))
+* reword brand color section in CLAUDE.md ([#173](https://github.com/nozomiishii/git-harvest/issues/173)) ([9232af9](https://github.com/nozomiishii/git-harvest/commit/9232af9abf6f0a847ab123c86eec722683eaf4b0))
+* surface --dry-run trial and add git harvest no-install alias in README ([#172](https://github.com/nozomiishii/git-harvest/issues/172)) ([c3be78a](https://github.com/nozomiishii/git-harvest/commit/c3be78a3fb1844376abcd2012cc4417d2545a360))
+* trim redundant sections from CLAUDE.md ([#175](https://github.com/nozomiishii/git-harvest/issues/175)) ([04504ed](https://github.com/nozomiishii/git-harvest/commit/04504ed7f059d83cfead86502581f1a1d7547197))
+* update dependency lefthook to v2.1.8 ([#165](https://github.com/nozomiishii/git-harvest/issues/165)) ([dd127c5](https://github.com/nozomiishii/git-harvest/commit/dd127c5dad9e7bef68256ba3a61755c8320e43ea))
+* update dependency lefthook to v2.1.9 ([#181](https://github.com/nozomiishii/git-harvest/issues/181)) ([9d8a529](https://github.com/nozomiishii/git-harvest/commit/9d8a529c05b6cd456cd4bf58cd61c5848eb4fb8c))
+* update dependency release-please to v17.6.1 ([#171](https://github.com/nozomiishii/git-harvest/issues/171)) ([f78cc54](https://github.com/nozomiishii/git-harvest/commit/f78cc546e06132ed73f75524a4dd5aebf810f08e))
+* update nozomiishii ([#162](https://github.com/nozomiishii/git-harvest/issues/162)) ([1f49e3c](https://github.com/nozomiishii/git-harvest/commit/1f49e3c989ff326005fb8af6c7102b87f985a1b7))
+* update nozomiishii to v1.2.0 ([#168](https://github.com/nozomiishii/git-harvest/issues/168)) ([2a7a7af](https://github.com/nozomiishii/git-harvest/commit/2a7a7af9018e4bb6afa52f8074580c383c6cff8b))
+* update nozomiishii to v1.3.0 ([#174](https://github.com/nozomiishii/git-harvest/issues/174)) ([569f107](https://github.com/nozomiishii/git-harvest/commit/569f107a9f299e38bc53998b3cc630f42a002247))
+* update nozomiishii to v1.4.0 ([#178](https://github.com/nozomiishii/git-harvest/issues/178)) ([f325002](https://github.com/nozomiishii/git-harvest/commit/f325002c543a8f6a56b1117a4bbee478af7cbd16))
+* update nozomiishii to v1.5.0 ([#182](https://github.com/nozomiishii/git-harvest/issues/182)) ([79c1ef6](https://github.com/nozomiishii/git-harvest/commit/79c1ef67419358a31289814e87b50db5cf1f0a83))
+
 ## [0.2.2](https://github.com/nozomiishii/git-harvest/compare/v0.2.1...v0.2.2) (2026-05-20)
 
 
