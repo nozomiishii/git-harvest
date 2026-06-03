@@ -28,16 +28,22 @@ export async function classifyBranch(
   try {
     const firstParent = await gitText(["rev-list", "--first-parent", base], { cwd });
 
-    if (firstParent.split("\n").includes(head)) return "untouched";
+    if (firstParent.split("\n").includes(head)) {
+      return "untouched";
+    }
   } catch {
     // base を辿れない場合は次のフォールバックへ。
   }
 
   // 2) branch が base の祖先なら取り込み済み = merged。
-  if (await gitExitOk(["merge-base", "--is-ancestor", branch, base], { cwd })) return "merged";
+  if (await gitExitOk(["merge-base", "--is-ancestor", branch, base], { cwd })) {
+    return "merged";
+  }
 
   // 3) 仮想 squash で内容が base に取り込み済みなら merged。
-  if (await isSquashMerged(base, branch, cwd)) return "merged";
+  if (await isSquashMerged(base, branch, cwd)) {
+    return "merged";
+  }
 
   // 4) log --cherry-pick --right-only が空 = base 側に同等 commit がある = merged。
   try {
@@ -46,7 +52,9 @@ export async function classifyBranch(
       { cwd },
     );
 
-    if (stdout.trim() === "") return "merged";
+    if (stdout.trim() === "") {
+      return "merged";
+    }
   } catch {
     // 比較できなければ merged とは見なさず other へ落とす。
   }
@@ -64,18 +72,24 @@ async function isSquashMerged(
 ): Promise<boolean> {
   const mergeBase = await tryGitText(["merge-base", base, branch], cwd);
 
-  if (!mergeBase) return false;
+  if (!mergeBase) {
+    return false;
+  }
 
   const squash = await tryGitText(
     ["commit-tree", `${branch}^{tree}`, "-p", mergeBase, "-m", "_"],
     cwd,
   );
 
-  if (!squash) return false;
+  if (!squash) {
+    return false;
+  }
 
   const cherry = await tryGitText(["cherry", base, squash], cwd);
 
-  if (!cherry) return false;
+  if (!cherry) {
+    return false;
+  }
 
   const added = cherry.split("\n").filter((line) => line.startsWith("+")).length;
 

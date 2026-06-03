@@ -14,14 +14,18 @@ export async function hasRunningClaudeSession(worktreePath: string): Promise<boo
   try {
     const dirStat = await stat(dir);
 
-    if (!dirStat.isDirectory()) return false;
+    if (!dirStat.isDirectory()) {
+      return false;
+    }
   } catch {
     return false;
   }
 
   const worktreeCanon = canonicalPath(worktreePath);
 
-  if (!worktreeCanon) return false;
+  if (!worktreeCanon) {
+    return false;
+  }
 
   let entries: string[];
 
@@ -34,7 +38,9 @@ export async function hasRunningClaudeSession(worktreePath: string): Promise<boo
   }
 
   for (const name of entries) {
-    if (await isSessionAlive(path.join(dir, name), worktreeCanon)) return true;
+    if (await isSessionAlive(path.join(dir, name), worktreeCanon)) {
+      return true;
+    }
   }
 
   return false;
@@ -47,7 +53,9 @@ export function isClaudeManagedWorktree(worktreePath: string): boolean {
   const marker = "/.claude/worktrees/";
   const index = worktreePath.indexOf(marker);
 
-  if (index === -1) return false;
+  if (index === -1) {
+    return false;
+  }
 
   // marker 直後に最低1文字あること（`?*` 相当）。
   return worktreePath.length > index + marker.length;
@@ -58,7 +66,9 @@ export function isClaudeManagedWorktree(worktreePath: string): boolean {
 // 記録されうるため両者を揃える。例: macOS の /var/folders は /private/var/folders。
 // 解決できないパスは原文のまま返す。
 function canonicalPath(p: string): string {
-  if (!p) return p;
+  if (!p) {
+    return p;
+  }
 
   try {
     return realpathSync(p);
@@ -81,7 +91,9 @@ async function isSessionAlive(file: string, worktreeCanon: string): Promise<bool
   try {
     const fileStat = await stat(file);
 
-    if (!fileStat.isFile()) return false;
+    if (!fileStat.isFile()) {
+      return false;
+    }
     raw = await readFile(file, "utf8");
   } catch {
     return false;
@@ -91,14 +103,20 @@ async function isSessionAlive(file: string, worktreeCanon: string): Promise<bool
   const cwdMatch = /"cwd"\s*:\s*"([^"]*)"/.exec(raw);
   const cwd = cwdMatch?.[1];
 
-  if (!cwd) return false;
+  if (!cwd) {
+    return false;
+  }
 
-  if (canonicalPath(cwd) !== worktreeCanon) return false;
+  if (canonicalPath(cwd) !== worktreeCanon) {
+    return false;
+  }
 
   const pidMatch = /"pid"\s*:\s*(\d+)/.exec(raw);
   const pid = pidMatch?.[1];
 
-  if (!pid) return false;
+  if (!pid) {
+    return false;
+  }
 
   // process.kill(pid, 0) は実際にはシグナルを送らず生存確認のみ。投げなければ生存。
   try {

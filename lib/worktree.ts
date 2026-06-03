@@ -48,7 +48,9 @@ export async function cleanupWorktrees(
 
   for (const wt of infos) {
     // 主 worktree は表示も削除もしない（bash 同様、サマリー対象外）。
-    if (wt.isMain) continue;
+    if (wt.isMain) {
+      continue;
+    }
 
     const decision = decideWorktree(wt, flags);
 
@@ -66,7 +68,9 @@ export async function cleanupWorktrees(
     // 実削除: 未コミット変更があるときだけ --force。
     const args = ["worktree", "remove"];
 
-    if (wt.hasUncommittedChanges) args.push("--force");
+    if (wt.hasUncommittedChanges) {
+      args.push("--force");
+    }
     args.push(wt.path);
 
     try {
@@ -157,9 +161,13 @@ export function shouldDeleteWorktree(wt: WorktreeInfo, flags: Flags): boolean {
 //   classification === merged → merged
 //   それ以外 → committed
 export function worktreeStage(wt: WorktreeInfo): Stage {
-  if (wt.hasUncommittedChanges) return "files-changed";
+  if (wt.hasUncommittedChanges) {
+    return "files-changed";
+  }
 
-  if (wt.classification === "merged") return "merged";
+  if (wt.classification === "merged") {
+    return "merged";
+  }
 
   return "committed";
 }
@@ -167,7 +175,9 @@ export function worktreeStage(wt: WorktreeInfo): Stage {
 // パスを canonical（symlink 解決済み）に正規化する。解決できなければ原文を返す。
 // git は worktree path を canonical で保持するが、cwd は symlink 経由のことがあるため揃える。
 function canonicalPath(p: string): string {
-  if (!p) return p;
+  if (!p) {
+    return p;
+  }
 
   try {
     return realpathSync(p);
@@ -180,16 +190,24 @@ function canonicalPath(p: string): string {
 // 判定順は issue の pseudo-code に厳密一致。
 function decideWorktree(wt: WorktreeInfo, flags: Flags): CleanupDecision {
   // invariant: 主 worktree / base branch の worktree は消さない。
-  if (wt.isMain || wt.isBaseBranch) return { reason: "base worktree", remove: false };
+  if (wt.isMain || wt.isBaseBranch) {
+    return { reason: "base worktree", remove: false };
+  }
 
   // invariant: カレント worktree（cwd）は消すと自爆するので消さない。
-  if (wt.isCurrent) return { reason: "current worktree", remove: false };
+  if (wt.isCurrent) {
+    return { reason: "current worktree", remove: false };
+  }
 
   // invariant: 走行中 session のある worktree は消さない。
-  if (wt.sessionRunning) return { reason: "session running", remove: false };
+  if (wt.sessionRunning) {
+    return { reason: "session running", remove: false };
+  }
 
   // invariant: locked worktree は消さない。
-  if (wt.locked) return { reason: "locked", remove: false };
+  if (wt.locked) {
+    return { reason: "locked", remove: false };
+  }
 
   // detached HEAD: branch が無く stage 分類できない。専用フラグでのみ削除。
   if (!wt.branch) {
@@ -213,7 +231,9 @@ function decideWorktree(wt: WorktreeInfo, flags: Flags): CleanupDecision {
   const threshold = wt.isClaudeManaged ? flags.claudeWorktree : flags.worktree;
   const stage = worktreeStage(wt);
 
-  if (atOrSafer(stage, threshold)) return { remove: true };
+  if (atOrSafer(stage, threshold)) {
+    return { remove: true };
+  }
 
   return stage === "files-changed"
     ? { reason: "files-changed (use --worktree-files-changed)", remove: false }
@@ -224,10 +244,14 @@ function decideWorktree(wt: WorktreeInfo, flags: Flags): CleanupDecision {
 // bash の has_uncommitted_changes 移植: diff HEAD / diff --cached / ls-files --others --exclude-standard。
 async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
   // 追跡ファイルの作業ツリー差分。
-  if (!(await gitExitOk(["-C", worktreePath, "diff", "--quiet", "HEAD"]))) return true;
+  if (!(await gitExitOk(["-C", worktreePath, "diff", "--quiet", "HEAD"]))) {
+    return true;
+  }
 
   // ステージ済み差分。
-  if (!(await gitExitOk(["-C", worktreePath, "diff", "--quiet", "--cached"]))) return true;
+  if (!(await gitExitOk(["-C", worktreePath, "diff", "--quiet", "--cached"]))) {
+    return true;
+  }
 
   // 未追跡ファイル。
   try {
@@ -239,7 +263,9 @@ async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
       "--exclude-standard",
     ]);
 
-    if (untracked !== "") return true;
+    if (untracked !== "") {
+      return true;
+    }
   } catch {
     // 取得できなければ未追跡なしとみなす。
   }
@@ -262,12 +288,16 @@ function parsePorcelain(text: string): PorcelainEntry[] {
   for (const line of text.split("\n")) {
     if (line.startsWith("worktree ")) {
       // 新しいブロック開始。直前のブロックを確定する。
-      if (current) entries.push(current);
+      if (current) {
+        entries.push(current);
+      }
       current = { branch: null, locked: false, path: line.slice("worktree ".length) };
       continue;
     }
 
-    if (!current) continue;
+    if (!current) {
+      continue;
+    }
 
     if (line.startsWith("branch ")) {
       current.branch = line.slice("branch ".length).replace(/^refs\/heads\//, "");
@@ -276,7 +306,9 @@ function parsePorcelain(text: string): PorcelainEntry[] {
     }
   }
 
-  if (current) entries.push(current);
+  if (current) {
+    entries.push(current);
+  }
 
   return entries;
 }

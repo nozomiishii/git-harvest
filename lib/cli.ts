@@ -63,7 +63,9 @@ export async function main(argv: string[]): Promise<void> {
   const base = await resolveBase();
 
   // resolveBase が解決失敗で終了コード 1 を設定済みなら、削除へ進まず終了する。
-  if (base === undefined) return;
+  if (base === undefined) {
+    return;
+  }
 
   // worktree を整理し、生き残った worktree path を branch 判定に渡す。
   const worktreeResult = await cleanupWorktrees(base, flags);
@@ -73,7 +75,9 @@ export async function main(argv: string[]): Promise<void> {
   // 結果サマリーを stdout へ。
   const summary = formatSummary(worktreeResult, branchResult);
 
-  if (summary) process.stdout.write(`${summary}\n`);
+  if (summary) {
+    process.stdout.write(`${summary}\n`);
+  }
 
   // 後処理: git worktree prune は cleanupWorktrees 側で実施済み。
   // git fetch --prune は post-merge hook で毎回走るとハング源になるため既定では実行しない。
@@ -87,23 +91,33 @@ export async function main(argv: string[]): Promise<void> {
 export function parseArgs(argv: string[]): Parsed {
   // logo / --help / --version は副作用なしの即時 mode。最優先で拾う。
   for (const arg of argv) {
-    if (arg === "logo") return { flags: defaultFlags(), mode: "logo" };
+    if (arg === "logo") {
+      return { flags: defaultFlags(), mode: "logo" };
+    }
 
-    if (arg === "-h" || arg === "--help") return { flags: defaultFlags(), mode: "help" };
+    if (arg === "-h" || arg === "--help") {
+      return { flags: defaultFlags(), mode: "help" };
+    }
 
-    if (arg === "-v" || arg === "--version") return { flags: defaultFlags(), mode: "version" };
+    if (arg === "-v" || arg === "--version") {
+      return { flags: defaultFlags(), mode: "version" };
+    }
   }
 
   // 常に保守的な default を土台にする。--yolo はその上に PRESETS.yolo を展開する。
   const flags = defaultFlags();
 
   if (argv.includes("--yolo")) {
-    for (const token of PRESETS.yolo) applyToken(flags, token);
+    for (const token of PRESETS.yolo) {
+      applyToken(flags, token);
+    }
   }
 
   for (const arg of argv) {
     // --yolo は上で展開済み。--dry-run / -n は scope を持たない共通フラグ。
-    if (arg === "--yolo") continue;
+    if (arg === "--yolo") {
+      continue;
+    }
 
     if (arg === "--dry-run" || arg === "-n") {
       flags.dryRun = true;
@@ -111,7 +125,9 @@ export function parseArgs(argv: string[]): Parsed {
     }
 
     // 残りは scope フラグ。applyToken が一致すれば適用、未知なら usage エラー。
-    if (applyToken(flags, arg)) continue;
+    if (applyToken(flags, arg)) {
+      continue;
+    }
 
     throw new UsageError(`unknown option: ${arg}`);
   }

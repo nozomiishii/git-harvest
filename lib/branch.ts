@@ -58,7 +58,9 @@ export async function cleanupBranches(
     };
 
     // base は表示も削除もしない（サマリー対象外）。
-    if (info.isBase) continue;
+    if (info.isBase) {
+      continue;
+    }
 
     const decision = decideBranch(info, flags);
 
@@ -122,16 +124,24 @@ function checkedOutBranches(porcelain: string, survivingWorktreePaths: string[])
 // 判定順は issue の pseudo-code に厳密一致。
 function decideBranch(info: BranchInfo, flags: Flags): CleanupDecision {
   // invariant: base branch は消さない。
-  if (info.isBase) return { reason: "base branch", remove: false };
+  if (info.isBase) {
+    return { reason: "base branch", remove: false };
+  }
 
   // invariant: 現在 HEAD は git が拒否するので消さない。
-  if (info.isCurrentHead) return { reason: "current HEAD", remove: false };
+  if (info.isCurrentHead) {
+    return { reason: "current HEAD", remove: false };
+  }
 
   // invariant: 生存 worktree が参照中の branch は git が拒否するので消さない。
-  if (info.checkedOutInSurviving) return { reason: "currently checked out", remove: false };
+  if (info.checkedOutInSurviving) {
+    return { reason: "currently checked out", remove: false };
+  }
 
   // stage を閾値と比較。閾値以降（より安全側）なら削除。
-  if (atOrSafer(branchStage(info.classification), flags.branch)) return { remove: true };
+  if (atOrSafer(branchStage(info.classification), flags.branch)) {
+    return { remove: true };
+  }
 
   return { reason: "committed (use --branch-committed)", remove: false };
 }

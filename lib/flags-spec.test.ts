@@ -51,7 +51,9 @@ test("applyToken returns false for an unknown token and leaves flags untouched",
 test("yolo preset expands to the all-aggressive flag set", () => {
   const flags = defaultFlags();
 
-  for (const token of PRESETS.yolo) applyToken(flags, token);
+  for (const token of PRESETS.yolo) {
+    applyToken(flags, token);
+  }
 
   expect(flags).toStrictEqual({
     branch: "committed",

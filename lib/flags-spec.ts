@@ -135,7 +135,9 @@ export const PRESETS = {
 export function applyToken(flags: Flags, token: string): boolean {
   const spec = FLAG_SPECS.find((s) => s.token === token);
 
-  if (!spec) return false;
+  if (!spec) {
+    return false;
+  }
 
   // kind ごとに分けて narrowing を効かせる（field の union が混ざると書き込み型が never になる）。
   if (spec.kind === "boolean") {
@@ -163,7 +165,9 @@ export function renderFlagHelp(): string {
 function helpLine(spec: FlagSpec): string {
   const head = `  ${spec.token.padEnd(HELP_COL - 2)}${spec.help}`;
 
-  if (!spec.warning) return head;
+  if (!spec.warning) {
+    return head;
+  }
 
   const pad = " ".repeat(HELP_COL);
   const cont = spec.warning
