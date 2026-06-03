@@ -5,8 +5,8 @@
     "": {
       "name": "git-harvest",
       "devDependencies": {
-        "@nozomiishii/commitlint-config": "1.5.0",
-        "@nozomiishii/lefthook-config": "1.5.0",
+        "@nozomiishii/commitlint-config": "1.5.1",
+        "@nozomiishii/lefthook-config": "1.5.1",
         "@types/bun": "1.3.14",
         "lefthook": "2.1.9",
         "release-please": "17.6.1",
@@ -64,9 +64,9 @@
 
     "@jsep-plugin/regex": ["@jsep-plugin/regex@1.0.4", "", { "peerDependencies": { "jsep": "^0.4.0||^1.0.0" } }, "sha512-q7qL4Mgjs1vByCaTnDFcBnV9HS7GVPJX5vyVoCgZHNSC9rjwIlmbXG5sUuorR5ndfHAIlJ8pVStxvjXHbNvtUg=="],
 
-    "@nozomiishii/commitlint-config": ["@nozomiishii/commitlint-config@1.5.0", "", { "dependencies": { "@commitlint/cli": "21.0.2", "@commitlint/config-conventional": "21.0.2", "@commitlint/types": "21.0.1" }, "bin": { "nozo-commitlint": "./bin/nozo-commitlint.js", "nozo-commitlint-init": "./bin/nozo-commitlint-init.js" } }, "sha512-FaYlFCnD/+FQ4/0Zs1RBK1JacDu5N7zO4cGdOKlw50uUogT6wjge2NCdDzSUdEKIxZD7HXAaA2MmCWeE9c290Q=="],
+    "@nozomiishii/commitlint-config": ["@nozomiishii/commitlint-config@1.5.1", "", { "dependencies": { "@commitlint/cli": "21.0.2", "@commitlint/config-conventional": "21.0.2", "@commitlint/types": "21.0.1" }, "bin": { "nozo-commitlint": "./bin/nozo-commitlint.js", "nozo-commitlint-init": "./bin/nozo-commitlint-init.js" } }, "sha512-IXmxiLcuoHIMo5gspWrlVMgt86/i3sR8hZV9B0EqMqhC3ojHiIUVwJWzspIkzugduoh4E0tqLjdnerGVWcfJPQ=="],
 
-    "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@1.5.0", "", { "dependencies": { "git-harvest": "0.2.2" }, "peerDependencies": { "lefthook": "2.1.9" }, "bin": { "nozo-git-harvest": "./bin/nozo-git-harvest.js", "nozo-lefthook-init": "./bin/nozo-lefthook-init.js" } }, "sha512-Rz6dGZcJVY3NDmBNn6GQSf6dF4g/X3mVWrEOQK5UZezp/cV1MMjY8blMdMIN1LvpB25/ZaBgJITFKiaC4fDI4w=="],
+    "@nozomiishii/lefthook-config": ["@nozomiishii/lefthook-config@1.5.1", "", { "dependencies": { "git-harvest": "0.2.3" }, "peerDependencies": { "lefthook": "2.1.9" }, "bin": { "nozo-git-harvest": "./bin/nozo-git-harvest.js", "nozo-lefthook-init": "./bin/nozo-lefthook-init.js" } }, "sha512-TOefDBkPk3tJuQWI5opNyyvnbXO/xL/AvnOef13G+uNmAwYoYUYRyA7ky6X5m+o8pWchXvpJ1iHiK+i+KhUWcQ=="],
 
     "@octokit/auth-token": ["@octokit/auth-token@4.0.0", "", {}, "sha512-tY/msAuJo6ARbK6SPIxZrPBms3xPbfwBrulZe0Wtr/DIY9lje2HeV1uoebShn6mx7SjCHif6EjMvoREj+gZ+SA=="],
 
@@ -234,7 +234,7 @@
 
     "get-east-asian-width": ["get-east-asian-width@1.6.0", "", {}, "sha512-QRbvDIbx6YklUe6RxeTeleMR0yv3cYH6PsPZHcnVn7xv7zO1BHN8r0XETu8n6Ye3Q+ahtSarc3WgtNWmehIBfA=="],
 
-    "git-harvest": ["git-harvest@0.2.2", "", { "bin": { "git-harvest": "lib/git-harvest" } }, "sha512-D3DjkeDqqkLG3MYFi2Ar8qo9frAWgaSbOhGMi7QsJ2DMThgJXBngjTiWIIMCMtvR83is19eftHYjW4lQL06S/g=="],
+    "git-harvest": ["git-harvest@0.2.3", "", { "bin": { "git-harvest": "lib/git-harvest" } }, "sha512-kksOQircQJK0lzVKvIH2vfQnYEQB+4wfc1+C2qk1EGcIUJhvsFPdsttIWyxjsdDopYUk1J/yabJnZ0h/fgQA8A=="],
 
     "git-raw-commits": ["git-raw-commits@5.0.1", "", { "dependencies": { "@conventional-changelog/git-client": "^2.6.0", "meow": "^13.0.0" }, "bin": { "git-raw-commits": "src/cli.js" } }, "sha512-Y+csSm2GD/PCSh6Isd/WiMjNAydu0VBiG9J7EdQsNA5P9uXvLayqjmTsNlK5Gs9IhblFZqOU0yid5Il5JPoLiQ=="],
 
