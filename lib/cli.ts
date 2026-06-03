@@ -8,14 +8,13 @@ import { gitText } from "./git";
 import { defaultFlags } from "./preset";
 import { cleanupWorktrees } from "./worktree";
 
-// 実行モード。run 以外は副作用のない即時出力。
-type Mode = "help" | "logo" | "run" | "version";
-
-// argv パース結果。flags は run / dry-run 用、mode が分岐先。
-type Parsed = {
-  flags: Flags;
-  mode: Mode;
-};
+// argv パース結果。即時出力モード（help / logo / version）は flags を持たず、
+// 実削除する run だけが flags を伴う。判別共用体で「flags を使うのは run だけ」を型で表す。
+type Parsed =
+  | { flags: Flags; mode: "run" }
+  | { mode: "help" }
+  | { mode: "logo" }
+  | { mode: "version" };
 
 // 未知フラグ用エラー。main の catch で usage を出して終了コード 1 にする。
 class UsageError extends Error {}
@@ -92,15 +91,15 @@ export function parseArgs(argv: string[]): Parsed {
   // logo / --help / --version は副作用なしの即時 mode。最優先で拾う。
   for (const arg of argv) {
     if (arg === "logo") {
-      return { flags: defaultFlags(), mode: "logo" };
+      return { mode: "logo" };
     }
 
     if (arg === "-h" || arg === "--help") {
-      return { flags: defaultFlags(), mode: "help" };
+      return { mode: "help" };
     }
 
     if (arg === "-v" || arg === "--version") {
-      return { flags: defaultFlags(), mode: "version" };
+      return { mode: "version" };
     }
   }
 
