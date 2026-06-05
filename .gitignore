@@ -13,6 +13,9 @@ lefthook-local.yaml
 # pnpm
 .pnpm-store
 
+# eslint
+.eslintcache
+
 # Claude Code
 **/.claude/settings.local.json
 **/CLAUDE.local.md

@@ -1,0 +1,6 @@
+{
+  "extends": "@nozomiishii/tsconfig/tsconfig.bundler.json",
+  "compilerOptions": {
+    "types": ["node"]
+  }
+}

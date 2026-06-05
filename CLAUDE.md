@@ -13,7 +13,7 @@
 マージ済みブランチと worktree を自動で整理する CLI ツール。
 
 - **本番コード**: `lib/git-harvest`（shell スクリプト、ビルド不要）
-- **テスト**: `lib/git-harvest.test.ts`（Bun test、Integration Test）
+- **テスト**: `lib/git-harvest.test.ts`（vitest、Integration Test）
 - **配布**: npm publish で shell スクリプトを直接配布
 - **デモ**: `demo/` — VHS + Docker でロゴ GIF を生成（`bash demo/create.sh`）
 
