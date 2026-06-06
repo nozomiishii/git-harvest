@@ -5,7 +5,5 @@ allowBuilds:
   lefthook: true
   unrs-resolver: true
 
-# pnpm v11 デフォルトの minimumReleaseAge(公開1日後まで採用しない) から除外する。
-# 自分の管理パッケージは Renovate も遅延なしで取り込むため、CI の supply-chain 照合と衝突する。
 minimumReleaseAgeExclude:
   - "@nozomiishii/*"
