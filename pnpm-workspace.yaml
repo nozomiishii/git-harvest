@@ -1,5 +1,8 @@
-onlyBuiltDependencies:
-  - "@swc/core"
-  - esbuild
-  - lefthook
-  - unrs-resolver
+allowBuilds:
+  "@swc/core": true
+  esbuild: true
+  lefthook: true
+  unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - "@nozomiishii/*"
