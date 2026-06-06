@@ -4,7 +4,7 @@
 
 **Goal:** bash の `lib/git-harvest` を TypeScript に置き換え、`docs/flag-redesign.md` の scope-as-value フラグ設計を実装し、npm/npx 配布で 0.3.0 をリリースする。
 
-**Architecture:** 単一責務の小モジュール（types / git / merge-detect / agent / worktree / branch / flags / format / brand / cli）に分割。検出（merge-detect・agent path/session・base 解決）→ 判定（worktree/branch decision + flags）→ 整形出力（format）を cli が束ねる。git 実行は `node:child_process` の execFile wrapper 経由でランタイム依存ゼロ。tsdown で単一 ESM `dist/git-harvest` に固める。
+**Architecture:** 単一責務の小モジュール（types / git / merge-detect / agent / worktree / branch / flags / format / brand / cli）に分割。検出（merge-detect・agent path/session・base 解決）→ 判定（worktree/branch decision + flags）→ 整形出力（format）を cli が束ねる。git 実行は `node:child_process` の execFile wrapper 経由でランタイム依存ゼロ。tsdown で単一 ESM `dist/cli.mjs` に固める。
 
 **Tech Stack:** TypeScript 6 / Node ≥24（ESM）/ tsdown / vitest / pnpm。すべて main 7b8185d に staged 済み。
 
@@ -35,8 +35,7 @@ lib/
   brand.ts          # logo()
   cli.ts            # main(argv) / resolveBase() / orchestration / エントリ
   test-helpers.ts   # makeRepo()（self-contained）
-bin/git-harvest     # #!/usr/bin/env node ; import('../dist/git-harvest')
-tsdown.config.ts    # entry lib/cli.ts → dist/git-harvest（shebang 付与）
+tsdown.config.ts    # entry lib/cli.ts → dist/cli.mjs（banner で shebang）
 ```
 
 各 `lib/<name>.ts` の隣に `lib/<name>.test.ts`。
@@ -177,7 +176,7 @@ export async function gitExitOk(args: string[], opts: Opts = {}): Promise<boolea
 
 - [ ] **成功確認** PASS(2) → commit `feat: add git execFile wrapper and test repo helper`
 
-### Task 3: ビルド配線（tsdown / bin / package.json）
+### Task 3: ビルド配線（tsdown / package.json）
 
 - [ ] **暫定 cli.ts**
 
@@ -193,24 +192,15 @@ await main(process.argv.slice(2));
 
 ```ts
 import { defineConfig } from "tsdown";
+// entry 以外はデフォルト: outDir=dist / format=esm / 拡張子=.mjs。banner で shebang のみ付与
 export default defineConfig({
   entry: ["lib/cli.ts"],
-  format: ["esm"],
-  outDir: "dist",
-  outExtensions: () => ({ js: "" }),
-  outputOptions: { entryFileNames: "git-harvest", banner: "#!/usr/bin/env node" },
+  outputOptions: { banner: "#!/usr/bin/env node" },
 });
 ```
 
-- [ ] **bin/git-harvest**
-
-```sh
-#!/usr/bin/env node
-import("../dist/git-harvest");
-```
-
-- [ ] **package.json**: `"version": "0.3.0"` / `"bin": { "git-harvest": "./bin/git-harvest" }` / `"files": ["dist/git-harvest", "bin/git-harvest", "README.md", "README.ja.md", "LICENSE"]` / `"build": "tsdown"` / `"dev": "tsx lib/cli.ts --dry-run"`。`pnpm add -D tsx`。
-- [ ] **smoke** `pnpm build && node bin/git-harvest --version` → `git-harvest v0.3.0`
+- [ ] **package.json**: `"version": "0.3.0"` / `"bin": { "git-harvest": "./dist/cli.mjs" }` / `"files": ["dist", "README.md", "README.ja.md", "LICENSE"]` / `"build": "tsdown"` / `"dev": "tsx lib/cli.ts --dry-run"`。`pnpm add -D tsx`。
+- [ ] **smoke** `pnpm build && node dist/cli.mjs --version` → `git-harvest v0.3.0`
 - [ ] commit `feat: wire tsdown build, node bin, and npm distribution`
 
 ---
@@ -234,20 +224,20 @@ test("classifyBranch returns merged for a branch merged into base", async () => 
   await repo.commit("work");
   await repo.git("switch", "main");
   await repo.git("merge", "--no-ff", "feature", "-m", "merge feature");
-  expect(await classifyBranch("feature", "main", { cwd: repo.dir })).toBe("merged");
+  expect(await classifyBranch({ branch: "feature", base: "main" }, { cwd: repo.dir })).toBe("merged");
 });
 // 独自コミット無しは untouched
 test("classifyBranch returns untouched for a branch with no unique commits", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "-c", "fresh");
-  expect(await classifyBranch("fresh", "main", { cwd: repo.dir })).toBe("untouched");
+  expect(await classifyBranch({ branch: "fresh", base: "main" }, { cwd: repo.dir })).toBe("untouched");
 });
 // 未取り込みの独自コミットは other
 test("classifyBranch returns other for an unmerged branch with unique commits", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "-c", "wip");
   await repo.commit("unmerged work");
-  expect(await classifyBranch("wip", "main", { cwd: repo.dir })).toBe("other");
+  expect(await classifyBranch({ branch: "wip", base: "main" }, { cwd: repo.dir })).toBe("other");
 });
 ```
 
@@ -257,7 +247,7 @@ test("classifyBranch returns other for an unmerged branch with unique commits", 
 import type { Classification } from "./types";
 import { git, gitExitOk, gitText } from "./git";
 type Opts = { cwd?: string };
-export async function classifyBranch(branch: string, base: string, opts: Opts = {}): Promise<Classification> {
+export async function classifyBranch({ branch, base }: { branch: string; base: string }, opts: Opts = {}): Promise<Classification> {
   const head = await gitText(["rev-parse", branch], opts);
   const firstParent = (await git(["rev-list", "--first-parent", base], opts)).stdout;
   if (firstParent.split("\n").includes(head)) return "untouched";
@@ -339,7 +329,7 @@ export function hasRunningClaudeSession(worktree: string): boolean {
 
 ### Task 6: フラグパース（flags.ts）
 
-- [ ] **失敗テスト** `lib/flags.test.ts`（主要 11 件）
+- [ ] **失敗テスト** `lib/flags.test.ts`（主要 12 件）
 
 ```ts
 import { expect, test } from "vitest";
@@ -368,6 +358,8 @@ test("bare --files-changed affects worktree scopes but not branch", () => {
   expect(p.flags.thresholds.branch).toBe("merged");
 });
 test("--files-changed=branch is rejected", () => { expect(() => parseArgs(["--files-changed=branch"])).toThrow(); });
+// 空値 --committed= は全 scope に化けず error にする（変数の空展開対策）
+test("an empty scope value like --committed= is rejected", () => { expect(() => parseArgs(["--committed="])).toThrow(); });
 test("comma-separated scopes apply to each listed scope", () => {
   const p = parseArgs(["--files-changed=worktree,claude-worktree"]);
   if (p.mode !== "run") throw new Error("run");
@@ -411,7 +403,7 @@ function lower(current: Stage, candidate: Stage): Stage {
 }
 function applyStage(flags: Flags, stage: "committed" | "files-changed", value: string | undefined): void {
   const allowed = STAGE_SCOPES[stage];
-  const targets = value ? value.split(",") : [...allowed];
+  const targets = value === undefined ? [...allowed] : value.split(",");
   for (const scope of targets) {
     if (!allowed.includes(scope as Scope)) throw new UsageError(`invalid scope for --${stage}: ${scope}`);
     flags.thresholds[scope as Scope] = lower(flags.thresholds[scope as Scope], stage);
@@ -446,7 +438,7 @@ export function parseArgs(argv: string[]): Parsed {
 }
 ```
 
-- [ ] **成功確認** PASS(11) → commit `feat: add scope-as-value flag parsing with yolo preset`
+- [ ] **成功確認** PASS(12) → commit `feat: add scope-as-value flag parsing with yolo preset`
 
 ### Task 7: worktree 判定（worktree.ts 判定コア）
 
@@ -668,7 +660,7 @@ test("cleanupWorktrees removes a merged linked worktree by default", async () =>
   await repo.git("merge", "--no-ff", "done", "-m", "merge done");
   const wtPath = `${repo.dir}-done`;
   await repo.git("worktree", "add", wtPath, "done");
-  const result = await cleanupWorktrees(repo.dir, "main", defaultFlags(), { cwd: repo.dir });
+  const result = await cleanupWorktrees(repo.dir, defaultFlags(), { cwd: repo.dir });
   expect(result.results.some((r) => r.action === "removed" && r.name === wtPath)).toBe(true);
 });
 ```
@@ -700,7 +692,7 @@ async function hasUncommitted(wt: string): Promise<boolean> {
   if (!(await gitExitOk(["-C", wt, "diff", "--quiet", "--cached"]))) return true;
   return (await git(["-C", wt, "ls-files", "--others", "--exclude-standard"])).stdout.trim().length > 0;
 }
-export async function cleanupWorktrees(base: string, _baseName: string, flags: Flags, opts: Opts = {}): Promise<CleanupResult> {
+export async function cleanupWorktrees(base: string, flags: Flags, opts: Opts = {}): Promise<CleanupResult> {
   const records = await listWorktrees(opts);
   const mainPath = records[0]?.path ? canonical(records[0].path) : "";
   const current = canonical(opts.cwd ?? process.cwd());
@@ -715,7 +707,7 @@ export async function cleanupWorktrees(base: string, _baseName: string, flags: F
     let isUntouched = false;
     let isMerged = false;
     if (rec.branch) {
-      const c = await classifyBranch(rec.branch, base, opts);
+      const c = await classifyBranch({ branch: rec.branch, base }, opts);
       isUntouched = c === "untouched" && !uncommitted;
       isMerged = c === "merged";
     }
@@ -753,7 +745,7 @@ export async function cleanupBranches(base: string, flags: Flags, survivingPaths
   for (const name of branchesOut.split("\n").map((b) => b.trim()).filter(Boolean)) {
     if (name === base) continue;
     const isInvariant = name === currentHead || checkedOut.has(name);
-    const classification = await classifyBranch(name, base, opts);
+    const classification = await classifyBranch({ branch: name, base }, opts);
     const decision = decideBranch({ name, isInvariant, classification }, flags);
     if (!decision.remove) { results.push({ action: "kept", name, reason: decision.reason }); continue; }
     if (flags.dryRun) { results.push({ action: "would-remove", name }); continue; }
@@ -830,7 +822,7 @@ export async function main(argv: string[]): Promise<void> {
   if (base === undefined) return;
   process.stdout.write(`\n${bold("git harvest", useColor())}\n`);
   if (parsed.flags.dryRun) process.stdout.write(`\n${dim("Dry run mode - nothing will be deleted")}\n`);
-  const wt = await cleanupWorktrees(base, base, parsed.flags);
+  const wt = await cleanupWorktrees(base, parsed.flags);
   const br = await cleanupBranches(base, parsed.flags, wt.survivingPaths);
   if (wt.results.length) process.stdout.write(`\n${bold("Worktrees")}\n${wt.results.map((r) => statusLine(r)).join("\n")}\n`);
   if (br.results.length) process.stdout.write(`\n${bold("Branches")}\n${br.results.map((r) => statusLine(r)).join("\n")}\n`);
@@ -843,7 +835,7 @@ await main(process.argv.slice(2));
 
 `tsconfig.json` に `"resolveJsonModule": true` が無ければ追加。
 
-- [ ] **成功確認 + smoke** `pnpm vitest run lib/cli.test.ts && pnpm build && node bin/git-harvest --help | head -3 && node bin/git-harvest --version`
+- [ ] **成功確認 + smoke** `pnpm vitest run lib/cli.test.ts && pnpm build && node dist/cli.mjs --help | head -3 && node dist/cli.mjs --version`
 - [ ] commit `feat: orchestrate cleanup with base resolution and summary output`
 
 ---
@@ -853,28 +845,28 @@ await main(process.argv.slice(2));
 ### Task 13: 旧 bash と install スクリプト除去
 
 - [ ] `git rm lib/git-harvest install.sh uninstall.sh`、`package.json` の `install:local`/`uninstall:local` 削除
-- [ ] `pnpm vitest run && pnpm build && node bin/git-harvest -n`
+- [ ] `pnpm vitest run && pnpm build && node dist/cli.mjs -n`
 - [ ] commit `feat: replace bash implementation with TypeScript build`
 
 ### Task 14: README（en/ja）+ CLAUDE.md 更新
 
 - [ ] `README.ja.md` の Options/Usage/「動作内容」表を新 surface に（progression 冒頭明示、新 default = 全 scope merged のみ削除）
 - [ ] `README.md` を同一構成で英訳
-- [ ] `CLAUDE.md`: 本番コードを `lib/*.ts`（tsdown → `dist/git-harvest`）に、help チェックリスト参照を `lib/flags.ts` の `helpText()` に
-- [ ] `node bin/git-harvest --help` と README の Options 一致を目視
+- [ ] `CLAUDE.md`: 本番コードを `lib/*.ts`（tsdown → `dist/cli.mjs`）に、help チェックリスト参照を `lib/flags.ts` の `helpText()` に
+- [ ] `node dist/cli.mjs --help` と README の Options 一致を目視
 - [ ] commit `docs: rewrite README and CLAUDE.md for scope-as-value flags`
 
 ### Task 15: リリース配線（0.3.0）と CI
 
 - [ ] `.gitignore` に `dist/` 追加
-- [ ] test workflow に `pnpm build && node bin/git-harvest --version` smoke 追加
+- [ ] test workflow に `pnpm build && node dist/cli.mjs --version` smoke 追加
 - [ ] release workflow を npm publish に寄せ単体バイナリ `upload-assets` 削除。`package.json` に `"prepublishOnly": "pnpm build"`
 - [ ] `feat:` のみで 0.2.3 → 0.3.0 を release-please dry-run で確認
 - [ ] commit `chore: build in CI and publish to npm, drop single-binary assets`
 
 ### Task 16: 最終ゲート + doc リンク
 
-- [ ] `pnpm eslint . && pnpm exec tsc --noEmit && pnpm vitest run && pnpm build && node bin/git-harvest -n`（全通過）
+- [ ] `pnpm eslint . && pnpm exec tsc --noEmit && pnpm vitest run && pnpm build && node dist/cli.mjs -n`（全通過）
 - [ ] `docs/flag-redesign.md` 末尾に「実装計画: `docs/flag-redesign-plan.md`」を 1 行
 - [ ] commit `docs: link implementation plan from the design doc`
 

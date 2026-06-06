@@ -75,16 +75,16 @@ Worktrees
 | `--files-changed[=<scope>]` | 閾値を files-changed へ（未コミット込みで削除）。cumulative | `worktree` 系のみ（branch 不可）。省略=全部 |
 | `--untouched` | untouched worktree も削除（zero-loss・off-ladder toggle） | path 非依存 |
 | `--detached` | detached worktree も削除（off-ladder toggle・恒久喪失の警告付き） | path 非依存 |
-| `--yolo` | preset。`--files-changed --committed --untouched --detached`（全 scope）の束。非 TTY/hook では `--yes` 必須 | — |
+| `--yolo` | preset。`--files-changed --committed --untouched --detached`（全 scope）の束 | — |
 | `-n, --dry-run` | 削除せず予測のみ | — |
 | `-h, --help` / `-v, --version` | help / version | — |
 | `logo` | ロゴ表示（subcommand） | — |
 
 ルール:
 
-- 省略フラグ = その stage を持つ全 scope に効く。`--committed`=worktree＋claude-worktree＋codex-worktree＋branch、`--files-changed`=worktree 系のみ（branch は files-changed 段を持たない）
+- 省略フラグ = その stage を持つ全 scope に効く。`--committed`=worktree＋claude-worktree＋branch、`--files-changed`=worktree 系のみ（branch は files-changed 段を持たない）
 - 複数 scope は comma（`--files-changed=worktree,claude-worktree`）または繰り返し（`--files-changed=worktree --files-changed=claude-worktree`）
-- `--yolo` ＝ `--files-changed --committed --untouched --detached`（全 scope）の正確な束 ＋ 非 TTY での `--yes` ゲート。preset の挙動は全て個別フラグで表現でき、暗黙の preset 外挙動を持たない
+- `--yolo` ＝ `--files-changed --committed --untouched --detached`（全 scope）の正確な束。preset の挙動は全て個別フラグで表現でき、暗黙の preset 外挙動を持たない
 
 ### #169 からの移行
 
@@ -103,7 +103,7 @@ Worktrees
 ## 判定ロジック（pseudo）
 
 ```ts
-const SCOPES = ["worktree", "claude-worktree", "codex-worktree", "branch"] as const
+const SCOPES = ["worktree", "claude-worktree", "branch"] as const  // codex-worktree は将来 1 行追加
 const SAFETY = ["files-changed", "committed", "merged"] as const  // 危険 → 安全
 
 type Flags = {
@@ -115,7 +115,7 @@ type Flags = {
 
 function scopeOf(wt): Scope {
   if (matchClaudeWorktree(wt.path)) return "claude-worktree"
-  if (matchCodexWorktree(wt.path))  return "codex-worktree"
+  // codex-worktree は将来: matchCodexWorktree を 1 行追加
   return "worktree"
 }
 
@@ -193,7 +193,7 @@ Stages (risky -> safe):
   A worktree/branch is classified by its most at-risk stage (uncommitted changes win).
   A flag lowers the threshold and deletes that stage and everything safer; merged is the safe default.
   "untouched" (no work, identical to base) and "detached" (no branch) sit off this ladder:
-  kept by default, removed only by --yolo.
+  kept by default, removed by --untouched / --detached (or --yolo).
 
 Usage: git-harvest [options]
        git-harvest logo
@@ -204,9 +204,9 @@ Options:
   -n, --dry-run               Show what would be deleted without deleting
 
   --committed[=<scope>]       Delete from committed (committed + merged). scope: worktree,
-                              claude-worktree, codex-worktree, branch (default: all).
+                              claude-worktree, branch (default: all).
   --files-changed[=<scope>]   Delete from files-changed (uncommitted included). scope: worktree,
-                              claude-worktree, codex-worktree (default: all worktree scopes).
+                              claude-worktree (default: all worktree scopes).
                               Multiple scopes: comma-separated or repeat the flag.
   --untouched                 Delete untouched worktrees (no work, identical to base; off-ladder).
   --detached                  Delete detached worktrees (no branch; off-ladder).
@@ -214,7 +214,6 @@ Options:
                               lose them permanently (no reflog recovery).
 
   --yolo                      Preset: --files-changed --committed --untouched --detached (all scopes).
-                              Requires --yes in non-TTY/hook contexts.
                               WARNING: removes uncommitted changes and detached commits (see --detached).
 
 Subcommands:
@@ -228,7 +227,7 @@ Invariants are always protected (no flag or --yolo can override):
 ## 実装メモ
 
 - 閾値は `Record<Scope, Stage>` で保持（明示フィールドにしない）。scope 追加が型・初期化・判定を触らず「データ」で済む
-- `--committed[=<scope>]` パースは `arg.split("=", 2)`。値なし=全 applicable scope、comma=`value.split(",")`
+- `--committed[=<scope>]` パースは `arg.split("=", 2)`。`=` 無し=全 applicable scope、空値（`--committed=`）は error、comma=`value.split(",")`
 - codex 対応の本体は scope 分割ではなく path matcher ＋ running-session 検出（どの設計でも必須）。これが書けるまで「codex 対応」と言わない
 - off-ladder は `untouched` / `detached` の boolean 2 つ。`--yolo` はパース時にこれらを true にし全 threshold を最危険へ展開する（preset = フラグの束、判定に yolo 分岐を作らない）
 
