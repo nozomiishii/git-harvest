@@ -103,7 +103,7 @@ export function atOrSafer(stage: Stage, threshold: Stage): boolean {
 
 ```ts
 import { execFile } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -112,6 +112,7 @@ export type Repo = {
   dir: string;
   git: (...args: string[]) => Promise<string>;
   commit: (message: string) => Promise<void>;
+  commitFile: (name: string, content: string, message: string) => Promise<void>;
   [Symbol.asyncDispose]: () => Promise<void>;
 };
 // `await using repo = await makeRepo()` でスコープ離脱時に自動削除
@@ -122,11 +123,16 @@ export async function makeRepo(): Promise<Repo> {
   await git("config", "user.email", "test@example.com");
   await git("config", "user.name", "Test");
   const commit = async (message: string): Promise<void> => { await git("commit", "--allow-empty", "-m", message); };
+  const commitFile = async (name: string, content: string, message: string): Promise<void> => {
+    writeFileSync(join(dir, name), content);
+    await git("add", name);
+    await git("commit", "-m", message);
+  };
   await commit("init");
   await git("remote", "add", "origin", dir);
   await git("update-ref", "refs/remotes/origin/main", "HEAD");
   await git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main");
-  return { dir, git, commit, [Symbol.asyncDispose]: async () => rmSync(dir, { recursive: true, force: true }) };
+  return { dir, git, commit, commitFile, [Symbol.asyncDispose]: async () => rmSync(dir, { recursive: true, force: true }) };
 }
 ```
 
@@ -239,6 +245,26 @@ test("classifyBranch returns other for an unmerged branch with unique commits", 
   await repo.commit("unmerged work");
   expect(await classifyBranch({ branch: "wip", base: "main" }, { cwd: repo.dir })).toBe("other");
 });
+// squash merge: コミットは残らないが tree が base に取り込まれていれば merged（段3）
+test("classifyBranch returns merged for a squash-merged branch", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "squashed");
+  await repo.commitFile("a.txt", "hello", "add a");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--squash", "squashed");
+  await repo.git("commit", "-m", "squash squashed");
+  expect(await classifyBranch({ branch: "squashed", base: "main" }, { cwd: repo.dir })).toBe("merged");
+});
+// cherry-pick: patch-id 一致で merged（段4）
+test("classifyBranch returns merged for a cherry-picked branch", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "picked");
+  await repo.commitFile("b.txt", "world", "add b");
+  const sha = await repo.git("rev-parse", "HEAD");
+  await repo.git("switch", "main");
+  await repo.git("cherry-pick", sha);
+  expect(await classifyBranch({ branch: "picked", base: "main" }, { cwd: repo.dir })).toBe("merged");
+});
 ```
 
 - [ ] **実装** `lib/merge-detect.ts`
@@ -266,7 +292,7 @@ export async function classifyBranch({ branch, base }: { branch: string; base: s
 }
 ```
 
-- [ ] **成功確認** PASS(3) → commit `feat: port 4-stage branch classification to merge-detect`
+- [ ] **成功確認** PASS(5) → commit `feat: port 4-stage branch classification to merge-detect`
 
 ### Task 5: agent path / session（agent.ts）
 
@@ -329,7 +355,7 @@ export function hasRunningClaudeSession(worktree: string): boolean {
 
 ### Task 6: フラグパース（flags.ts）
 
-- [ ] **失敗テスト** `lib/flags.test.ts`（主要 12 件）
+- [ ] **失敗テスト** `lib/flags.test.ts`（主要 13 件）
 
 ```ts
 import { expect, test } from "vitest";
@@ -371,13 +397,19 @@ test("--untouched and --detached set the off-ladder toggles", () => {
   expect(p.flags.untouched).toBe(true);
   expect(p.flags.detached).toBe(true);
 });
-test("--yolo expands to the union of all deletion flags", () => {
-  const y = parseArgs(["--yolo"]);
-  const m = parseArgs(["--files-changed", "--committed", "--untouched", "--detached"]);
-  if (y.mode !== "run" || m.mode !== "run") throw new Error("run");
-  expect(y.flags.thresholds).toEqual(m.flags.thresholds);
-  expect(y.flags.untouched).toBe(m.flags.untouched);
-  expect(y.flags.detached).toBe(m.flags.detached);
+// --yolo の展開結果を spec の具体値で固定（経路非依存に検証）
+test("--yolo lowers every scope to its most aggressive stage and enables both toggles", () => {
+  const p = parseArgs(["--yolo"]);
+  if (p.mode !== "run") throw new Error("run");
+  expect(p.flags.thresholds).toEqual({ worktree: "files-changed", "claude-worktree": "files-changed", branch: "committed" });
+  expect(p.flags.untouched).toBe(true);
+  expect(p.flags.detached).toBe(true);
+});
+// 安全側フラグを後から足しても、より危険な閾値は保持される（lower の order 非依存）
+test("a safer flag after a riskier one keeps the riskier threshold", () => {
+  const p = parseArgs(["--files-changed=worktree", "--committed=worktree"]);
+  if (p.mode !== "run") throw new Error("run");
+  expect(p.flags.thresholds.worktree).toBe("files-changed");
 });
 test("an unknown flag throws", () => { expect(() => parseArgs(["--nope"])).toThrow(); });
 test("--help short-circuits to help mode", () => { expect(parseArgs(["--help"]).mode).toBe("help"); });
@@ -438,7 +470,7 @@ export function parseArgs(argv: string[]): Parsed {
 }
 ```
 
-- [ ] **成功確認** PASS(12) → commit `feat: add scope-as-value flag parsing with yolo preset`
+- [ ] **成功確認** PASS(13) → commit `feat: add scope-as-value flag parsing with yolo preset`
 
 ### Task 7: worktree 判定（worktree.ts 判定コア）
 
@@ -449,11 +481,17 @@ import { expect, test } from "vitest";
 import { defaultFlags } from "./flags";
 import { decideWorktree, type WorktreeInfo } from "./worktree";
 function wt(over: Partial<WorktreeInfo>): WorktreeInfo {
-  return { path: "/repo/.claude/worktrees/x", isInvariant: false, hasBranch: true, isUntouched: false, hasUncommittedChanges: false, isMerged: false, ...over };
+  return { path: "/repo/.claude/worktrees/x", invariantReason: undefined, hasBranch: true, isUntouched: false, hasUncommittedChanges: false, isMerged: false, ...over };
 }
 test("decideWorktree keeps an invariant worktree even under yolo", () => {
   const yolo = { thresholds: { worktree: "files-changed", "claude-worktree": "files-changed", branch: "committed" }, untouched: true, detached: true, dryRun: false } as const;
-  expect(decideWorktree(wt({ isInvariant: true }), yolo).remove).toBe(false);
+  expect(decideWorktree(wt({ invariantReason: "locked" }), yolo).remove).toBe(false);
+});
+// invariant は generic な protected でなく「残した理由」をそのまま reason に返す
+test("decideWorktree surfaces the invariant reason instead of a generic label", () => {
+  const result = decideWorktree(wt({ invariantReason: "session running" }), defaultFlags());
+  if (result.remove) throw new Error("expected kept");
+  expect(result.reason).toBe("session running");
 });
 test("decideWorktree removes a merged worktree by default", () => {
   expect(decideWorktree(wt({ isMerged: true }), defaultFlags()).remove).toBe(true);
@@ -486,7 +524,7 @@ import { atOrSafer } from "./types";
 import { scopeOfPath } from "./agent";
 export type WorktreeInfo = {
   path: string;
-  isInvariant: boolean;
+  invariantReason: string | undefined;
   hasBranch: boolean;
   isUntouched: boolean;
   hasUncommittedChanges: boolean;
@@ -500,7 +538,7 @@ function worktreeStage(info: WorktreeInfo): Stage {
 }
 // yolo は flags に展開済みなので判定に yolo 分岐は無い
 export function decideWorktree(info: WorktreeInfo, flags: Flags): CleanupDecisionResult {
-  if (info.isInvariant) return { remove: false, reason: "protected" };
+  if (info.invariantReason) return { remove: false, reason: info.invariantReason };
   if (!info.hasBranch) return flags.detached ? { remove: true } : { remove: false, reason: "detached" };
   if (info.isUntouched) return flags.untouched ? { remove: true } : { remove: false, reason: "untouched" };
   const stage = worktreeStage(info);
@@ -509,7 +547,7 @@ export function decideWorktree(info: WorktreeInfo, flags: Flags): CleanupDecisio
 }
 ```
 
-- [ ] **成功確認** PASS(7) → commit `feat: add worktree deletion decision with thresholds and off-ladder toggles`
+- [ ] **成功確認** PASS(8) → commit `feat: add worktree deletion decision with thresholds and off-ladder toggles`
 
 ### Task 8: branch 判定（branch.ts 判定コア）
 
@@ -519,9 +557,11 @@ export function decideWorktree(info: WorktreeInfo, flags: Flags): CleanupDecisio
 import { expect, test } from "vitest";
 import { decideBranch, type BranchInfo } from "./branch";
 import { defaultFlags } from "./flags";
-function br(over: Partial<BranchInfo>): BranchInfo { return { name: "feature", isInvariant: false, classification: "other", ...over }; }
-test("decideBranch keeps an invariant branch", () => {
-  expect(decideBranch(br({ isInvariant: true }), defaultFlags()).remove).toBe(false);
+function br(over: Partial<BranchInfo>): BranchInfo { return { name: "feature", invariantReason: undefined, classification: "other", ...over }; }
+test("decideBranch keeps an invariant branch and surfaces its reason", () => {
+  const result = decideBranch(br({ invariantReason: "current HEAD" }), defaultFlags());
+  if (result.remove) throw new Error("expected kept");
+  expect(result.reason).toBe("current HEAD");
 });
 test("decideBranch removes an in-base branch by default", () => {
   expect(decideBranch(br({ classification: "merged" }), defaultFlags()).remove).toBe(true);
@@ -540,10 +580,10 @@ test("decideBranch keeps a committed branch by default and removes it at the com
 import type { Classification, Flags, Stage } from "./types";
 import { atOrSafer } from "./types";
 import type { CleanupDecisionResult } from "./worktree";
-export type BranchInfo = { name: string; isInvariant: boolean; classification: Classification };
+export type BranchInfo = { name: string; invariantReason: string | undefined; classification: Classification };
 function branchStage(c: Classification): Stage { return c === "other" ? "committed" : "merged"; }
 export function decideBranch(info: BranchInfo, flags: Flags): CleanupDecisionResult {
-  if (info.isInvariant) return { remove: false, reason: "protected" };
+  if (info.invariantReason) return { remove: false, reason: info.invariantReason };
   const stage = branchStage(info.classification);
   return atOrSafer(stage, flags.thresholds.branch) ? { remove: true } : { remove: false, reason: stage };
 }
@@ -644,7 +684,7 @@ export function logo(color = Boolean(process.stdout.isTTY) && !process.env["NO_C
 
 ### Task 11: git 収集 + 実削除（cleanup orchestration）
 
-`lib/worktree.ts` に `cleanupWorktrees`、`lib/branch.ts` に `cleanupBranches` を追記。porcelain 解析・invariant 判定（main/current cwd/locked/session/current HEAD/checked-out）・dry-run 分岐・`git`(tolerant) で 1 件ずつ実削除（`is not a working tree`/`not found` は no-op 成功化）・branch は survivingPaths で checked-out を invariant 化。
+`lib/worktree.ts` に `cleanupWorktrees`、`lib/branch.ts` に `cleanupBranches` を追記。porcelain 解析・invariant 判定（main/current cwd/locked/session/current HEAD/checked-out）・dry-run 分岐・`git`(tolerant) で 1 件ずつ実削除（`is not a working tree`/`not found` は no-op 成功化）・各 item は try/catch で隔離し throw は `failed` に流して継続（fail-soft・hook で部分失敗を握り潰さない）・branch は survivingPaths で checked-out を invariant 化。
 
 - [ ] **integration テスト** `lib/worktree.test.ts` 追記
 
@@ -702,21 +742,33 @@ export async function cleanupWorktrees(base: string, flags: Flags, opts: Opts = 
   for (const rec of records.slice(1)) {
     const path = rec.path;
     const canon = canonical(path);
-    const isInvariant = canon === mainPath || canon === current || rec.branch === base || rec.locked || hasRunningClaudeSession(path);
-    const uncommitted = await hasUncommitted(path);
-    let isUntouched = false;
-    let isMerged = false;
-    if (rec.branch) {
-      const c = await classifyBranch({ branch: rec.branch, base }, opts);
-      isUntouched = c === "untouched" && !uncommitted;
-      isMerged = c === "merged";
+    try {
+      let invariantReason: string | undefined;
+      if (canon === mainPath) invariantReason = "main";
+      else if (canon === current) invariantReason = "current";
+      else if (rec.branch === base) invariantReason = "base branch";
+      else if (rec.locked) invariantReason = "locked";
+      else if (hasRunningClaudeSession(path)) invariantReason = "session running";
+      const uncommitted = await hasUncommitted(path);
+      let isUntouched = false;
+      let isMerged = false;
+      if (rec.branch) {
+        const c = await classifyBranch({ branch: rec.branch, base }, opts);
+        isUntouched = c === "untouched" && !uncommitted;
+        isMerged = c === "merged";
+      }
+      const decision = decideWorktree({ path, invariantReason, hasBranch: Boolean(rec.branch), isUntouched, hasUncommittedChanges: uncommitted, isMerged }, flags);
+      if (!decision.remove) { results.push({ action: "kept", name: path, reason: decision.reason }); survivingPaths.push(canon); continue; }
+      if (flags.dryRun) { results.push({ action: "would-remove", name: path }); continue; }
+      const { code, stdout } = await git(["worktree", "remove", "--force", path], opts);
+      if (code === 0 || /is not a working tree/.test(stdout)) results.push({ action: "removed", name: path });
+      else { results.push({ action: "failed", name: path, error: `exit ${code}` }); failures += 1; survivingPaths.push(canon); }
+    } catch (e) {
+      // 1 件の throw（壊れた ref で classifyBranch が rev-parse 失敗 等）で全体を止めない
+      results.push({ action: "failed", name: path, error: String(e) });
+      failures += 1;
+      survivingPaths.push(canon);
     }
-    const decision = decideWorktree({ path, isInvariant, hasBranch: Boolean(rec.branch), isUntouched, hasUncommittedChanges: uncommitted, isMerged }, flags);
-    if (!decision.remove) { results.push({ action: "kept", name: path, reason: decision.reason }); survivingPaths.push(canon); continue; }
-    if (flags.dryRun) { results.push({ action: "would-remove", name: path }); continue; }
-    const { code, stdout } = await git(["worktree", "remove", "--force", path], opts);
-    if (code === 0 || /is not a working tree/.test(stdout)) results.push({ action: "removed", name: path });
-    else { results.push({ action: "failed", name: path, error: `exit ${code}` }); failures += 1; survivingPaths.push(canon); }
   }
   if (!flags.dryRun) await git(["worktree", "prune"], opts);
   return { results, failures, survivingPaths };
@@ -744,14 +796,22 @@ export async function cleanupBranches(base: string, flags: Flags, survivingPaths
   let failures = 0;
   for (const name of branchesOut.split("\n").map((b) => b.trim()).filter(Boolean)) {
     if (name === base) continue;
-    const isInvariant = name === currentHead || checkedOut.has(name);
-    const classification = await classifyBranch({ branch: name, base }, opts);
-    const decision = decideBranch({ name, isInvariant, classification }, flags);
-    if (!decision.remove) { results.push({ action: "kept", name, reason: decision.reason }); continue; }
-    if (flags.dryRun) { results.push({ action: "would-remove", name }); continue; }
-    const { code, stdout } = await git(["branch", "-D", name], opts);
-    if (code === 0 || /not found/.test(stdout)) results.push({ action: "removed", name });
-    else { results.push({ action: "failed", name, error: `exit ${code}` }); failures += 1; }
+    try {
+      let invariantReason: string | undefined;
+      if (name === currentHead) invariantReason = "current HEAD";
+      else if (checkedOut.has(name)) invariantReason = "checked out";
+      const classification = await classifyBranch({ branch: name, base }, opts);
+      const decision = decideBranch({ name, invariantReason, classification }, flags);
+      if (!decision.remove) { results.push({ action: "kept", name, reason: decision.reason }); continue; }
+      if (flags.dryRun) { results.push({ action: "would-remove", name }); continue; }
+      const { code, stdout } = await git(["branch", "-D", name], opts);
+      if (code === 0 || /not found/.test(stdout)) results.push({ action: "removed", name });
+      else { results.push({ action: "failed", name, error: `exit ${code}` }); failures += 1; }
+    } catch (e) {
+      // 1 件の throw で全体を止めない（fail-soft）
+      results.push({ action: "failed", name, error: String(e) });
+      failures += 1;
+    }
   }
   return { results, failures, survivingPaths };
 }
@@ -777,7 +837,10 @@ test("resolveBase fails closed when origin/HEAD cannot be determined", async () 
   await repo.git("remote", "remove", "origin");
   await repo.git("symbolic-ref", "-d", "refs/remotes/origin/HEAD").catch(() => "");
   process.exitCode = 0;
-  expect(await resolveBase({ cwd: repo.dir, offline: true })).toBeUndefined();
+  const base = await resolveBase({ cwd: repo.dir, offline: true });
+  expect(base).toBeUndefined();
+  expect(process.exitCode).toBe(1);
+  process.exitCode = 0; // global を後続テストに残さない
 });
 ```
 
