@@ -89,6 +89,8 @@ export type ActionResult =
   | { action: "kept"; name: string; reason: string }
   | { action: "failed"; name: string; error: string };
 export type CleanupResult = { results: ActionResult[]; failures: number; survivingPaths: string[] };
+// worktree / branch の両 decide が返す共有の判定結果（どちらの所有でもないので types に置く）
+export type CleanupDecisionResult = { remove: true } | { remove: false; reason: string };
 // stage が threshold 以降（安全側）なら削除対象
 export function atOrSafer(stage: Stage, threshold: Stage): boolean {
   return SAFETY.indexOf(stage) >= SAFETY.indexOf(threshold);
@@ -301,12 +303,15 @@ export async function classifyBranch({ branch, base }: { branch: string; base: s
 ```ts
 import { expect, test } from "vitest";
 import { isClaudeWorktree, scopeOfPath } from "./agent";
+// .claude/worktrees 配下は claude-worktree
 test("scopeOfPath classifies a .claude/worktrees path as claude-worktree", () => {
   expect(scopeOfPath("/repo/.claude/worktrees/foo")).toBe("claude-worktree");
 });
+// 通常 path は worktree
 test("scopeOfPath classifies a normal path as worktree", () => {
   expect(scopeOfPath("/repo/feature-wt")).toBe("worktree");
 });
+// .claude/worktrees の後に1文字以上で初めて claude worktree
 test("isClaudeWorktree requires at least one char after .claude/worktrees/", () => {
   expect(isClaudeWorktree("/repo/.claude/worktrees")).toBe(false);
   expect(isClaudeWorktree("/repo/.claude/worktrees/x")).toBe(true);
@@ -335,11 +340,10 @@ export function hasRunningClaudeSession(worktree: string): boolean {
   try { files = readdirSync(dir).filter((f) => f.endsWith(".json")); } catch { return false; }
   const target = canonical(worktree);
   for (const file of files) {
-    let raw: string;
-    try { raw = readFileSync(join(dir, file), "utf8"); } catch { continue; }
-    const cwd = /"cwd"\s*:\s*"([^"]*)"/.exec(raw)?.[1];
-    if (!cwd || canonical(cwd) !== target) continue;
-    const pid = Number(/"pid"\s*:\s*(\d+)/.exec(raw)?.[1]);
+    let session: { cwd?: string };
+    try { session = JSON.parse(readFileSync(join(dir, file), "utf8")); } catch { continue; }
+    if (!session.cwd || canonical(session.cwd) !== target) continue;
+    const pid = Number(file.replace(/\.json$/, "")); // <pid>.json から pid を取る
     if (!pid) continue;
     try { process.kill(pid, 0); return true; } catch { continue; }
   }
@@ -360,37 +364,44 @@ export function hasRunningClaudeSession(worktree: string): boolean {
 ```ts
 import { expect, test } from "vitest";
 import { defaultFlags, parseArgs } from "./flags";
+// default は全 scope merged で toggle 無効
 test("defaultFlags keeps every scope at merged and toggles off", () => {
   const f = defaultFlags();
   expect(f.thresholds).toEqual({ worktree: "merged", "claude-worktree": "merged", branch: "merged" });
   expect(f.untouched).toBe(false);
   expect(f.detached).toBe(false);
 });
+// scope 指定は対象 scope だけ閾値を下げる
 test("--committed=claude-worktree lowers only the claude scope", () => {
   const p = parseArgs(["--committed=claude-worktree"]);
   if (p.mode !== "run") throw new Error("run");
   expect(p.flags.thresholds["claude-worktree"]).toBe("committed");
   expect(p.flags.thresholds.worktree).toBe("merged");
 });
+// 値無し --committed は全 scope に効く
 test("bare --committed lowers all scopes", () => {
   const p = parseArgs(["--committed"]);
   if (p.mode !== "run") throw new Error("run");
   expect(p.flags.thresholds).toEqual({ worktree: "committed", "claude-worktree": "committed", branch: "committed" });
 });
+// 値無し --files-changed は worktree 系のみで branch は対象外
 test("bare --files-changed affects worktree scopes but not branch", () => {
   const p = parseArgs(["--files-changed"]);
   if (p.mode !== "run") throw new Error("run");
   expect(p.flags.thresholds.worktree).toBe("files-changed");
   expect(p.flags.thresholds.branch).toBe("merged");
 });
+// branch に files-changed は許さず error
 test("--files-changed=branch is rejected", () => { expect(() => parseArgs(["--files-changed=branch"])).toThrow(); });
 // 空値 --committed= は全 scope に化けず error にする（変数の空展開対策）
 test("an empty scope value like --committed= is rejected", () => { expect(() => parseArgs(["--committed="])).toThrow(); });
+// カンマ区切りで列挙した各 scope に適用
 test("comma-separated scopes apply to each listed scope", () => {
   const p = parseArgs(["--files-changed=worktree,claude-worktree"]);
   if (p.mode !== "run") throw new Error("run");
   expect(p.flags.thresholds["claude-worktree"]).toBe("files-changed");
 });
+// --untouched / --detached は off-ladder toggle を立てる
 test("--untouched and --detached set the off-ladder toggles", () => {
   const p = parseArgs(["--untouched", "--detached"]);
   if (p.mode !== "run") throw new Error("run");
@@ -411,7 +422,9 @@ test("a safer flag after a riskier one keeps the riskier threshold", () => {
   if (p.mode !== "run") throw new Error("run");
   expect(p.flags.thresholds.worktree).toBe("files-changed");
 });
+// 未知フラグは error
 test("an unknown flag throws", () => { expect(() => parseArgs(["--nope"])).toThrow(); });
+// --help は help mode へ即分岐
 test("--help short-circuits to help mode", () => { expect(parseArgs(["--help"]).mode).toBe("help"); });
 ```
 
@@ -483,6 +496,7 @@ import { decideWorktree, type WorktreeInfo } from "./worktree";
 function wt(over: Partial<WorktreeInfo>): WorktreeInfo {
   return { path: "/repo/.claude/worktrees/x", invariantReason: undefined, hasBranch: true, isUntouched: false, hasUncommittedChanges: false, isMerged: false, ...over };
 }
+// invariant は yolo でも保護
 test("decideWorktree keeps an invariant worktree even under yolo", () => {
   const yolo = { thresholds: { worktree: "files-changed", "claude-worktree": "files-changed", branch: "committed" }, untouched: true, detached: true, dryRun: false } as const;
   expect(decideWorktree(wt({ invariantReason: "locked" }), yolo).remove).toBe(false);
@@ -493,24 +507,36 @@ test("decideWorktree surfaces the invariant reason instead of a generic label", 
   if (result.remove) throw new Error("expected kept");
   expect(result.reason).toBe("session running");
 });
+// merged は default で削除
 test("decideWorktree removes a merged worktree by default", () => {
   expect(decideWorktree(wt({ isMerged: true }), defaultFlags()).remove).toBe(true);
 });
+// committed は default で保護
 test("decideWorktree keeps a committed worktree by default", () => {
   expect(decideWorktree(wt({ isMerged: false }), defaultFlags()).remove).toBe(false);
 });
+// --committed=claude-worktree で committed な claude worktree を削除
 test("decideWorktree removes a committed claude worktree under --committed=claude-worktree", () => {
   const flags = { ...defaultFlags(), thresholds: { ...defaultFlags().thresholds, "claude-worktree": "committed" as const } };
   expect(decideWorktree(wt({ isMerged: false }), flags).remove).toBe(true);
 });
-test("decideWorktree keeps untouched by default and removes it with the untouched toggle", () => {
+// untouched は default で保護
+test("decideWorktree keeps untouched by default", () => {
   expect(decideWorktree(wt({ isUntouched: true }), defaultFlags()).remove).toBe(false);
+});
+// --untouched toggle で untouched を削除
+test("decideWorktree removes untouched with the untouched toggle", () => {
   expect(decideWorktree(wt({ isUntouched: true }), { ...defaultFlags(), untouched: true }).remove).toBe(true);
 });
-test("decideWorktree keeps detached by default and removes it with the detached toggle", () => {
+// detached は default で保護
+test("decideWorktree keeps detached by default", () => {
   expect(decideWorktree(wt({ hasBranch: false }), defaultFlags()).remove).toBe(false);
+});
+// --detached toggle で detached を削除
+test("decideWorktree removes detached with the detached toggle", () => {
   expect(decideWorktree(wt({ hasBranch: false }), { ...defaultFlags(), detached: true }).remove).toBe(true);
 });
+// 未コミット変更は files-changed 扱いで default 保護
 test("decideWorktree treats uncommitted changes as files-changed and keeps them by default", () => {
   expect(decideWorktree(wt({ isMerged: true, hasUncommittedChanges: true }), defaultFlags()).remove).toBe(false);
 });
@@ -519,7 +545,7 @@ test("decideWorktree treats uncommitted changes as files-changed and keeps them 
 - [ ] **実装（判定コア）** `lib/worktree.ts`
 
 ```ts
-import type { Flags, Stage } from "./types";
+import type { CleanupDecisionResult, Flags, Stage } from "./types";
 import { atOrSafer } from "./types";
 import { scopeOfPath } from "./agent";
 export type WorktreeInfo = {
@@ -530,7 +556,6 @@ export type WorktreeInfo = {
   hasUncommittedChanges: boolean;
   isMerged: boolean;
 };
-export type CleanupDecisionResult = { remove: true } | { remove: false; reason: string };
 function worktreeStage(info: WorktreeInfo): Stage {
   if (info.hasUncommittedChanges) return "files-changed";
   if (info.isMerged) return "merged";
@@ -547,7 +572,7 @@ export function decideWorktree(info: WorktreeInfo, flags: Flags): CleanupDecisio
 }
 ```
 
-- [ ] **成功確認** PASS(8) → commit `feat: add worktree deletion decision with thresholds and off-ladder toggles`
+- [ ] **成功確認** PASS(10) → commit `feat: add worktree deletion decision with thresholds and off-ladder toggles`
 
 ### Task 8: branch 判定（branch.ts 判定コア）
 
@@ -558,17 +583,23 @@ import { expect, test } from "vitest";
 import { decideBranch, type BranchInfo } from "./branch";
 import { defaultFlags } from "./flags";
 function br(over: Partial<BranchInfo>): BranchInfo { return { name: "feature", invariantReason: undefined, classification: "other", ...over }; }
+// invariant branch は理由をそのまま reason に返す
 test("decideBranch keeps an invariant branch and surfaces its reason", () => {
   const result = decideBranch(br({ invariantReason: "current HEAD" }), defaultFlags());
   if (result.remove) throw new Error("expected kept");
   expect(result.reason).toBe("current HEAD");
 });
+// merged / untouched は in-base として default 削除
 test("decideBranch removes an in-base branch by default", () => {
   expect(decideBranch(br({ classification: "merged" }), defaultFlags()).remove).toBe(true);
   expect(decideBranch(br({ classification: "untouched" }), defaultFlags()).remove).toBe(true);
 });
-test("decideBranch keeps a committed branch by default and removes it at the committed threshold", () => {
+// committed（other）な branch は default で保護
+test("decideBranch keeps a committed branch by default", () => {
   expect(decideBranch(br({ classification: "other" }), defaultFlags()).remove).toBe(false);
+});
+// committed 閾値で committed な branch を削除
+test("decideBranch removes a committed branch at the committed threshold", () => {
   const flags = { ...defaultFlags(), thresholds: { ...defaultFlags().thresholds, branch: "committed" as const } };
   expect(decideBranch(br({ classification: "other" }), flags).remove).toBe(true);
 });
@@ -577,9 +608,8 @@ test("decideBranch keeps a committed branch by default and removes it at the com
 - [ ] **実装（判定コア）** `lib/branch.ts`
 
 ```ts
-import type { Classification, Flags, Stage } from "./types";
+import type { Classification, CleanupDecisionResult, Flags, Stage } from "./types";
 import { atOrSafer } from "./types";
-import type { CleanupDecisionResult } from "./worktree";
 export type BranchInfo = { name: string; invariantReason: string | undefined; classification: Classification };
 function branchStage(c: Classification): Stage { return c === "other" ? "committed" : "merged"; }
 export function decideBranch(info: BranchInfo, flags: Flags): CleanupDecisionResult {
@@ -589,7 +619,7 @@ export function decideBranch(info: BranchInfo, flags: Flags): CleanupDecisionRes
 }
 ```
 
-- [ ] **成功確認** PASS(4) → commit `feat: add branch deletion decision folding untouched into in-base`
+- [ ] **成功確認** PASS(5) → commit `feat: add branch deletion decision folding untouched into in-base`
 
 ---
 
@@ -602,15 +632,18 @@ export function decideBranch(info: BranchInfo, flags: Flags): CleanupDecisionRes
 ```ts
 import { expect, test } from "vitest";
 import { relpath, statusLine } from "./format";
+// home dir は ~ に短縮
 test("relpath shortens the home directory to a tilde", () => {
   const home = process.env["HOME"] ?? "";
   expect(relpath(`${home}/repo/x`)).toBe("~/repo/x");
 });
+// kept 行は reason ラベルと区切り · を含む
 test("statusLine renders a kept item with its reason label without color", () => {
   const line = statusLine({ action: "kept", name: "wt", reason: "untouched" }, false);
   expect(line).toContain("untouched");
   expect(line).toContain("·");
 });
+// removed 行は ✓ を含む
 test("statusLine renders a removed item with a check mark", () => {
   expect(statusLine({ action: "removed", name: "wt" }, false)).toContain("✓");
 });
@@ -656,6 +689,7 @@ export function statusLine(result: ActionResult, color = useColor()): string {
 ```ts
 import { expect, test } from "vitest";
 import { logo } from "./brand";
+// logo に GIT / HARVEST の字が含まれる
 test("logo contains the wordmark letters", () => {
   const out = logo(false);
   expect(out).toContain("G I T");
@@ -682,9 +716,9 @@ export function logo(color = Boolean(process.stdout.isTTY) && !process.env["NO_C
 
 - [ ] **成功確認** PASS(1) → commit `feat: port brand logo`
 
-### Task 11: git 収集 + 実削除（cleanup orchestration）
+### Task 11a: worktree 収集 + 実削除
 
-`lib/worktree.ts` に `cleanupWorktrees`、`lib/branch.ts` に `cleanupBranches` を追記。porcelain 解析・invariant 判定（main/current cwd/locked/session/current HEAD/checked-out）・dry-run 分岐・`git`(tolerant) で 1 件ずつ実削除（`is not a working tree`/`not found` は no-op 成功化）・各 item は try/catch で隔離し throw は `failed` に流して継続（fail-soft・hook で部分失敗を握り潰さない）・branch は survivingPaths で checked-out を invariant 化。
+`lib/worktree.ts` に `cleanupWorktrees` を追記。porcelain 解析・invariant 判定（main/current cwd/locked/session）・dry-run 分岐・`git`(tolerant) で 1 件ずつ実削除（`is not a working tree` は no-op 成功化）・各 item は try/catch で隔離し throw は `failed` に流して継続（fail-soft・hook で部分失敗を握り潰さない）。生存 worktree を survivingPaths に集めて branch cleanup へ渡す。
 
 - [ ] **integration テスト** `lib/worktree.test.ts` 追記
 
@@ -775,6 +809,43 @@ export async function cleanupWorktrees(base: string, flags: Flags, opts: Opts = 
 }
 ```
 
+- [ ] **成功確認** PASS → commit `feat: collect worktrees and execute fail-tolerant cleanup`
+
+### Task 11b: branch 収集 + 実削除
+
+`lib/branch.ts` に `cleanupBranches` を追記。branch 列挙・invariant 判定（current HEAD / 生存 worktree が checkout 中）・dry-run 分岐・fail-soft。survivingPaths（Task 11a が返す realpath 集合）で checked-out を invariant 化。
+
+- [ ] **integration テスト** `lib/branch.test.ts` 追記（expect/test/defaultFlags は Task 8 で import 済み）
+
+```ts
+import { cleanupBranches } from "./branch";
+import { cleanupWorktrees } from "./worktree";
+import { makeRepo } from "./test-helpers";
+// base に取り込まれた branch は default で削除
+test("cleanupBranches removes an in-base branch by default", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commitFile("x.txt", "x", "done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const result = await cleanupBranches("main", defaultFlags(), [], { cwd: repo.dir });
+  expect(result.results.some((r) => r.action === "removed" && r.name === "done")).toBe(true);
+});
+// 生存 worktree が checkout 中の branch は invariant 保護（survivingPaths 経由）
+test("cleanupBranches keeps a branch checked out in a surviving worktree", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "wip");
+  await repo.commitFile("y.txt", "y", "wip work");
+  await repo.git("switch", "main");
+  const wtPath = `${repo.dir}-wip`;
+  await repo.git("worktree", "add", wtPath, "wip");
+  const wt = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+  const flags = { ...defaultFlags(), thresholds: { ...defaultFlags().thresholds, branch: "committed" as const } };
+  const result = await cleanupBranches("main", flags, wt.survivingPaths, { cwd: repo.dir });
+  expect(result.results.some((r) => r.action === "kept" && r.name === "wip")).toBe(true);
+});
+```
+
 - [ ] **実装 `cleanupBranches`**（`lib/branch.ts` 追記）
 
 ```ts
@@ -817,7 +888,7 @@ export async function cleanupBranches(base: string, flags: Flags, survivingPaths
 }
 ```
 
-- [ ] **成功確認** PASS → commit `feat: collect git state and execute fail-tolerant cleanup`
+- [ ] **成功確認** PASS → commit `feat: collect branches and execute fail-tolerant cleanup`
 
 ### Task 12: orchestration + help（cli.ts）
 
@@ -828,10 +899,12 @@ export async function cleanupBranches(base: string, flags: Flags, survivingPaths
 import { expect, test } from "vitest";
 import { resolveBase } from "./cli";
 import { makeRepo } from "./test-helpers";
+// origin/HEAD から default branch を解決
 test("resolveBase resolves the default branch from origin/HEAD", async () => {
   await using repo = await makeRepo();
   expect(await resolveBase({ cwd: repo.dir })).toBe("main");
 });
+// origin/HEAD 不明なら exit 1 で fail-closed
 test("resolveBase fails closed when origin/HEAD cannot be determined", async () => {
   await using repo = await makeRepo();
   await repo.git("remote", "remove", "origin");
@@ -937,7 +1010,7 @@ await main(process.argv.slice(2));
 
 ## Self-Review（実装前チェック結果）
 
-- **Spec coverage:** `docs/flag-redesign.md` の各節をマップ済み — stage(T1) / scope per-tool(T5,7) / off-ladder untouched・detached(T6,7) / フラグ surface(T6) / `--yolo`=4 フラグの束(T6 等価テスト) / 判定 pseudo(T7,8) / invariant(T11) / base fail-closed(T12) / 出力 status ラベル(T9,12) / 命名 README(T14) / 配布 npm(T3,15) / 0.3.0(T3,15)。codex-worktree は意図的にスコープ外（将来 1 行追加）。
+- **Spec coverage:** `docs/flag-redesign.md` の各節をマップ済み — stage(T1) / scope per-tool(T5,7) / off-ladder untouched・detached(T6,7) / フラグ surface(T6) / `--yolo`=4 フラグの束(T6 等価テスト) / 判定 pseudo(T7,8) / invariant(T11a,11b) / base fail-closed(T12) / 出力 status ラベル(T9,12) / 命名 README(T14) / 配布 npm(T3,15) / 0.3.0(T3,15)。codex-worktree は意図的にスコープ外（将来 1 行追加）。
 - **Placeholder scan:** 各コード step に実コードあり。codex matcher は「将来追加」と明示。
-- **Type consistency:** `Flags`(types) / `Parsed`・`UsageError`(flags) / `WorktreeInfo`・`CleanupDecisionResult`・`decideWorktree`・`cleanupWorktrees`(worktree) / `BranchInfo`・`decideBranch`・`cleanupBranches`(branch) / `classifyBranch`(merge-detect) / `scopeOfPath`・`hasRunningClaudeSession`(agent) / `statusLine`(format) / `logo`(brand) / `resolveBase`・`main`(cli) を全タスクで同名・同シグネチャ。
+- **Type consistency:** `Flags`・`CleanupDecisionResult`(types) / `Parsed`・`UsageError`(flags) / `WorktreeInfo`・`decideWorktree`・`cleanupWorktrees`(worktree) / `BranchInfo`・`decideBranch`・`cleanupBranches`(branch) / `classifyBranch`(merge-detect) / `scopeOfPath`・`hasRunningClaudeSession`(agent) / `statusLine`(format) / `logo`(brand) / `resolveBase`・`main`(cli) を全タスクで同名・同シグネチャ。
 - **既知の注意:** (1) `using`/`Symbol.asyncDispose` は tsconfig の `lib`/`target` が ES2022+ 必要（不可なら `lib` に `esnext.disposable` 追加）。(2) `with { type: "json" }` import は tsdown が静的インライン化する前提。(3) `cleanupWorktrees` の `hasUncommitted` はメモ化して呼び出し回数を減らしてよい（挙動不変）。
