@@ -1,6 +1,8 @@
+import { realpathSync } from "node:fs";
 import { expect, test } from "vitest";
 import { defaultFlags } from "./flags";
-import { decideWorktree, type WorktreeInfo } from "./worktree";
+import { makeRepo } from "./test-helpers";
+import { cleanupWorktrees, decideWorktree, type WorktreeInfo } from "./worktree";
 
 function wt(over: Partial<WorktreeInfo>): WorktreeInfo {
   return {
@@ -90,4 +92,21 @@ test("decideWorktree treats uncommitted changes as files-changed and keeps them 
   expect(
     decideWorktree(wt({ hasUncommittedChanges: true, isMerged: true }), defaultFlags()).remove,
   ).toBe(false);
+});
+
+// main にマージ済みの linked worktree は default で削除
+test("cleanupWorktrees removes a merged linked worktree by default", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+  // git は porcelain で realpath を返すため canonical 同士で比較する（macOS の /private symlink 対策）
+  const canonWt = realpathSync(wtPath);
+
+  const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+
+  expect(result.results.some((r) => r.action === "removed" && r.name === canonWt)).toBe(true);
 });

@@ -1,5 +1,8 @@
-import type { CleanupDecisionResult, Flags, Stage } from "./types";
-import { scopeOfPath } from "./agent";
+import { realpathSync } from "node:fs";
+import type { CleanupDecisionResult, CleanupResult, Flags, Stage } from "./types";
+import { hasRunningClaudeSession, scopeOfPath } from "./agent";
+import { git, gitExitOk, gitText } from "./git";
+import { classifyBranch } from "./merge-detect";
 import { atOrSafer } from "./types";
 
 export type WorktreeInfo = {
@@ -10,6 +13,96 @@ export type WorktreeInfo = {
   isUntouched: boolean;
   path: string;
 };
+
+type Opts = { cwd?: string };
+
+type WtRecord = { branch?: string; locked: boolean; path: string };
+
+export async function cleanupWorktrees(
+  base: string,
+  flags: Flags,
+  opts: Opts = {},
+): Promise<CleanupResult> {
+  const records = await listWorktrees(opts);
+  const first = records[0];
+  const mainPath = first ? canonical(first.path) : "";
+  const current = canonical(opts.cwd ?? process.cwd());
+  const results: CleanupResult["results"] = [];
+  const survivingPaths: string[] = [];
+  let failures = 0;
+
+  for (const rec of records.slice(1)) {
+    const path = rec.path;
+    const canon = canonical(path);
+
+    try {
+      let invariantReason: string | undefined;
+
+      if (canon === mainPath) {
+        invariantReason = "main";
+      } else if (canon === current) {
+        invariantReason = "current";
+      } else if (rec.branch === base) {
+        invariantReason = "base branch";
+      } else if (rec.locked) {
+        invariantReason = "locked";
+      } else if (hasRunningClaudeSession(path)) {
+        invariantReason = "session running";
+      }
+      const uncommitted = await hasUncommitted(path);
+      let isUntouched = false;
+      let isMerged = false;
+
+      if (rec.branch !== undefined) {
+        const c = await classifyBranch({ base, branch: rec.branch }, opts);
+        isUntouched = c === "untouched" && !uncommitted;
+        isMerged = c === "merged";
+      }
+      const decision = decideWorktree(
+        {
+          hasBranch: rec.branch !== undefined,
+          hasUncommittedChanges: uncommitted,
+          invariantReason,
+          isMerged,
+          isUntouched,
+          path,
+        },
+        flags,
+      );
+
+      if (!decision.remove) {
+        results.push({ action: "kept", name: path, reason: decision.reason });
+        survivingPaths.push(canon);
+        continue;
+      }
+
+      if (flags.dryRun) {
+        results.push({ action: "would-remove", name: path });
+        continue;
+      }
+      const { code, stdout } = await git(["worktree", "remove", "--force", path], opts);
+
+      if (code === 0 || stdout.includes("is not a working tree")) {
+        results.push({ action: "removed", name: path });
+      } else {
+        results.push({ action: "failed", error: `exit ${String(code)}`, name: path });
+        failures += 1;
+        survivingPaths.push(canon);
+      }
+    } catch (error) {
+      // 1 件の throw（壊れた ref で classifyBranch が rev-parse 失敗 等）で全体を止めない
+      results.push({ action: "failed", error: String(error), name: path });
+      failures += 1;
+      survivingPaths.push(canon);
+    }
+  }
+
+  if (!flags.dryRun) {
+    await git(["worktree", "prune"], opts);
+  }
+
+  return { failures, results, survivingPaths };
+}
 
 // yolo は flags に展開済みなので判定に yolo 分岐は無い
 export function decideWorktree(info: WorktreeInfo, flags: Flags): CleanupDecisionResult {
@@ -28,6 +121,46 @@ export function decideWorktree(info: WorktreeInfo, flags: Flags): CleanupDecisio
   const threshold = flags.thresholds[scopeOfPath(info.path)];
 
   return atOrSafer(stage, threshold) ? { remove: true } : { reason: stage, remove: false };
+}
+
+function canonical(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+
+async function hasUncommitted(wt: string): Promise<boolean> {
+  if (!(await gitExitOk(["-C", wt, "diff", "--quiet", "HEAD"]))) {
+    return true;
+  }
+
+  if (!(await gitExitOk(["-C", wt, "diff", "--quiet", "--cached"]))) {
+    return true;
+  }
+  const others = await git(["-C", wt, "ls-files", "--others", "--exclude-standard"]);
+
+  return others.stdout.trim().length > 0;
+}
+
+async function listWorktrees(opts: Opts): Promise<WtRecord[]> {
+  const out = await gitText(["worktree", "list", "--porcelain"], opts);
+  const records: WtRecord[] = [];
+  let cur: undefined | WtRecord;
+
+  for (const line of out.split("\n")) {
+    if (line.startsWith("worktree ")) {
+      cur = { locked: false, path: line.slice(9) };
+      records.push(cur);
+    } else if (cur !== undefined && line.startsWith("branch ")) {
+      cur.branch = line.slice("branch refs/heads/".length);
+    } else if (cur !== undefined && line.startsWith("locked")) {
+      cur.locked = true;
+    }
+  }
+
+  return records;
 }
 
 function worktreeStage(info: WorktreeInfo): Stage {
