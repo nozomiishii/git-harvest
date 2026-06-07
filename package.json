@@ -32,13 +32,11 @@
     "eslint": "eslint --max-warnings=0 --cache",
     "format": "pnpm prettier . --check",
     "format:fix": "pnpm prettier . --write",
-    "install:local": "bash install.sh",
     "lint": "pnpm eslint",
     "lint:fix": "pnpm eslint --fix",
     "prepare": "lefthook install --force",
     "prettier": "prettier --ignore-unknown --cache",
-    "test": "vitest",
-    "uninstall:local": "bash uninstall.sh"
+    "test": "vitest"
   },
   "devDependencies": {
     "@nozomiishii/commitlint-config": "1.6.0",
