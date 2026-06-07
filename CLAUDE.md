@@ -19,7 +19,7 @@
 
 ## 動作内容
 
-- フラグ・stage・scope・off-ladder・invariant・status ラベルは `README.ja.md` の「動作内容」セクションを参照。設計の正本は `docs/flag-redesign.md`
+- フラグ・stage・scope・off-ladder・invariant・status ラベルは `README.ja.md` の「動作内容」セクションを参照。設計の経緯は [#169](https://github.com/nozomiishii/git-harvest/issues/169) を参照
 - マージ検出は4段階フォールバック（first-parent → ancestor → 仮想 squash → cherry-pick）。詳細は `lib/merge-detect.ts` の `classifyBranch()` を参照
 
 ## ブランドカラー

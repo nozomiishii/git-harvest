@@ -32,6 +32,7 @@ export function hasRunningClaudeSession(worktree: string): boolean {
     }
 
     try {
+      // signal 0 は送信せず生存確認のみ（kill しない）。成功 = process 生存 = session 走行中
       process.kill(pid, 0);
 
       return true;
@@ -60,7 +61,5 @@ function canonical(target: string): string {
 }
 
 function sessionsDir(): string {
-  return (
-    process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR ?? path.join(homedir(), ".claude", "sessions")
-  );
+  return process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR ?? path.join(homedir(), ".claude", "sessions");
 }
