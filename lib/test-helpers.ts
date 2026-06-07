@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { env } from "node:process";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
@@ -17,8 +18,17 @@ export type Repo = {
 // `await using repo = await makeRepo()` でスコープ離脱時に自動削除
 export async function makeRepo(): Promise<Repo> {
   const dir = mkdtempSync(path.join(tmpdir(), "git-harvest-test-"));
+  // 各 git 呼び出しに一意なタイムスタンプを付与し、cherry-pick が同一 SHA になるのを防ぐ
+  let ts = 1_000_000_000;
   const git = async (...args: string[]): Promise<string> => {
-    const result = await exec("git", args, { cwd: dir });
+    const date = String(ts);
+
+    ts += 60;
+
+    const result = await exec("git", args, {
+      cwd: dir,
+      env: { ...env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
+    });
 
     return result.stdout.trim();
   };
