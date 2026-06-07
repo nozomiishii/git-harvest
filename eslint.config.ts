@@ -7,8 +7,11 @@ export default defineConfig([
 
   {
     rules: {
-      // test は execSync(bash) で子プロセスに env を渡すため、必要な変数だけ process.env から読む
-      "n/no-process-env": ["error", { allowedVariables: ["HOME", "PATH"] }],
+      // bash test の execSync 用 (HOME/PATH) と TS 実装が読む runtime env を許可
+      "n/no-process-env": [
+        "error",
+        { allowedVariables: ["HOME", "PATH", "NO_COLOR", "GIT_HARVEST_CLAUDE_SESSIONS_DIR"] },
+      ],
     },
   },
 ]);
