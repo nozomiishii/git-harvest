@@ -102,14 +102,14 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-  # アセット upload + draft release を publish
-  upload-assets:
+  # draft release を publish（npm が配布元なので単体バイナリは添付しない）
+  publish-release:
     needs: create-draft-release
     if: needs.create-draft-release.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write # required by gh release upload/edit to attach assets and publish the draft release
+      contents: write # required by gh release edit to publish the draft release
 
     steps:
       - name: Checkout code
@@ -117,12 +117,6 @@ jobs:
         with:
           ref: ${{ needs.create-draft-release.outputs.tag_name }}
           persist-credentials: false
-
-      - name: Upload release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ needs.create-draft-release.outputs.tag_name }}
-        run: gh release upload "${TAG_NAME}" lib/git-harvest
 
       - name: Publish Release
         env:
@@ -146,21 +140,31 @@ jobs:
           ref: ${{ needs.create-draft-release.outputs.tag_name }}
           persist-credentials: false
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+
       - name: Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: package.json
+          cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      # publish 時に prepare（lefthook install）が走ると devDependencies 未インストールで落ちる。
-      # git-harvest は shell スクリプト配布で publish 時のビルド工程は無いため、scripts は無効化する。
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # dist/ をビルドしてから publish する。--ignore-scripts で prepare（lefthook install）の失敗と
+      # prepublishOnly の二重ビルドを避ける（ビルドは上の Build ステップ済み、files は dist のみ）。
       - name: Publish to npm
         run: npm publish --ignore-scripts
 
   # publish 後に次の release PR を作成/更新
   release-pr:
-    needs: [create-draft-release, upload-assets]
-    if: ${{ always() && !cancelled() && needs.upload-assets.result != 'failure' }}
+    needs: [create-draft-release, publish-release]
+    if: ${{ always() && !cancelled() && needs.publish-release.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

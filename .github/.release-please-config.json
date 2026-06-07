@@ -3,7 +3,7 @@
   "bootstrap-sha": "302ed82827bc9f8c52e49ac70a32e5b5b8dc4270",
   "always-update": true,
   "bump-minor-pre-major": true,
-  "bump-patch-for-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": false,
   "include-component-in-tag": false,
   "draft": true,
   "force-tag-creation": true,
@@ -15,8 +15,7 @@
   ],
   "packages": {
     ".": {
-      "release-type": "node",
-      "extra-files": ["lib/git-harvest"]
+      "release-type": "node"
     }
   }
 }

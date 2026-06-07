@@ -35,6 +35,7 @@
     "lint": "pnpm eslint",
     "lint:fix": "pnpm eslint --fix",
     "prepare": "lefthook install --force",
+    "prepublishOnly": "pnpm build",
     "prettier": "prettier --ignore-unknown --cache",
     "test": "vitest"
   },
