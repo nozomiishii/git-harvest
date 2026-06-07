@@ -236,3 +236,7 @@ Invariants are always protected (no flag or --yolo can override):
 - pushed 軸: 今回スコープ外（committed に吸収）。必要が実証されたら committed と merged の間に肯定形で 1 段追加
 - detached の salvage branch 自動生成: 今回は warn-only を採用。foolproof を強めたくなったら後付け
 - 中間 preset / scope group（例 agent worktree 一括）: 必要が出たら非破壊で追加
+
+## 実装
+
+実装計画: [docs/flag-redesign-plan.md](./flag-redesign-plan.md)
