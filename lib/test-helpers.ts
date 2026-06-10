@@ -29,11 +29,11 @@ export function assertKept(
 export async function makeRepo(): Promise<Repo> {
   const dir = mkdtempSync(path.join(tmpdir(), "git-harvest-test-"));
   // 各 git 呼び出しに一意なタイムスタンプを付与し、cherry-pick が同一 SHA になるのを防ぐ
-  let ts = 1_000_000_000;
+  let timestamp = 1_000_000_000;
   const git = async (...args: string[]): Promise<string> => {
-    const date = String(ts);
+    const date = String(timestamp);
 
-    ts += 60;
+    timestamp += 60;
 
     const result = await exec("git", args, {
       cwd: dir,
