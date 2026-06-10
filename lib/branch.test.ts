@@ -1,3 +1,4 @@
+import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
 import { type BranchInfo, cleanupBranches, decideBranch } from "./branch";
 import { defaultFlags } from "./flags";
@@ -50,6 +51,56 @@ test("cleanupBranches removes an in-base branch by default", async () => {
   const result = await cleanupBranches("main", defaultFlags(), [], { cwd: repo.dir });
 
   expect(result.results.some((r) => r.action === "removed" && r.name === "done")).toBe(true);
+});
+
+// detached HEAD のプレースホルダ行 "(HEAD detached at ...)" はブランチとして扱わない
+test("cleanupBranches ignores the detached HEAD placeholder line", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "--detach");
+
+  const result = await cleanupBranches("main", defaultFlags(), [], { cwd: repo.dir });
+
+  expect(result.failures).toBe(0);
+});
+
+// main worktree に checkout 中の branch も invariant 保護（survivingPaths に main worktree を含む）
+test("cleanupBranches keeps a branch checked out in the main worktree", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commitFile("z.txt", "z", "done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  await repo.git("switch", "done");
+  const wtPath = `${repo.dir}-base`;
+  await repo.git("worktree", "add", wtPath, "main");
+
+  try {
+    const wt = await cleanupWorktrees("main", defaultFlags(), { cwd: wtPath });
+
+    const result = await cleanupBranches("main", defaultFlags(), wt.survivingPaths, {
+      cwd: wtPath,
+    });
+
+    expect(
+      result.results.some(
+        (r) => r.action === "kept" && r.name === "done" && r.reason === "checked out",
+      ),
+    ).toBe(true);
+  } finally {
+    rmSync(wtPath, { force: true, recursive: true });
+  }
+});
+
+// リモートで削除済みの追跡ブランチを実行後の fetch --prune で整理（旧 bash の挙動）
+test("cleanupBranches prunes stale remote-tracking branches", async () => {
+  await using repo = await makeRepo();
+  await repo.git("update-ref", "refs/remotes/origin/gone", "HEAD");
+
+  await cleanupBranches("main", defaultFlags(), [], { cwd: repo.dir });
+
+  await expect(repo.git("rev-parse", "--verify", "refs/remotes/origin/gone")).rejects.toThrow(
+    /fatal/,
+  );
 });
 
 // 生存 worktree が checkout 中の branch は invariant 保護（survivingPaths 経由）

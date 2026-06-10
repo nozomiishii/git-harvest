@@ -36,7 +36,8 @@ export async function cleanupBranches(
   for (const name of branchesOut
     .split("\n")
     .map((b) => b.trim())
-    .filter(Boolean)) {
+    // detached HEAD では "(HEAD detached at ...)" 行が混ざるので除外
+    .filter((b) => b && !b.startsWith("("))) {
     if (name === base) {
       continue;
     }
@@ -61,12 +62,13 @@ export async function cleanupBranches(
         results.push({ action: "would-remove", name });
         continue;
       }
-      const { code, stdout } = await git(["branch", "-D", name], opts);
+      const { code, stderr } = await git(["branch", "-D", name], opts);
 
-      if (code === 0 || stdout.includes("not found")) {
+      // "not found" は別プロセスが先に消した競合なので removed 扱い（エラーは stderr に出る）
+      if (code === 0 || stderr.includes("not found")) {
         results.push({ action: "removed", name });
       } else {
-        results.push({ action: "failed", error: `exit ${String(code)}`, name });
+        results.push({ action: "failed", error: `exit ${String(code)}: ${stderr.trim()}`, name });
         failures += 1;
       }
     } catch (error) {
@@ -74,6 +76,11 @@ export async function cleanupBranches(
       results.push({ action: "failed", error: String(error), name });
       failures += 1;
     }
+  }
+
+  if (!flags.dryRun) {
+    // リモートで削除済みの追跡ブランチ (origin/*) を整理。offline 等の失敗は無視（git は throw しない）
+    await git(["fetch", "--prune"], opts);
   }
 
   return { failures, results, survivingPaths };

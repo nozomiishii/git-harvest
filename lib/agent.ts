@@ -22,7 +22,8 @@ export function hasRunningClaudeSession(worktree: string): boolean {
       continue;
     }
 
-    if (!session.cwd || canonical(session.cwd) !== target) {
+    // session が worktree のサブディレクトリで起動されていても検出する（sep 付き比較で前方一致誤判定を防ぐ）
+    if (!session.cwd || !(canonical(session.cwd) + path.sep).startsWith(target + path.sep)) {
       continue;
     }
     const pid = Number(file.replace(/\.json$/, "")); // <pid>.json から pid を取る

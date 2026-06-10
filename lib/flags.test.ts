@@ -52,6 +52,11 @@ test("--files-changed=branch is rejected", () => {
   expect(() => parseArgs(["--files-changed=branch"])).toThrow(/invalid scope/);
 });
 
+// = を含む不正 scope は切り詰めて受理せず error（split("=", 2) の残り捨て対策）
+test("a malformed scope value containing '=' is rejected", () => {
+  expect(() => parseArgs(["--committed=worktree=x"])).toThrow(/invalid scope/);
+});
+
 // 空値 --committed= は全 scope に化けず error にする（変数の空展開対策）
 test("an empty scope value like --committed= is rejected", () => {
   expect(() => parseArgs(["--committed="])).toThrow(/invalid scope/);

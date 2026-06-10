@@ -54,6 +54,18 @@ export function statusLine(result: ActionResult, color = useColor()): string {
   }
 }
 
+export function summaryLine(n: number, dryRun: boolean, color = useColor()): string {
+  if (n === 0) {
+    return dim("· Nothing to harvest. All growing.", color);
+  }
+
+  if (dryRun) {
+    return `${hi("→", color)} ${bold(`Would harvest ${String(n)} item(s)`, color)}`;
+  }
+
+  return `${hi("✓", color)} ${bold(`Harvested ${String(n)} item(s)`, color)}`;
+}
+
 export function useColor(): boolean {
   return process.stdout.isTTY && !process.env.NO_COLOR;
 }

@@ -29,7 +29,8 @@ export async function cleanupWorktrees(
   const mainPath = first ? canonical(first.path) : "";
   const current = canonical(opts.cwd ?? process.cwd());
   const results: CleanupResult["results"] = [];
-  const survivingPaths: string[] = [];
+  // main worktree はループ対象外（slice(1)）だが常に生存するので、checked out 保護のため先に入れる
+  const survivingPaths: string[] = mainPath ? [mainPath] : [];
   let failures = 0;
 
   for (const rec of records.slice(1)) {
@@ -82,12 +83,17 @@ export async function cleanupWorktrees(
         results.push({ action: "would-remove", name: path });
         continue;
       }
-      const { code, stdout } = await git(["worktree", "remove", "--force", path], opts);
+      const { code, stderr } = await git(["worktree", "remove", "--force", path], opts);
 
-      if (code === 0 || stdout.includes("is not a working tree")) {
+      // "is not a working tree" は別プロセスが先に消した競合なので removed 扱い（エラーは stderr に出る）
+      if (code === 0 || stderr.includes("is not a working tree")) {
         results.push({ action: "removed", name: path });
       } else {
-        results.push({ action: "failed", error: `exit ${String(code)}`, name: path });
+        results.push({
+          action: "failed",
+          error: `exit ${String(code)}: ${stderr.trim()}`,
+          name: path,
+        });
         failures += 1;
         survivingPaths.push(canon);
       }

@@ -61,8 +61,8 @@ Subcommands:
   logo                        Show the git-harvest logo
 
 Invariants are always protected (no flag or --yolo can override):
-  main/default worktree, current cwd worktree, locked worktree, worktree with a running agent session,
-  current HEAD branch, branch checked out in a surviving worktree.
+  main/default worktree, worktree on the base branch, current cwd worktree, locked worktree,
+  worktree with a running agent session, current HEAD branch, branch checked out in a surviving worktree.
 `;
 }
 
@@ -136,7 +136,10 @@ function applyToken(flags: Flags, arg: string): boolean {
 
     return true;
   }
-  const [token, value] = arg.split("=", 2) as [string, string | undefined];
+  // split("=", 2) は3つ目以降を黙って捨てるため、先頭の = だけで分割して残り全体を value にする
+  const eq = arg.indexOf("=");
+  const token = eq === -1 ? arg : arg.slice(0, eq);
+  const value = eq === -1 ? undefined : arg.slice(eq + 1);
 
   if (token === "--committed" || token === "--files-changed") {
     applyStage(flags, token === "--committed" ? "committed" : "files-changed", value);

@@ -7,15 +7,22 @@ type Opts = { cwd?: string };
 export async function git(
   args: string[],
   opts: Opts = {},
-): Promise<{ code: number; stdout: string }> {
+): Promise<{ code: number; stderr: string; stdout: string }> {
   try {
-    const { stdout } = await exec("git", args, { cwd: opts.cwd, maxBuffer: 64 * 1024 * 1024 });
+    const { stderr, stdout } = await exec("git", args, {
+      cwd: opts.cwd,
+      maxBuffer: 64 * 1024 * 1024,
+    });
 
-    return { code: 0, stdout };
+    return { code: 0, stderr, stdout };
   } catch (error) {
-    const e = error as { code?: number; stdout?: string };
+    const e = error as { code?: number; stderr?: string; stdout?: string };
 
-    return { code: typeof e.code === "number" ? e.code : 1, stdout: e.stdout ?? "" };
+    return {
+      code: typeof e.code === "number" ? e.code : 1,
+      stderr: e.stderr ?? "",
+      stdout: e.stdout ?? "",
+    };
   }
 }
 

@@ -5,7 +5,7 @@ import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch";
 import { logo } from "./brand";
 import { helpText, parseArgs, UsageError } from "./flags";
-import { bold, dim, hi, statusLine, useColor } from "./format";
+import { bold, dim, statusLine, summaryLine, useColor } from "./format";
 import { gitText } from "./git";
 import { cleanupWorktrees } from "./worktree";
 
@@ -68,11 +68,7 @@ export async function main(argv: string[]): Promise<void> {
   const n = [...wt.results, ...br.results].filter(
     (r) => r.action === "removed" || r.action === "would-remove",
   ).length;
-  process.stdout.write(
-    n > 0
-      ? `\n${hi("✓")} ${bold(`Harvested ${String(n)} item(s)`)}\n\n`
-      : `\n${dim("· Nothing to harvest. All growing.")}\n\n`,
-  );
+  process.stdout.write(`\n${summaryLine(n, parsed.flags.dryRun)}\n\n`);
   process.exitCode = wt.failures + br.failures > 0 ? 2 : 0;
 }
 
