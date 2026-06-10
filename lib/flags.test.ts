@@ -5,7 +5,7 @@ import { defaultFlags, parseArgs } from "./flags";
 test("defaultFlags keeps every scope at merged and toggles off", () => {
   const f = defaultFlags();
 
-  expect(f.thresholds).toEqual({
+  expect(f.thresholds).toStrictEqual({
     branch: "merged",
     "claude-worktree": "merged",
     worktree: "merged",
@@ -35,12 +35,12 @@ test("bare stage flags lower every allowed scope", () => {
     throw new Error("run");
   }
 
-  expect(committed.flags.thresholds).toEqual({
+  expect(committed.flags.thresholds).toStrictEqual({
     branch: "committed",
     "claude-worktree": "committed",
     worktree: "committed",
   });
-  expect(filesChanged.flags.thresholds).toEqual({
+  expect(filesChanged.flags.thresholds).toStrictEqual({
     branch: "merged",
     "claude-worktree": "files-changed",
     worktree: "files-changed",
@@ -93,7 +93,7 @@ test("--yolo lowers every scope to its most aggressive stage and enables both to
     throw new Error("run");
   }
 
-  expect(p.flags.thresholds).toEqual({
+  expect(p.flags.thresholds).toStrictEqual({
     branch: "committed",
     "claude-worktree": "files-changed",
     worktree: "files-changed",

@@ -23,10 +23,6 @@ export default defineConfig([
     rules: {
       // discriminated union を if で絞る型ナローイングガードを許可（テスト分岐ではない）
       "vitest/no-conditional-in-test": "off",
-      // 定数名をそのままタイトルに使う場合（例: "SAFETY orders..."）を許可
-      "vitest/prefer-lowercase-title": "off",
-      // 型・undefined を厳密に区別しない配列比較は toEqual で十分
-      "vitest/prefer-strict-equal": "off",
     },
   },
 ]);
