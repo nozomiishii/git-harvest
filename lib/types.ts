@@ -1,5 +1,8 @@
+// Stage = 消した時の危険度。files-changed（未コミットの変更あり）は消すと復元できず最も危険、
+// committed（コミット済み・base 未取り込み）は履歴から復元可能、merged（base 取り込み済み）は安全
 export type Stage = "committed" | "files-changed" | "merged";
 
+// 危険 → 安全の順。フラグはこのはしごの閾値を下げ、閾値以上（安全側）を削除対象にする
 export const SAFETY: readonly Stage[] = ["files-changed", "committed", "merged"];
 
 export const WORKTREE_SCOPES = ["worktree", "claude-worktree"] as const;

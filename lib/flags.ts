@@ -6,6 +6,8 @@ export type Subcommand = "help" | "logo" | "version";
 
 export class UsageError extends Error {}
 
+// stage ごとに指定できる scope。branch は作業ディレクトリを持たず
+// 「未コミットの変更」が存在しないため、files-changed に branch scope は無い
 const STAGE_SCOPES: Record<"committed" | "files-changed", readonly Scope[]> = {
   committed: SCOPES,
   "files-changed": WORKTREE_SCOPES,

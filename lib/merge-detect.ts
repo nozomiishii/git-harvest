@@ -30,6 +30,9 @@ export async function classifyBranch(refs: Refs, opts: Opts = {}): Promise<Class
   return unique ? "other" : "merged";
 }
 
+// branch 側だけにあり、同じ内容の commit が base にも無いものを探す。
+// --cherry-pick は commit ID でなく変更内容で照合するため、rebase / cherry-pick で
+// ID が変わって base に入った commit も「取り込み済み」と判定できる
 async function hasUniqueCommits({ base, branch }: Refs, opts: Opts): Promise<boolean> {
   const uniqueResult = await git(
     ["log", "--cherry-pick", "--right-only", "--no-merges", "--oneline", `${base}...${branch}`],
@@ -44,11 +47,16 @@ async function hasUniqueCommits({ base, branch }: Refs, opts: Opts): Promise<boo
   return uniqueResult.stdout.trim() !== "";
 }
 
+// merge-base --is-ancestor A B = 「A は B の歴史に含まれるか」。
+// branch が base の歴史に含まれる = branch の commit はすべて base に到達済み = マージ済み
 async function isAncestorOfBase({ base, branch }: Refs, opts: Opts): Promise<boolean> {
   return gitExitOk(["merge-base", "--is-ancestor", branch, base], opts);
 }
 
+// first-parent = マージで合流してきた側の枝を無視した、base の本流だけの commit 一覧。
+// branch の先頭 commit が本流上にある = このブランチではまだ独自の作業をしていない
 async function isInFirstParentHistory({ base, branch }: Refs, opts: Opts): Promise<boolean> {
+  // rev-parse はブランチ名を commit ID に解決する。
   // 壊れた ref は gitText がここで throw → 呼び出し側の fail-soft で failed になる（git() に変えない）
   const head = await gitText(["rev-parse", branch], opts);
   const firstParentResult = await git(["rev-list", "--first-parent", base], opts);
@@ -57,8 +65,11 @@ async function isInFirstParentHistory({ base, branch }: Refs, opts: Opts): Promi
   return firstParent.split("\n").includes(head);
 }
 
-// 仮想 squash commit を作って cherry で照合。判定不能（merge-base 無し等）は false = 次の段へ
+// squash マージ = ブランチの全 commit を 1 つに潰して base に積む方式。元の commit は base の
+// 履歴に現れないため、同じ「潰した 1 commit」を手元で仮に作り（commit-tree）、その内容が base に
+// 入っているかを cherry で照合する。判定不能（merge-base 無し等）は false = 次の段へ
 async function isSquashMerged({ base, branch }: Refs, opts: Opts): Promise<boolean> {
+  // merge-base = base と branch が分岐した地点の commit
   const mergeBaseResult = await git(["merge-base", base, branch], opts);
   const mergeBase = mergeBaseResult.stdout.trim();
 
@@ -76,6 +87,7 @@ async function isSquashMerged({ base, branch }: Refs, opts: Opts): Promise<boole
   if (!squash) {
     return false;
   }
+  // git cherry = 各 commit の変更内容が base に取り込み済みなら "-"、未取り込みなら "+" を付けて列挙
   const cherryResult = await git(["cherry", base, squash], opts);
   const cherry = cherryResult.stdout;
 

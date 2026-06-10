@@ -2,6 +2,8 @@ import { gitText, NETWORK_TIMEOUT_MS } from "./git";
 
 type ResolveOpts = { cwd?: string; offline?: boolean };
 
+// base = 掃除の基準になるデフォルトブランチ（main 等）。
+// origin/HEAD という「リモートのデフォルトブランチを指すポインタ」から解決する
 export async function resolveBase(opts: ResolveOpts = {}): Promise<string | undefined> {
   const cached = await originHead(opts);
 
@@ -10,7 +12,8 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
   }
 
   if (opts.offline !== true) {
-    // offline でも hook をブロックしないよう、ネットワークを伴う set-head は上限時間で打ち切る
+    // remote set-head --auto = リモートに現在のデフォルトブランチを問い合わせて origin/HEAD を作り直す。
+    // offline でも hook をブロックしないよう、ネットワークを伴うこの操作は上限時間で打ち切る
     await gitText(["remote", "set-head", "origin", "--auto"], {
       ...opts,
       timeoutMs: NETWORK_TIMEOUT_MS,

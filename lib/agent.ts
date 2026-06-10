@@ -3,6 +3,8 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { canonical, isInside } from "./path";
 
+// Claude Code は実行中 session の情報を ~/.claude/sessions/*.json に置く。
+// その cwd がこの worktree 配下で、かつ process が生きていれば「session 実行中」と判定する
 export function hasRunningClaudeSession(worktree: string): boolean {
   const target = canonical(worktree);
 

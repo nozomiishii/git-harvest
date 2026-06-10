@@ -9,6 +9,7 @@ import { bold, dim, statusLine, summaryLine } from "./format";
 import { resolveBase } from "./resolve-base";
 import { cleanupWorktrees } from "./worktree";
 
+// 実行の流れ: subcommand 判定 → フラグ解釈 → base branch 解決 → worktree 掃除 → branch 掃除 → 集計表示
 export async function main(argv: string[]): Promise<void> {
   const sub = subcommandOf(argv);
 
@@ -44,6 +45,8 @@ export async function main(argv: string[]): Promise<void> {
   if (flags.dryRun) {
     process.stdout.write(`\n${dim("Dry run mode - nothing will be deleted")}\n`);
   }
+  // worktree を先に掃除し、生き残った worktree が checkout 中の branch 名を branch 掃除へ引き継ぐ
+  // （使用中の branch を誤って消さないため）
   const wt = await cleanupWorktrees(base, flags);
   const br = await cleanupBranches(base, flags, wt.survivingBranches);
 

@@ -25,19 +25,22 @@ type HarvestContext = {
 
 type Opts = { cwd?: string };
 
+// ローカルブランチの一覧を取り、1 つずつ「守る / 消す」を判定して、消せるものを削除する
 export async function cleanupBranches(
   base: string,
   flags: Flags,
   survivingBranches: Set<string>,
   opts: Opts = {},
 ): Promise<CleanupResult> {
-  // for-each-ref は refs/heads 配下の ref だけを出す: detached のプレースホルダ行が混ざらず、
-  // 同名 tag があっても refname:short のような曖昧性解消名（heads/x）にならない
+  // refs/heads = ローカルブランチの置き場。for-each-ref はその一覧をスクリプト向けに出し、
+  // lstrip=2 で "refs/heads/foo" を "foo" にする。refs/heads 配下だけを出すので
+  // detached のプレースホルダ行が混ざらず、同名 tag があっても曖昧性解消名（heads/x）にならない
   const branchesOut = await gitText(
     ["for-each-ref", "refs/heads", "--format=%(refname:lstrip=2)"],
     opts,
   );
-  // detached HEAD では symbolic-ref が失敗するので ""（どの branch 名とも一致しない）
+  // symbolic-ref --short HEAD = 今 checkout 中のブランチ名。
+  // detached HEAD（ブランチに居ない状態）では失敗するので ""（どの branch 名とも一致しない）
   const currentHead = await gitText(["symbolic-ref", "--short", "HEAD"], opts).catch(() => "");
   const context: HarvestContext = { base, currentHead, flags, opts, survivingBranches };
   const results: ActionResult[] = [];
@@ -68,6 +71,8 @@ export function decideBranch(info: BranchInfo, flags: Flags): CleanupDecisionRes
     : { reason: stage, remove: false };
 }
 
+// branch は作業ディレクトリを持たないので files-changed 段が無い。
+// 未取り込みコミットあり = committed、それ以外（merged / untouched）= merged
 function branchStage(c: Classification): Stage {
   return c === "other" ? "committed" : "merged";
 }
@@ -94,6 +99,7 @@ async function harvestOne(name: string, context: HarvestContext): Promise<Action
   }
 }
 
+// 絶対に消してはいけない branch の判定。該当すれば理由ラベルを返す（どのフラグでも上書き不可）
 function invariantOf(name: string, context: HarvestContext): string | undefined {
   if (name === context.currentHead) {
     return "current HEAD";
@@ -111,7 +117,9 @@ function listLocalBranches(branchesOut: string): string[] {
   return branchesOut.split("\n").filter((name) => name !== "");
 }
 
-// 競合 rescue とエラー整形だけを持つ実行関数
+// 競合 rescue とエラー整形だけを持つ実行関数。
+// branch -D は「base に取り込み済みか」を git 側で確認しない強制削除（-d は未マージを拒否する）。
+// 取り込み済み確認は classifyBranch で済んでいるため -D で良い
 async function removeBranch(name: string, opts: Opts): Promise<ActionResult> {
   const { code, stderr } = await git(["branch", "-D", name], opts);
 

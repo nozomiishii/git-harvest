@@ -36,6 +36,8 @@ type Opts = { cwd?: string };
 // harvestOne の結果に元の record を添えて、生存 worktree の branch 名を後から導出できるようにする
 type WorktreeOutcome = { rec: WtRecord; result: ActionResult };
 
+// worktree = 同じリポジトリの履歴を共有する、もう 1 つの作業ディレクトリ（git worktree add で作る）。
+// 一覧を取り、1 つずつ「守る / 消す」を判定して、消せるものを削除する
 export async function cleanupWorktrees(
   base: string,
   flags: Flags,
@@ -87,6 +89,7 @@ export function decideWorktree(info: WorktreeInfo, flags: Flags): CleanupDecisio
     return { reason: info.invariantReason, remove: false };
   }
 
+  // detached = branch を持たない worktree。消すと commit を指す参照ごと失われ復元できない
   if (!info.hasBranch) {
     return flags.detached ? { remove: true } : { reason: "detached", remove: false };
   }
@@ -104,7 +107,8 @@ export async function listWorktrees(
   opts: Opts = {},
 ): Promise<{ main: undefined | WtRecord; others: WtRecord[] }> {
   const out = await gitText(["worktree", "list", "--porcelain"], opts);
-  // porcelain はエントリごとに空行区切り。各エントリは worktree 行 + 任意の branch / locked 行
+  // --porcelain はスクリプト向けの固定書式。エントリごとに空行区切りで、
+  // 各エントリは worktree 行（パス）+ 任意の branch / locked 行
   const records = out
     .split("\n\n")
     .map((block) => parseWorktreeBlock(block))
@@ -156,19 +160,24 @@ async function harvestOne(rec: WtRecord, context: HarvestContext): Promise<Actio
   }
 }
 
+// 「未コミットの作業があるか」を、変更が置かれうる 3 か所すべてで調べる
 async function hasUncommitted(wt: string): Promise<boolean> {
+  // 編集したがまだ commit していないファイル。HEAD = 最後の commit との差分で見る
   if (!(await gitExitOk(["-C", wt, "diff", "--quiet", "HEAD"]))) {
     return true;
   }
 
+  // git add でステージしたが commit していない変更
   if (!(await gitExitOk(["-C", wt, "diff", "--quiet", "--cached"]))) {
     return true;
   }
+  // まだ一度も git add していない新規ファイル。.gitignore 対象は除く
   const others = await git(["-C", wt, "ls-files", "--others", "--exclude-standard"]);
 
   return others.stdout.trim().length > 0;
 }
 
+// 絶対に消してはいけない worktree の判定。該当すれば理由ラベルを返す（どのフラグでも上書き不可）
 function invariantOf(rec: WtRecord, context: HarvestContext): string | undefined {
   // { main, others } 分割で構造上ここには来ないはずだが、誤削除防止の防御層として残す
   if (rec.canon === context.mainPath) {
@@ -208,7 +217,8 @@ function parseWorktreeBlock(block: string): WtRecord {
   };
 }
 
-// 競合 rescue とエラー整形だけを持つ実行関数
+// 競合 rescue とエラー整形だけを持つ実行関数。
+// git worktree remove は未コミット変更がある worktree を拒否する。--force はその安全確認を飛ばす
 async function removeWorktree(path: string, opts: Opts, force: boolean): Promise<ActionResult> {
   const args = force ? ["worktree", "remove", "--force", path] : ["worktree", "remove", path];
   const { code, stderr } = await git(args, opts);
@@ -221,6 +231,7 @@ async function removeWorktree(path: string, opts: Opts, force: boolean): Promise
   return { action: "failed", error: `exit ${String(code)}: ${stderr.trim()}`, name: path };
 }
 
+// worktree を SAFETY ladder のどの段に置くか。未コミット変更が最優先（消すと復元できないため）
 function worktreeStage(info: WorktreeInfo): Stage {
   if (info.hasUncommittedChanges) {
     return "files-changed";
