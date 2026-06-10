@@ -1,12 +1,28 @@
-import type { Classification, CleanupDecisionResult, CleanupResult, Flags, Stage } from "./types";
+import type {
+  ActionResult,
+  Classification,
+  CleanupDecisionResult,
+  CleanupResult,
+  Flags,
+  Stage,
+} from "./types";
 import { git, gitText } from "./git";
 import { classifyBranch } from "./merge-detect";
 import { atOrSafer } from "./types";
+import { listWorktrees } from "./worktree";
 
 export type BranchInfo = {
   classification: Classification;
   invariantReason: string | undefined;
   name: string;
+};
+
+type HarvestContext = {
+  base: string;
+  checkedOut: Set<string>;
+  currentHead: string;
+  flags: Flags;
+  opts: Opts;
 };
 
 type Opts = { cwd?: string };
@@ -18,57 +34,15 @@ export async function cleanupBranches(
   opts: Opts = {},
 ): Promise<CleanupResult> {
   const branchesOut = await gitText(["branch", "--format=%(refname:short)"], opts);
+  // detached HEAD では symbolic-ref が失敗するので ""（どの branch 名とも一致しない）
   const currentHead = await gitText(["symbolic-ref", "--short", "HEAD"], opts).catch(() => "");
-  const porcelain = await gitText(["worktree", "list", "--porcelain"], opts);
-  const checkedOut = checkedOutBranches(porcelain, survivingPaths);
-  const invariantOf = (name: string): string | undefined => {
-    if (name === currentHead) {
-      return "current HEAD";
-    }
+  const checkedOut = await checkedOutBranches(survivingPaths, opts);
+  const context: HarvestContext = { base, checkedOut, currentHead, flags, opts };
+  const results: ActionResult[] = [];
 
-    if (checkedOut.has(name)) {
-      return "checked out";
-    }
-
-    return undefined;
-  };
-  const results: CleanupResult["results"] = [];
-
-  for (const name of branchesOut
-    .split("\n")
-    .map((b) => b.trim())
-    // detached HEAD では "(HEAD detached at ...)" 行が混ざるので除外
-    .filter((b) => b && !b.startsWith("("))) {
-    if (name === base) {
-      continue;
-    }
-
-    try {
-      const invariantReason = invariantOf(name);
-      const classification = await classifyBranch({ base, branch: name }, opts);
-      const decision = decideBranch({ classification, invariantReason, name }, flags);
-
-      if (!decision.remove) {
-        results.push({ action: "kept", name, reason: decision.reason });
-        continue;
-      }
-
-      if (flags.dryRun) {
-        results.push({ action: "would-remove", name });
-        continue;
-      }
-      const { code, stderr } = await git(["branch", "-D", name], opts);
-
-      // "not found" は別プロセスが先に消した競合なので removed 扱い（エラーは stderr に出る）
-      if (code === 0 || stderr.includes("not found")) {
-        results.push({ action: "removed", name });
-      } else {
-        results.push({ action: "failed", error: `exit ${String(code)}: ${stderr.trim()}`, name });
-      }
-    } catch (error) {
-      // 1 件の throw で全体を止めない（fail-soft）
-      results.push({ action: "failed", error: String(error), name });
-    }
+  // base 自身は掃除対象外（results にも出さない）。並列化しない: 直列 await で順序と index.lock を守る
+  for (const name of listLocalBranches(branchesOut).filter((branchName) => branchName !== base)) {
+    results.push(await harvestOne(name, context));
   }
 
   if (!flags.dryRun) {
@@ -95,19 +69,72 @@ function branchStage(c: Classification): Stage {
   return c === "other" ? "committed" : "merged";
 }
 
-// porcelain の各エントリから、生存 worktree に checkout 中の branch 名を集める
-function checkedOutBranches(porcelain: string, survivingPaths: string[]): Set<string> {
+// 生存 worktree に checkout 中の branch 名を集める
+async function checkedOutBranches(survivingPaths: string[], opts: Opts): Promise<Set<string>> {
+  const { main, others } = await listWorktrees(opts);
+  const surviving = new Set(survivingPaths);
   const checkedOut = new Set<string>();
 
-  for (const block of porcelain.split("\n\n")) {
-    const lines = block.split("\n");
-    const wtPath = lines.find((l) => l.startsWith("worktree "))?.slice(9);
-    const branch = lines.find((l) => l.startsWith("branch "))?.slice("branch refs/heads/".length);
-
-    if (wtPath !== undefined && branch !== undefined && survivingPaths.includes(wtPath)) {
-      checkedOut.add(branch);
+  // branch 掃除は main を含む全 worktree を見る。照合は raw path でなく realpath 済み canon で行う
+  for (const rec of main ? [main, ...others] : others) {
+    if (rec.branch !== undefined && surviving.has(rec.canon)) {
+      checkedOut.add(rec.branch);
     }
   }
 
   return checkedOut;
+}
+
+// 1 branch → 1 結果。fail-soft の catch を内側に持ち、呼び出し側へは throw しない契約
+async function harvestOne(name: string, context: HarvestContext): Promise<ActionResult> {
+  try {
+    const invariantReason = invariantOf(name, context);
+    const classification = await classifyBranch({ base: context.base, branch: name }, context.opts);
+    const decision = decideBranch({ classification, invariantReason, name }, context.flags);
+
+    if (!decision.remove) {
+      return { action: "kept", name, reason: decision.reason };
+    }
+
+    if (context.flags.dryRun) {
+      return { action: "would-remove", name };
+    }
+
+    return await removeBranch(name, context.opts);
+  } catch (error) {
+    // 1 件の throw（壊れた ref 等）で全体を止めない
+    return { action: "failed", error: String(error), name };
+  }
+}
+
+function invariantOf(name: string, context: HarvestContext): string | undefined {
+  if (name === context.currentHead) {
+    return "current HEAD";
+  }
+
+  if (context.checkedOut.has(name)) {
+    return "checked out";
+  }
+
+  return undefined;
+}
+
+// detached HEAD では "(HEAD detached at ...)" 行が混ざるので除外
+function listLocalBranches(branchesOut: string): string[] {
+  return branchesOut
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((name) => name !== "" && !name.startsWith("("));
+}
+
+// 競合 rescue とエラー整形だけを持つ実行関数
+async function removeBranch(name: string, opts: Opts): Promise<ActionResult> {
+  const { code, stderr } = await git(["branch", "-D", name], opts);
+
+  // "not found" は別プロセスが先に消した競合なので removed 扱い（エラーは stderr に出る）
+  if (code === 0 || stderr.includes("not found")) {
+    return { action: "removed", name };
+  }
+
+  return { action: "failed", error: `exit ${String(code)}: ${stderr.trim()}`, name };
 }
