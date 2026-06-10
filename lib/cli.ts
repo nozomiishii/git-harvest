@@ -6,10 +6,8 @@ import { cleanupBranches } from "./branch";
 import { logo } from "./brand";
 import { helpText, parseFlags, subcommandOf, UsageError } from "./flags";
 import { bold, dim, statusLine, summaryLine } from "./format";
-import { gitText, NETWORK_TIMEOUT_MS } from "./git";
+import { resolveBase } from "./resolve-base";
 import { cleanupWorktrees } from "./worktree";
-
-type ResolveOpts = { cwd?: string; offline?: boolean };
 
 export async function main(argv: string[]): Promise<void> {
   const sub = subcommandOf(argv);
@@ -67,33 +65,6 @@ export async function main(argv: string[]): Promise<void> {
   process.exitCode = wt.failures + br.failures > 0 ? 2 : 0;
 }
 
-export async function resolveBase(opts: ResolveOpts = {}): Promise<string | undefined> {
-  const cached = await originHead(opts);
-
-  if (cached) {
-    return cached;
-  }
-
-  if (opts.offline !== true) {
-    // offline でも hook をブロックしないよう、ネットワークを伴う set-head は上限時間で打ち切る
-    await gitText(["remote", "set-head", "origin", "--auto"], {
-      ...opts,
-      timeoutMs: NETWORK_TIMEOUT_MS,
-    }).catch(() => "");
-    const refreshed = await originHead(opts);
-
-    if (refreshed) {
-      return refreshed;
-    }
-  }
-  process.stderr.write(
-    "git-harvest: cannot determine default branch (try: git remote set-head origin <branch>)\n",
-  );
-  process.exitCode = 1;
-
-  return undefined;
-}
-
 // このファイルが node のエントリとして直接実行された時だけ true（import 時は false）
 function isEntrypoint(): boolean {
   const entry = process.argv[1];
@@ -109,13 +80,6 @@ function isEntrypoint(): boolean {
   }
 }
 
-// origin/HEAD が指す default branch 名。未設定なら ""
-async function originHead(opts: ResolveOpts): Promise<string> {
-  return gitText(["symbolic-ref", "refs/remotes/origin/HEAD"], opts)
-    .then(stripOrigin)
-    .catch(() => "");
-}
-
 // UsageError は usage 表示 + exit code 1 に変換する（成功時は Flags、失敗時は undefined）
 function readFlags(argv: string[]): Flags | undefined {
   try {
@@ -127,10 +91,6 @@ function readFlags(argv: string[]): Flags | undefined {
 
     return undefined;
   }
-}
-
-function stripOrigin(ref: string): string {
-  return ref.replace(/^refs\/remotes\/origin\//, "");
 }
 
 if (isEntrypoint()) {

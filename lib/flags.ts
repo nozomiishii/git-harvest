@@ -11,7 +11,11 @@ const STAGE_SCOPES: Record<"committed" | "files-changed", readonly Scope[]> = {
   "files-changed": WORKTREE_SCOPES,
 };
 
-const YOLO_TOKENS = ["--files-changed", "--committed", "--untouched", "--detached"];
+// preset を増やすときはここに 1 entry 足す。applyToken は threshold を下げる・toggle を true に
+// するだけ（単調）なので、preset と単体フラグはどの順で並んでも同じ結果になる
+const PRESETS: Record<string, readonly string[]> = {
+  "--yolo": ["--files-changed", "--committed", "--untouched", "--detached"],
+};
 
 export function defaultFlags(): Flags {
   return {
@@ -66,19 +70,17 @@ Invariants are always protected (no flag or --yolo can override):
 export function parseFlags(argv: string[]): Flags {
   const flags = defaultFlags();
 
-  if (argv.includes("--yolo")) {
-    for (const t of YOLO_TOKENS) {
-      applyToken(flags, t);
-    }
-  }
-
   for (const arg of argv) {
-    if (arg === "--yolo") {
-      continue;
-    }
-
     if (arg === "--dry-run" || arg === "-n") {
       flags.dryRun = true;
+      continue;
+    }
+    const preset = PRESETS[arg];
+
+    if (preset !== undefined) {
+      for (const token of preset) {
+        applyToken(flags, token);
+      }
       continue;
     }
 

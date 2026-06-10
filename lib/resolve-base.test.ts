@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { resolveBase } from "./cli";
+import { resolveBase } from "./resolve-base";
 import { makeRepo } from "./test-helpers";
 
 // origin/HEAD から default branch を解決
