@@ -22,6 +22,25 @@ test("hasRunningClaudeSession detects a session started in a subdirectory", () =
   }
 });
 
+// session ファイル名が pid 形式でなくても、JSON 本文の pid で生存判定できる（命名規則は非公開・無保証）
+test("hasRunningClaudeSession reads the pid from the session JSON body", () => {
+  const sessions = mkdtempSync(path.join(tmpdir(), "gh-sessions-"));
+  const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
+  writeFileSync(
+    path.join(sessions, "session-abc.json"),
+    JSON.stringify({ cwd: wt, pid: process.pid }),
+  );
+  process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR = sessions;
+
+  try {
+    expect(hasRunningClaudeSession(wt)).toBe(true);
+  } finally {
+    delete process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR;
+    rmSync(sessions, { force: true, recursive: true });
+    rmSync(wt, { force: true, recursive: true });
+  }
+});
+
 // 通常 path は worktree（claude-worktree 側は isClaudeWorktree の boundary テストでカバー）
 test("scopeOfPath classifies a normal path as worktree", () => {
   expect(scopeOfPath("/repo/feature-wt")).toBe("worktree");

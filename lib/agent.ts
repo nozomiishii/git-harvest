@@ -42,7 +42,8 @@ function isLiveSessionIn({ file, target }: { file: string; target: string }): bo
   if (!isInside({ child: canonical(session.cwd), parent: target })) {
     return false;
   }
-  const pid = Number(path.basename(file, ".json")); // <pid>.json から pid を取る
+  // pid は JSON 本文を正とし、無ければ <pid>.json 形式のファイル名から取る（命名規則は非公開・無保証）
+  const pid = session.pid ?? Number(path.basename(file, ".json"));
 
   return isProcessAlive(pid);
 }
@@ -64,9 +65,9 @@ function isProcessAlive(pid: number): boolean {
 }
 
 // 壊れた JSON はセッション扱いしない
-function readSession(file: string): undefined | { cwd?: string } {
+function readSession(file: string): undefined | { cwd?: string; pid?: number } {
   try {
-    return JSON.parse(readFileSync(file, "utf8")) as { cwd?: string };
+    return JSON.parse(readFileSync(file, "utf8")) as { cwd?: string; pid?: number };
   } catch {
     return undefined;
   }
