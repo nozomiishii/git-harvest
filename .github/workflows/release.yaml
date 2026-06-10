@@ -154,9 +154,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # publish 時に prepublishOnly（pnpm build）が dist/ を生成するため、別の Build step は不要。
-      # prepare（lefthook install）も devDependencies インストール済みなので publish 時に無害に通る。
-      # tag checkout は detached HEAD で publish-branch チェックに掛かるため --no-git-checks を付ける。
       - name: Publish to npm
         run: pnpm publish --no-git-checks
 
