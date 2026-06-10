@@ -102,15 +102,25 @@ logo                         Show the logo
 
 ### Stages (risky → safe)
 
-git-harvest classifies each worktree / branch by its most at-risk stage.
+The git commit lifecycle, organized as states:
 
 ```
-files-changed   →   committed   →   merged
-uncommitted         committed        merged into base
-unrecoverable       reflog recovery  fully safe
+untouched
+  ↓
+files-changed  →  committed  →  merged
+  ↑
+  └─ editing brings it back to files-changed (from any state)
 ```
 
-A flag lowers the threshold and deletes that stage and everything safer. The default deletes `merged` only — the most conservative choice, safe even in a post-merge hook.
+git-harvest classifies each worktree / branch by its most at-risk stage. A flag lowers the threshold and deletes that stage and everything safer (✓ = deleted):
+
+| stage | risk when deleted | no flag | `--committed` | `--files-changed` |
+| --- | --- | --- | --- | --- |
+| files-changed | unrecoverable once lost | · | · | ✓ |
+| committed | reflog recovery (tedious) | · | ✓ | ✓ |
+| merged | fully safe | ✓ | ✓ | ✓ |
+
+The default deletes `merged` only — the most conservative choice, safe even in a post-merge hook.
 
 For example, `--committed` deletes committed and merged while keeping uncommitted work; `--files-changed` deletes uncommitted work too.
 
@@ -167,6 +177,39 @@ The keep reason is a state label (files-changed / committed / untouched / detach
 - a worktree with a running agent session (`session running`)
 - the current HEAD branch (`current HEAD`)
 - a branch checked out in a surviving worktree (`checked out`)
+
+### Worktree decision flow
+
+The decision tree with no flags (default = every scope thresholded at merged). Flags lower the threshold and flip keep → delete, so each keep node notes which flag would delete it. Invariants are absolute — no flag moves them.
+
+```mermaid
+flowchart TD
+    Start([evaluate worktree]) --> Main{"main / default<br/>worktree?"}
+    Main -->|Yes| KeepMain[keep<br/>not displayed]
+    Main -->|No| Current{"current cwd<br/>worktree?"}
+    Current -->|Yes| KeepCurrent["·  current"]
+    Current -->|No| Base{"base branch<br/>checked out?"}
+    Base -->|Yes| KeepBase["·  base branch"]
+    Base -->|No| Locked{"git worktree<br/>lock?"}
+    Locked -->|Yes| KeepLocked["·  locked"]
+    Locked -->|No| Running{"running<br/>agent session?"}
+    Running -->|Yes| KeepRunning["·  session running"]
+    Running -->|No| Detached{"detached<br/>(no branch)?"}
+    Detached -->|Yes| KeepDetached["·  detached<br/>delete: --detached / --yolo"]
+    Detached -->|No| Untouched{"untouched?<br/>no unique commits + clean"}
+    Untouched -->|Yes| KeepUntouched["·  untouched<br/>delete: --untouched / --yolo"]
+    Untouched -->|No| Files{"uncommitted<br/>changes?"}
+    Files -->|Yes| KeepFiles["·  files-changed<br/>delete: --files-changed / --yolo"]
+    Files -->|No| Merged{"merged?"}
+    Merged -->|No| KeepCommitted["·  committed<br/>delete: --committed / --yolo"]
+    Merged -->|Yes| DeleteMerged["✓  delete<br/>(merged = default)"]
+    classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
+    classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
+    class KeepMain,KeepCurrent,KeepBase,KeepLocked,KeepRunning,KeepDetached,KeepUntouched,KeepFiles,KeepCommitted keep
+    class DeleteMerged delete
+```
+
+Branches follow the same idea — current HEAD → checked out → classification — and by default only branches already in base (in-base) are deleted.
 
 ### Claude Code integration
 

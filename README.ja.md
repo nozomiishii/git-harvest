@@ -102,15 +102,26 @@ logo                         ロゴを表示
 
 ### ステージ (危険 → 安全)
 
-git-harvest は各 worktree / branch を、含まれる「最も危険なステージ」で分類します。
+git の commit ライフサイクルを状態として整理すると:
 
 ```
-files-changed   →   committed   →   merged
-未コミット           コミット済        base に取り込み済
-復旧不可             reflog で復旧可    完全に安全
+未着手 (untouched)
+  ↓
+ファイル変更済  →  commit済  →  merge済
+(files-changed)   (committed)  (merged)
+  ↑
+  └─ 編集すると、どの状態からでも ファイル変更済 へ戻る
 ```
 
-フラグは閾値を下げ、そのステージと「それより安全な全部」を削除します。デフォルトは `merged` のみ削除 — 最も保守的で、post-merge hook でも安全です。
+git-harvest は各 worktree / branch を、含まれる「最も危険なステージ」で分類します。フラグは閾値を下げ、そのステージと「それより安全な全部」を削除します (✓ = 削除対象):
+
+| stage | 削除リスク | フラグなし | `--committed` | `--files-changed` |
+| --- | --- | --- | --- | --- |
+| files-changed | 失えば復旧不可 | · | · | ✓ |
+| committed | reflog で復旧 (面倒) | · | ✓ | ✓ |
+| merged | 完全に安全 | ✓ | ✓ | ✓ |
+
+デフォルトは `merged` のみ削除 — 最も保守的で、post-merge hook でも安全です。
 
 例: `--committed` は committed と merged を削除し、未コミットは守ります。`--files-changed` は未コミット込みで削除します。
 
@@ -167,6 +178,39 @@ Branches
 - 走行中の agent session を持つ worktree (`session running`)
 - 現在 HEAD の branch (`current HEAD`)
 - 生存している worktree が checkout 中の branch (`checked out`)
+
+### worktree の判定フロー
+
+フラグなし (デフォルト = 全 scope の閾値 merged) の判定木です。フラグは閾値を下げて keep → delete を切り替えるので、各 keep ノードに「どのフラグなら消えるか」を併記しています。invariant はフラグでは動かせない絶対保護です。
+
+```mermaid
+flowchart TD
+    Start([evaluate worktree]) --> Main{"main / default<br/>worktree?"}
+    Main -->|Yes| KeepMain[keep<br/>not displayed]
+    Main -->|No| Current{"current cwd<br/>worktree?"}
+    Current -->|Yes| KeepCurrent["·  current"]
+    Current -->|No| Base{"base branch<br/>checked out?"}
+    Base -->|Yes| KeepBase["·  base branch"]
+    Base -->|No| Locked{"git worktree<br/>lock?"}
+    Locked -->|Yes| KeepLocked["·  locked"]
+    Locked -->|No| Running{"running<br/>agent session?"}
+    Running -->|Yes| KeepRunning["·  session running"]
+    Running -->|No| Detached{"detached<br/>(no branch)?"}
+    Detached -->|Yes| KeepDetached["·  detached<br/>delete: --detached / --yolo"]
+    Detached -->|No| Untouched{"untouched?<br/>no unique commits + clean"}
+    Untouched -->|Yes| KeepUntouched["·  untouched<br/>delete: --untouched / --yolo"]
+    Untouched -->|No| Files{"uncommitted<br/>changes?"}
+    Files -->|Yes| KeepFiles["·  files-changed<br/>delete: --files-changed / --yolo"]
+    Files -->|No| Merged{"merged?"}
+    Merged -->|No| KeepCommitted["·  committed<br/>delete: --committed / --yolo"]
+    Merged -->|Yes| DeleteMerged["✓  delete<br/>(merged = default)"]
+    classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
+    classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
+    class KeepMain,KeepCurrent,KeepBase,KeepLocked,KeepRunning,KeepDetached,KeepUntouched,KeepFiles,KeepCommitted keep
+    class DeleteMerged delete
+```
+
+branch 側も同じ考え方で、current HEAD → checked out → 分類の順に判定し、デフォルトでは base に取り込み済み (in-base) のみ削除します。
 
 ### Claude Code 連携
 
