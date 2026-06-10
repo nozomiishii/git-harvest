@@ -90,7 +90,7 @@ npx -y git-harvest@latest
 --files-changed[=<scope>]    Lower the threshold to files-changed (delete uncommitted too; worktree scopes only)
 --untouched                  Also delete untouched worktrees (no work, identical to base)
 --detached                   Also delete detached worktrees (no branch)
-                             WARNING: a detached worktree's commits live only in the reflog and removing it can lose them permanently
+                             WARNING: a detached worktree's commits are unreachable -- removal can lose them permanently (no reflog recovery)
 --yolo                       Preset: --files-changed --committed --untouched --detached (all scopes)
 
 logo                         Show the logo
@@ -133,7 +133,7 @@ Thresholds are kept per scope. `--committed` affects every scope; `--committed=c
 
 An untouched branch is just a ref identical to base, so it is deleted by default — asymmetric with worktrees on purpose (a worktree signals intent to use it; a branch is residue to sweep).
 
-> WARNING: a detached worktree's commits have no branch ref, so removing it leaves them in the reflog only — `git gc` can lose them permanently. Only `--detached` / `--yolo` target them.
+> WARNING: a detached worktree's commits have no branch ref, and removing the worktree deletes its reflog with it — they can be lost permanently (no reflog recovery). Only `--detached` / `--yolo` target them.
 
 ### Status markers
 
@@ -142,17 +142,18 @@ An untouched branch is just a ref identical to base, so it is deleted by default
 | `✓` | deleted |
 | `→` | would delete (dry-run) |
 | `·` | kept (reason on the right) |
+| `✗` | failed to delete |
 
 ```
 Worktrees
   ·  ~/.claude/worktrees/foo        untouched      identical to base, no work
   ·  ~/repo-hotfix                  detached       no branch
   ·  ~/.claude/worktrees/bar        committed      below the threshold (merged), kept
-  ✓  ~/.claude/worktrees/done                      deleted (merged)
+  ✓  ~/.claude/worktrees/done
 
 Branches
   ·  feature/wip                    committed      below the threshold, kept
-  ✓  feature/done                                  deleted (in-base)
+  ✓  feature/done
 ```
 
 The keep reason is a state label (files-changed / committed / untouched / detached) or an invariant reason.
@@ -160,6 +161,7 @@ The keep reason is a state label (files-changed / committed / untouched / detach
 ### Invariants (always protected — no flag or `--yolo` overrides them)
 
 - the main / default worktree
+- the worktree on the base branch (`base branch`)
 - the worktree of the current working directory (`current`)
 - a locked worktree (`git worktree lock`)
 - a worktree with a running agent session (`session running`)
