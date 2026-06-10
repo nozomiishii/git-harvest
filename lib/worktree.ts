@@ -17,7 +17,7 @@ export type WorktreeInfo = {
 
 type Opts = { cwd?: string };
 
-type WtRecord = { branch?: string; locked: boolean; path: string };
+type WtRecord = { branch: string | undefined; locked: boolean; path: string };
 
 export async function cleanupWorktrees(
   base: string,
@@ -28,46 +28,50 @@ export async function cleanupWorktrees(
   const first = records[0];
   const mainPath = first ? canonical(first.path) : "";
   const current = canonical(opts.cwd ?? process.cwd());
+  const invariantOf = (rec: WtRecord, canon: string): string | undefined => {
+    if (canon === mainPath) {
+      return "main";
+    }
+
+    // cwd が worktree 直下でもサブディレクトリでも current 扱い（sep 付き比較で /wt-foo の前方一致誤判定を防ぐ）
+    if ((current + nodePath.sep).startsWith(canon + nodePath.sep)) {
+      return "current";
+    }
+
+    if (rec.branch === base) {
+      return "base branch";
+    }
+
+    if (rec.locked) {
+      return "locked";
+    }
+
+    if (hasRunningClaudeSession(rec.path)) {
+      return "session running";
+    }
+
+    return undefined;
+  };
   const results: CleanupResult["results"] = [];
   // main worktree はループ対象外（slice(1)）だが常に生存するので、checked out 保護のため先に入れる
   const survivingPaths: string[] = mainPath ? [mainPath] : [];
-  let failures = 0;
 
   for (const rec of records.slice(1)) {
     const path = rec.path;
     const canon = canonical(path);
 
     try {
-      let invariantReason: string | undefined;
-
-      if (canon === mainPath) {
-        invariantReason = "main";
-      } else if ((current + nodePath.sep).startsWith(canon + nodePath.sep)) {
-        // cwd が worktree 直下でもサブディレクトリでも current 扱い（sep 付き比較で /wt-foo の前方一致誤判定を防ぐ）
-        invariantReason = "current";
-      } else if (rec.branch === base) {
-        invariantReason = "base branch";
-      } else if (rec.locked) {
-        invariantReason = "locked";
-      } else if (hasRunningClaudeSession(path)) {
-        invariantReason = "session running";
-      }
+      const invariantReason = invariantOf(rec, canon);
       const uncommitted = await hasUncommitted(path);
-      let isUntouched = false;
-      let isMerged = false;
-
-      if (rec.branch !== undefined) {
-        const c = await classifyBranch({ base, branch: rec.branch }, opts);
-        isUntouched = c === "untouched" && !uncommitted;
-        isMerged = c === "merged";
-      }
+      const classification =
+        rec.branch === undefined ? undefined : await classifyBranch({ base, branch: rec.branch }, opts);
       const decision = decideWorktree(
         {
           hasBranch: rec.branch !== undefined,
           hasUncommittedChanges: uncommitted,
           invariantReason,
-          isMerged,
-          isUntouched,
+          isMerged: classification === "merged",
+          isUntouched: classification === "untouched" && !uncommitted,
           path,
         },
         flags,
@@ -94,13 +98,11 @@ export async function cleanupWorktrees(
           error: `exit ${String(code)}: ${stderr.trim()}`,
           name: path,
         });
-        failures += 1;
         survivingPaths.push(canon);
       }
     } catch (error) {
       // 1 件の throw（壊れた ref で classifyBranch が rev-parse 失敗 等）で全体を止めない
       results.push({ action: "failed", error: String(error), name: path });
-      failures += 1;
       survivingPaths.push(canon);
     }
   }
@@ -108,6 +110,7 @@ export async function cleanupWorktrees(
   if (!flags.dryRun) {
     await git(["worktree", "prune"], opts);
   }
+  const failures = results.filter((r) => r.action === "failed").length;
 
   return { failures, results, survivingPaths };
 }
@@ -154,21 +157,20 @@ async function hasUncommitted(wt: string): Promise<boolean> {
 
 async function listWorktrees(opts: Opts): Promise<WtRecord[]> {
   const out = await gitText(["worktree", "list", "--porcelain"], opts);
-  const records: WtRecord[] = [];
-  let cur: undefined | WtRecord;
 
-  for (const line of out.split("\n")) {
-    if (line.startsWith("worktree ")) {
-      cur = { locked: false, path: line.slice(9) };
-      records.push(cur);
-    } else if (cur !== undefined && line.startsWith("branch ")) {
-      cur.branch = line.slice("branch refs/heads/".length);
-    } else if (cur !== undefined && line.startsWith("locked")) {
-      cur.locked = true;
-    }
-  }
+  // porcelain はエントリごとに空行区切り。各エントリは worktree 行 + 任意の branch / locked 行
+  return out
+    .split("\n\n")
+    .map((block) => {
+      const lines = block.split("\n");
 
-  return records;
+      return {
+        branch: lines.find((l) => l.startsWith("branch "))?.slice("branch refs/heads/".length),
+        locked: lines.some((l) => l.startsWith("locked")),
+        path: lines.find((l) => l.startsWith("worktree "))?.slice(9) ?? "",
+      };
+    })
+    .filter((rec) => rec.path !== "");
 }
 
 function worktreeStage(info: WorktreeInfo): Stage {

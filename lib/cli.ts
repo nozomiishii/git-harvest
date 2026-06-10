@@ -31,15 +31,9 @@ export async function main(argv: string[]): Promise<void> {
 
     return;
   }
-  let flags: Flags;
+  const flags = readFlags(argv);
 
-  try {
-    flags = parseFlags(argv);
-  } catch (error) {
-    const message = error instanceof UsageError ? error.message : String(error);
-    process.stderr.write(`git-harvest: ${message}\n\n${helpText()}`);
-    process.exitCode = 1;
-
+  if (flags === undefined) {
     return;
   }
   const base = await resolveBase();
@@ -74,30 +68,29 @@ export async function main(argv: string[]): Promise<void> {
 }
 
 export async function resolveBase(opts: ResolveOpts = {}): Promise<string | undefined> {
-  let base = await gitText(["symbolic-ref", "refs/remotes/origin/HEAD"], opts)
-    .then(stripOrigin)
-    .catch(() => "");
+  const cached = await originHead(opts);
 
-  if (!base && opts.offline !== true) {
+  if (cached) {
+    return cached;
+  }
+
+  if (opts.offline !== true) {
     await gitText(
       ["-c", "http.connectTimeout=3", "remote", "set-head", "origin", "--auto"],
       opts,
     ).catch(() => "");
-    base = await gitText(["symbolic-ref", "refs/remotes/origin/HEAD"], opts)
-      .then(stripOrigin)
-      .catch(() => "");
+    const refreshed = await originHead(opts);
+
+    if (refreshed) {
+      return refreshed;
+    }
   }
+  process.stderr.write(
+    "git-harvest: cannot determine default branch (try: git remote set-head origin <branch>)\n",
+  );
+  process.exitCode = 1;
 
-  if (!base) {
-    process.stderr.write(
-      "git-harvest: cannot determine default branch (try: git remote set-head origin <branch>)\n",
-    );
-    process.exitCode = 1;
-
-    return undefined;
-  }
-
-  return base;
+  return undefined;
 }
 
 // このファイルが node のエントリとして直接実行された時だけ true（import 時は false）
@@ -112,6 +105,26 @@ function isEntrypoint(): boolean {
     return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
   } catch {
     return false;
+  }
+}
+
+// origin/HEAD が指す default branch 名。未設定なら ""
+async function originHead(opts: ResolveOpts): Promise<string> {
+  return gitText(["symbolic-ref", "refs/remotes/origin/HEAD"], opts)
+    .then(stripOrigin)
+    .catch(() => "");
+}
+
+// UsageError は usage 表示 + exit code 1 に変換する（成功時は Flags、失敗時は undefined）
+function readFlags(argv: string[]): Flags | undefined {
+  try {
+    return parseFlags(argv);
+  } catch (error) {
+    const message = error instanceof UsageError ? error.message : String(error);
+    process.stderr.write(`git-harvest: ${message}\n\n${helpText()}`);
+    process.exitCode = 1;
+
+    return undefined;
   }
 }
 

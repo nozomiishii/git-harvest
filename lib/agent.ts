@@ -3,30 +3,16 @@ import { homedir } from "node:os";
 import path from "node:path";
 
 export function hasRunningClaudeSession(worktree: string): boolean {
-  const dir = sessionsDir();
-  let files: string[];
-
-  try {
-    files = readdirSync(dir).filter((f) => f.endsWith(".json"));
-  } catch {
-    return false;
-  }
   const target = canonical(worktree);
 
-  for (const file of files) {
-    let session: { cwd?: string };
-
-    try {
-      session = JSON.parse(readFileSync(path.join(dir, file), "utf8")) as { cwd?: string };
-    } catch {
-      continue;
-    }
+  for (const file of sessionFiles(sessionsDir())) {
+    const session = readSession(file);
 
     // session が worktree のサブディレクトリで起動されていても検出する（sep 付き比較で前方一致誤判定を防ぐ）
-    if (!session.cwd || !(canonical(session.cwd) + path.sep).startsWith(target + path.sep)) {
+    if (!session?.cwd || !(canonical(session.cwd) + path.sep).startsWith(target + path.sep)) {
       continue;
     }
-    const pid = Number(file.replace(/\.json$/, "")); // <pid>.json から pid を取る
+    const pid = Number(path.basename(file, ".json")); // <pid>.json から pid を取る
 
     if (!pid) {
       continue;
@@ -58,6 +44,26 @@ function canonical(target: string): string {
     return realpathSync(target);
   } catch {
     return target;
+  }
+}
+
+// 壊れた JSON はセッション扱いしない
+function readSession(file: string): undefined | { cwd?: string } {
+  try {
+    return JSON.parse(readFileSync(file, "utf8")) as { cwd?: string };
+  } catch {
+    return undefined;
+  }
+}
+
+// sessions dir が無い環境（Claude 未使用 等）は空扱い
+function sessionFiles(dir: string): string[] {
+  try {
+    return readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => path.join(dir, f));
+  } catch {
+    return [];
   }
 }
 

@@ -19,19 +19,20 @@ export async function cleanupBranches(
 ): Promise<CleanupResult> {
   const branchesOut = await gitText(["branch", "--format=%(refname:short)"], opts);
   const currentHead = await gitText(["symbolic-ref", "--short", "HEAD"], opts).catch(() => "");
-  const checkedOut = new Set<string>();
   const porcelain = await gitText(["worktree", "list", "--porcelain"], opts);
-  let curPath = "";
-
-  for (const line of porcelain.split("\n")) {
-    if (line.startsWith("worktree ")) {
-      curPath = line.slice(9);
-    } else if (line.startsWith("branch ") && survivingPaths.includes(curPath)) {
-      checkedOut.add(line.slice("branch refs/heads/".length));
+  const checkedOut = checkedOutBranches(porcelain, survivingPaths);
+  const invariantOf = (name: string): string | undefined => {
+    if (name === currentHead) {
+      return "current HEAD";
     }
-  }
+
+    if (checkedOut.has(name)) {
+      return "checked out";
+    }
+
+    return undefined;
+  };
   const results: CleanupResult["results"] = [];
-  let failures = 0;
 
   for (const name of branchesOut
     .split("\n")
@@ -43,13 +44,7 @@ export async function cleanupBranches(
     }
 
     try {
-      let invariantReason: string | undefined;
-
-      if (name === currentHead) {
-        invariantReason = "current HEAD";
-      } else if (checkedOut.has(name)) {
-        invariantReason = "checked out";
-      }
+      const invariantReason = invariantOf(name);
       const classification = await classifyBranch({ base, branch: name }, opts);
       const decision = decideBranch({ classification, invariantReason, name }, flags);
 
@@ -69,12 +64,10 @@ export async function cleanupBranches(
         results.push({ action: "removed", name });
       } else {
         results.push({ action: "failed", error: `exit ${String(code)}: ${stderr.trim()}`, name });
-        failures += 1;
       }
     } catch (error) {
       // 1 件の throw で全体を止めない（fail-soft）
       results.push({ action: "failed", error: String(error), name });
-      failures += 1;
     }
   }
 
@@ -82,6 +75,7 @@ export async function cleanupBranches(
     // リモートで削除済みの追跡ブランチ (origin/*) を整理。offline 等の失敗は無視（git は throw しない）
     await git(["fetch", "--prune"], opts);
   }
+  const failures = results.filter((r) => r.action === "failed").length;
 
   return { failures, results, survivingPaths };
 }
@@ -99,4 +93,21 @@ export function decideBranch(info: BranchInfo, flags: Flags): CleanupDecisionRes
 
 function branchStage(c: Classification): Stage {
   return c === "other" ? "committed" : "merged";
+}
+
+// porcelain の各エントリから、生存 worktree に checkout 中の branch 名を集める
+function checkedOutBranches(porcelain: string, survivingPaths: string[]): Set<string> {
+  const checkedOut = new Set<string>();
+
+  for (const block of porcelain.split("\n\n")) {
+    const lines = block.split("\n");
+    const wtPath = lines.find((l) => l.startsWith("worktree "))?.slice(9);
+    const branch = lines.find((l) => l.startsWith("branch "))?.slice("branch refs/heads/".length);
+
+    if (wtPath !== undefined && branch !== undefined && survivingPaths.includes(wtPath)) {
+      checkedOut.add(branch);
+    }
+  }
+
+  return checkedOut;
 }
