@@ -105,6 +105,62 @@ test("cleanupWorktrees removes a merged linked worktree by default", async () =>
   expect(result.results.some((r) => r.action === "removed" && r.name === canonWt)).toBe(true);
 });
 
+// ディレクトリが消えた prunable worktree は表示にも生存にも含めず、その branch を同じ実行で回収可能にする
+test("cleanupWorktrees skips a worktree whose directory was deleted", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+  rmSync(wtPath, { force: true, recursive: true });
+
+  const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+
+  expect(result.results).toStrictEqual([]);
+  expect(result.survivingBranches.has("done")).toBe(false);
+});
+
+// clean でも submodule を含む worktree は git の最終検証（非 force）が拒否し、failed で残る（誤削除防止）
+test("cleanupWorktrees refuses to remove a clean worktree containing a submodule", async () => {
+  await using repo = await makeRepo();
+  const subPath = `${repo.dir}-sub`;
+  mkdirSync(subPath);
+  await repo.git("-C", subPath, "init", "-b", "main");
+  await repo.git("-C", subPath, "config", "user.email", "test@example.com");
+  await repo.git("-C", subPath, "config", "user.name", "Test");
+  await repo.git("-C", subPath, "commit", "--allow-empty", "-m", "sub init");
+  await repo.git("switch", "-c", "done");
+  await repo.git("switch", "main");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+
+  try {
+    await repo.git(
+      "-C",
+      wtPath,
+      "-c",
+      "protocol.file.allow=always",
+      "submodule",
+      "add",
+      subPath,
+      "mysub",
+    );
+    await repo.git("-C", wtPath, "commit", "-m", "add submodule");
+    await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+
+    const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+
+    expect(
+      result.results.some((r) => r.action === "failed" && r.name === realpathSync(wtPath)),
+    ).toBe(true);
+  } finally {
+    rmSync(wtPath, { force: true, recursive: true });
+    rmSync(subPath, { force: true, recursive: true });
+  }
+});
+
 // 生存 worktree（main + kept）の branch 名を返す。削除された worktree の branch は含まない
 test("cleanupWorktrees reports the branches of surviving worktrees", async () => {
   await using repo = await makeRepo();

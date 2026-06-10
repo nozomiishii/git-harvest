@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import nodePath from "node:path";
 import type {
   ActionResult,
@@ -49,6 +49,11 @@ export async function cleanupWorktrees(
 
   // 並列化しない: git の index.lock 競合と results の順序を守るため直列 await
   for (const rec of others) {
+    // ディレクトリごと消された prunable worktree は prune に任せ、表示にも生存にも含めない
+    // （含めると存在しない dir への git -C が失敗し「files-changed で kept」と虚偽表示になる）
+    if (!existsSync(rec.path)) {
+      continue;
+    }
     outcomes.push({ rec, result: await harvestOne(rec, context) });
   }
 
@@ -148,7 +153,9 @@ async function harvestOne(rec: WtRecord, context: HarvestContext): Promise<Actio
       return { action: "would-remove", name: rec.path };
     }
 
-    return await removeWorktree(rec.path, context.opts);
+    // 未コミットを承知で消す（--files-changed 到達）時だけ --force。
+    // それ以外は git の最終検証に任せる（probe 後の変化や submodule 内の未 push commit を git が拒否してくれる）
+    return await removeWorktree(rec.path, context.opts, hasUncommittedChanges);
   } catch (error) {
     // 1 件の throw（壊れた ref で classifyBranch が rev-parse 失敗 等）で全体を止めない
     return { action: "failed", error: String(error), name: rec.path };
@@ -208,8 +215,9 @@ function parseWorktreeBlock(block: string): WtRecord {
 }
 
 // 競合 rescue とエラー整形だけを持つ実行関数
-async function removeWorktree(path: string, opts: Opts): Promise<ActionResult> {
-  const { code, stderr } = await git(["worktree", "remove", "--force", path], opts);
+async function removeWorktree(path: string, opts: Opts, force: boolean): Promise<ActionResult> {
+  const args = force ? ["worktree", "remove", "--force", path] : ["worktree", "remove", path];
+  const { code, stderr } = await git(args, opts);
 
   // "is not a working tree" は別プロセスが先に消した競合なので removed 扱い（エラーは stderr に出る）
   if (code === 0 || stderr.includes("is not a working tree")) {
