@@ -1,10 +1,10 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { Parsed } from "./flags";
+import type { Flags } from "./types";
 import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch";
 import { logo } from "./brand";
-import { helpText, parseArgs, UsageError } from "./flags";
+import { helpText, parseFlags, subcommandOf, UsageError } from "./flags";
 import { bold, dim, statusLine, summaryLine, useColor } from "./format";
 import { gitText } from "./git";
 import { cleanupWorktrees } from "./worktree";
@@ -12,32 +12,33 @@ import { cleanupWorktrees } from "./worktree";
 type ResolveOpts = { cwd?: string; offline?: boolean };
 
 export async function main(argv: string[]): Promise<void> {
-  let parsed: Parsed;
+  const sub = subcommandOf(argv);
 
-  try {
-    parsed = parseArgs(argv);
-  } catch (error) {
-    const message = error instanceof UsageError ? error.message : String(error);
-    process.stderr.write(`git-harvest: ${message}\n\n${helpText()}`);
-    process.exitCode = 1;
-
-    return;
-  }
-
-  if (parsed.mode === "help") {
+  if (sub === "help") {
     process.stdout.write(helpText());
 
     return;
   }
 
-  if (parsed.mode === "version") {
+  if (sub === "version") {
     process.stdout.write(`git-harvest v${pkg.version}\n`);
 
     return;
   }
 
-  if (parsed.mode === "logo") {
+  if (sub === "logo") {
     process.stdout.write(`${logo()}\n`);
+
+    return;
+  }
+  let flags: Flags;
+
+  try {
+    flags = parseFlags(argv);
+  } catch (error) {
+    const message = error instanceof UsageError ? error.message : String(error);
+    process.stderr.write(`git-harvest: ${message}\n\n${helpText()}`);
+    process.exitCode = 1;
 
     return;
   }
@@ -48,11 +49,11 @@ export async function main(argv: string[]): Promise<void> {
   }
   process.stdout.write(`\n${bold("git harvest", useColor())}\n`);
 
-  if (parsed.flags.dryRun) {
+  if (flags.dryRun) {
     process.stdout.write(`\n${dim("Dry run mode - nothing will be deleted")}\n`);
   }
-  const wt = await cleanupWorktrees(base, parsed.flags);
-  const br = await cleanupBranches(base, parsed.flags, wt.survivingPaths);
+  const wt = await cleanupWorktrees(base, flags);
+  const br = await cleanupBranches(base, flags, wt.survivingPaths);
 
   if (wt.results.length > 0) {
     process.stdout.write(
@@ -68,7 +69,7 @@ export async function main(argv: string[]): Promise<void> {
   const n = [...wt.results, ...br.results].filter(
     (r) => r.action === "removed" || r.action === "would-remove",
   ).length;
-  process.stdout.write(`\n${summaryLine(n, parsed.flags.dryRun)}\n\n`);
+  process.stdout.write(`\n${summaryLine(n, flags.dryRun)}\n\n`);
   process.exitCode = wt.failures + br.failures > 0 ? 2 : 0;
 }
 

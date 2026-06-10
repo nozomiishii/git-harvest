@@ -2,7 +2,7 @@ import { mkdirSync, realpathSync, rmSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { defaultFlags } from "./flags";
-import { makeRepo } from "./test-helpers";
+import { assertKept, makeRepo } from "./test-helpers";
 import { cleanupWorktrees, decideWorktree, type WorktreeInfo } from "./worktree";
 
 function wt(over: Partial<WorktreeInfo>): WorktreeInfo {
@@ -32,9 +32,7 @@ test("decideWorktree keeps an invariant worktree even under yolo and surfaces th
 
   const result = decideWorktree(wt({ invariantReason: "locked" }), yolo);
 
-  if (result.remove) {
-    throw new Error("expected kept");
-  }
+  assertKept(result);
 
   expect(result.reason).toBe("locked");
 });

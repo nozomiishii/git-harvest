@@ -2,7 +2,7 @@ import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
 import { type BranchInfo, cleanupBranches, decideBranch } from "./branch";
 import { defaultFlags } from "./flags";
-import { makeRepo } from "./test-helpers";
+import { assertKept, makeRepo } from "./test-helpers";
 import { cleanupWorktrees } from "./worktree";
 
 function br(over: Partial<BranchInfo>): BranchInfo {
@@ -13,9 +13,7 @@ function br(over: Partial<BranchInfo>): BranchInfo {
 test("decideBranch keeps an invariant branch and surfaces its reason", () => {
   const result = decideBranch(br({ invariantReason: "current HEAD" }), defaultFlags());
 
-  if (result.remove) {
-    throw new Error("expected kept");
-  }
+  assertKept(result);
 
   expect(result.reason).toBe("current HEAD");
 });

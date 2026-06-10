@@ -18,11 +18,4 @@ export default defineConfig([
     },
   },
 
-  {
-    files: ["**/*.test.ts"],
-    rules: {
-      // discriminated union を if で絞る型ナローイングガードを許可（テスト分岐ではない）
-      "vitest/no-conditional-in-test": "off",
-    },
-  },
 ]);

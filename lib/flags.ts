@@ -1,11 +1,8 @@
 import type { Flags, Scope, Stage } from "./types";
 import { SAFETY, SCOPES, WORKTREE_SCOPES } from "./types";
 
-export type Parsed =
-  | { flags: Flags; mode: "run" }
-  | { mode: "help" }
-  | { mode: "logo" }
-  | { mode: "version" };
+// 掃除を実行しない脱出口。argv のどこにあってもフラグより優先される
+export type Subcommand = "help" | "logo" | "version";
 
 export class UsageError extends Error {}
 
@@ -66,20 +63,7 @@ Invariants are always protected (no flag or --yolo can override):
 `;
 }
 
-export function parseArgs(argv: string[]): Parsed {
-  for (const arg of argv) {
-    if (arg === "logo") {
-      return { mode: "logo" };
-    }
-
-    if (arg === "-h" || arg === "--help") {
-      return { mode: "help" };
-    }
-
-    if (arg === "-v" || arg === "--version") {
-      return { mode: "version" };
-    }
-  }
+export function parseFlags(argv: string[]): Flags {
   const flags = defaultFlags();
 
   if (argv.includes("--yolo")) {
@@ -105,7 +89,25 @@ export function parseArgs(argv: string[]): Parsed {
     throw new UsageError(`unknown option: ${arg}`);
   }
 
-  return { flags, mode: "run" };
+  return flags;
+}
+
+export function subcommandOf(argv: string[]): Subcommand | undefined {
+  for (const arg of argv) {
+    if (arg === "logo") {
+      return "logo";
+    }
+
+    if (arg === "-h" || arg === "--help") {
+      return "help";
+    }
+
+    if (arg === "-v" || arg === "--version") {
+      return "version";
+    }
+  }
+
+  return undefined;
 }
 
 function applyStage(
