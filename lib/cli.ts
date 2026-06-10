@@ -75,10 +75,10 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
   }
 
   if (opts.offline !== true) {
-    await gitText(
-      ["-c", "http.connectTimeout=3", "remote", "set-head", "origin", "--auto"],
-      opts,
-    ).catch(() => "");
+    // offline でも hook をブロックしないよう、ネットワークを伴う set-head は 3 秒で打ち切る
+    await gitText(["remote", "set-head", "origin", "--auto"], { ...opts, timeoutMs: 3000 }).catch(
+      () => "",
+    );
     const refreshed = await originHead(opts);
 
     if (refreshed) {
@@ -133,5 +133,11 @@ function stripOrigin(ref: string): string {
 }
 
 if (isEntrypoint()) {
-  await main(process.argv.slice(2));
+  try {
+    await main(process.argv.slice(2));
+  } catch (error) {
+    // 予期しない throw（一覧取得の git 失敗 等）は生スタックでなく整形メッセージ + 実行時失敗の exit 2 にする
+    process.stderr.write(`git-harvest: ${String(error)}\n`);
+    process.exitCode = 2;
+  }
 }
