@@ -6,6 +6,8 @@ type Opts = { cwd?: string };
 // base と branch は同型 string なのでオブジェクトで受けて取り違えを防ぐ
 type Refs = { base: string; branch: string };
 
+// 不変条件: 段1〜3 は「git 失敗 = この段では判定できない」として false で次段へ落ち、
+// 最終段 hasUniqueCommits だけが fail-closed で keep 側に倒す（段を増やす時はこの性質を守ること）
 export async function classifyBranch(refs: Refs, opts: Opts = {}): Promise<Classification> {
   // 段1: base の first-parent 履歴上にあれば独自コミット無し
   if (await isInFirstParentHistory(refs, opts)) {

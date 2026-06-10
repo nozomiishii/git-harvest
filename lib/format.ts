@@ -1,3 +1,4 @@
+import { homedir } from "node:os";
 import type { ActionResult } from "./types";
 
 const BRAND = "192;255;57";
@@ -15,7 +16,7 @@ export function hi(s: string, color = useColor()): string {
 }
 
 export function relpath(p: string): string {
-  const home = process.env.HOME;
+  const home = homedir();
 
   if (!home) {
     return p;
@@ -43,7 +44,7 @@ export function statusLine(result: ActionResult, color = useColor()): string {
       const pad = Math.max(2, 38 - name.length);
       const line = `  ·  ${name}${" ".repeat(pad)}${result.reason}`;
 
-      return color ? `[2m${line}[0m` : line;
+      return dim(line, color);
     }
     case "removed": {
       return `  ${hi("✓", color)}  ${name}`;

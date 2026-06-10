@@ -1,11 +1,10 @@
+import { homedir } from "node:os";
 import { expect, test } from "vitest";
 import { relpath, statusLine, summaryLine } from "./format";
 
 // home dir は ~ に短縮
 test("relpath shortens the home directory to a tilde", () => {
-  const home = process.env.HOME ?? "";
-
-  expect(relpath(`${home}/repo/x`)).toBe("~/repo/x");
+  expect(relpath(`${homedir()}/repo/x`)).toBe("~/repo/x");
 });
 
 // dry-run の合計行は「Harvested」と断言せず「Would harvest」にする（旧 bash の挙動）

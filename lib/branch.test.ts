@@ -6,7 +6,7 @@ import { assertKept, makeRepo } from "./test-helpers";
 import { cleanupWorktrees } from "./worktree";
 
 function br(over: Partial<BranchInfo>): BranchInfo {
-  return { classification: "other", invariantReason: undefined, name: "feature", ...over };
+  return { classification: "other", invariantReason: undefined, ...over };
 }
 
 // invariant branch は理由をそのまま reason に返す

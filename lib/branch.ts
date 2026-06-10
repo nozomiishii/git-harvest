@@ -6,14 +6,13 @@ import type {
   Flags,
   Stage,
 } from "./types";
-import { git, gitText } from "./git";
+import { git, gitText, NETWORK_TIMEOUT_MS } from "./git";
 import { classifyBranch } from "./merge-detect";
 import { atOrSafer } from "./types";
 
 export type BranchInfo = {
   classification: Classification;
   invariantReason: string | undefined;
-  name: string;
 };
 
 type HarvestContext = {
@@ -50,8 +49,8 @@ export async function cleanupBranches(
 
   if (!flags.dryRun) {
     // リモートで削除済みの追跡ブランチ (origin/*) を整理。fetch と違いオブジェクト転送をしない。
-    // offline 等の失敗は無視（git は throw しない）し、hook をブロックしないよう 5 秒で打ち切る
-    await git(["remote", "prune", "origin"], { ...opts, timeoutMs: 5000 });
+    // offline 等の失敗は無視（git は throw しない）し、hook をブロックしないよう上限時間で打ち切る
+    await git(["remote", "prune", "origin"], { ...opts, timeoutMs: NETWORK_TIMEOUT_MS });
   }
   const failures = results.filter((r) => r.action === "failed").length;
 
@@ -78,7 +77,7 @@ async function harvestOne(name: string, context: HarvestContext): Promise<Action
   try {
     const invariantReason = invariantOf(name, context);
     const classification = await classifyBranch({ base: context.base, branch: name }, context.opts);
-    const decision = decideBranch({ classification, invariantReason, name }, context.flags);
+    const decision = decideBranch({ classification, invariantReason }, context.flags);
 
     if (!decision.remove) {
       return { action: "kept", name, reason: decision.reason };
@@ -107,11 +106,9 @@ function invariantOf(name: string, context: HarvestContext): string | undefined 
   return undefined;
 }
 
+// 空リポジトリでは出力が空文字になり split が [""] を返すため除外する
 function listLocalBranches(branchesOut: string): string[] {
-  return branchesOut
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((name) => name !== "");
+  return branchesOut.split("\n").filter((name) => name !== "");
 }
 
 // 競合 rescue とエラー整形だけを持つ実行関数

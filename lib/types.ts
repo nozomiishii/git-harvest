@@ -2,11 +2,10 @@ export type Stage = "committed" | "files-changed" | "merged";
 
 export const SAFETY: readonly Stage[] = ["files-changed", "committed", "merged"];
 
-export const SCOPES = ["worktree", "claude-worktree", "branch"] as const;
-
-export type Scope = (typeof SCOPES)[number];
-
 export const WORKTREE_SCOPES = ["worktree", "claude-worktree"] as const;
+
+// scope の一覧は 1 箇所だけにする（worktree 系 + branch から導出）
+export const SCOPES = [...WORKTREE_SCOPES, "branch"] as const;
 
 export type ActionResult =
   | { action: "failed"; error: string; name: string }
@@ -28,6 +27,8 @@ export type Flags = {
   thresholds: Record<Scope, Stage>;
   untouched: boolean;
 };
+
+export type Scope = (typeof SCOPES)[number];
 
 // worktree 掃除が branch 掃除へ引き継ぐ情報: 生存 worktree（main + kept + failed）が checkout 中の branch 名
 export type WorktreeCleanupResult = CleanupResult & { survivingBranches: Set<string> };

@@ -5,8 +5,8 @@ import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch";
 import { logo } from "./brand";
 import { helpText, parseFlags, subcommandOf, UsageError } from "./flags";
-import { bold, dim, statusLine, summaryLine, useColor } from "./format";
-import { gitText } from "./git";
+import { bold, dim, statusLine, summaryLine } from "./format";
+import { gitText, NETWORK_TIMEOUT_MS } from "./git";
 import { cleanupWorktrees } from "./worktree";
 
 type ResolveOpts = { cwd?: string; offline?: boolean };
@@ -41,7 +41,7 @@ export async function main(argv: string[]): Promise<void> {
   if (base === undefined) {
     return;
   }
-  process.stdout.write(`\n${bold("git harvest", useColor())}\n`);
+  process.stdout.write(`\n${bold("git harvest")}\n`);
 
   if (flags.dryRun) {
     process.stdout.write(`\n${dim("Dry run mode - nothing will be deleted")}\n`);
@@ -75,10 +75,11 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
   }
 
   if (opts.offline !== true) {
-    // offline でも hook をブロックしないよう、ネットワークを伴う set-head は 3 秒で打ち切る
-    await gitText(["remote", "set-head", "origin", "--auto"], { ...opts, timeoutMs: 3000 }).catch(
-      () => "",
-    );
+    // offline でも hook をブロックしないよう、ネットワークを伴う set-head は上限時間で打ち切る
+    await gitText(["remote", "set-head", "origin", "--auto"], {
+      ...opts,
+      timeoutMs: NETWORK_TIMEOUT_MS,
+    }).catch(() => "");
     const refreshed = await originHead(opts);
 
     if (refreshed) {

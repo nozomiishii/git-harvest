@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, realpathSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { canonical, isInside } from "./path";
 
 export function hasRunningClaudeSession(worktree: string): boolean {
   const target = canonical(worktree);
@@ -14,19 +15,6 @@ export function isClaudeWorktree(candidate: string): boolean {
 
 export function scopeOfPath(candidate: string): "claude-worktree" | "worktree" {
   return isClaudeWorktree(candidate) ? "claude-worktree" : "worktree";
-}
-
-function canonical(target: string): string {
-  try {
-    return realpathSync(target);
-  } catch {
-    return target;
-  }
-}
-
-// child が parent 配下（parent 自身を含む）か。sep 付き比較で /wt-foo の前方一致誤判定を防ぐ
-function isInside({ child, parent }: { child: string; parent: string }): boolean {
-  return (child + path.sep).startsWith(parent + path.sep);
 }
 
 // 1 つの session ファイルが「target worktree（サブディレクトリ含む）で生きている session」か

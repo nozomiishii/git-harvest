@@ -3,11 +3,15 @@ import { env } from "node:process";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
-type Opts = { cwd?: string; timeoutMs?: number };
+
+// ネットワークを伴う git コマンド（set-head / remote prune）の上限時間。hook をブロックさせないための値
+export const NETWORK_TIMEOUT_MS = 5000;
+
+export type GitOpts = { cwd?: string; timeoutMs?: number };
 
 export async function git(
   args: string[],
-  opts: Opts = {},
+  opts: GitOpts = {},
 ): Promise<{ code: number; stderr: string; stdout: string }> {
   try {
     const { stderr, stdout } = await exec("git", args, {
@@ -32,13 +36,13 @@ export async function git(
   }
 }
 
-export async function gitExitOk(args: string[], opts: Opts = {}): Promise<boolean> {
+export async function gitExitOk(args: string[], opts: GitOpts = {}): Promise<boolean> {
   const result = await git(args, opts);
 
   return result.code === 0;
 }
 
-export async function gitText(args: string[], opts: Opts = {}): Promise<string> {
+export async function gitText(args: string[], opts: GitOpts = {}): Promise<string> {
   const { code, stdout } = await git(args, opts);
 
   if (code !== 0) {

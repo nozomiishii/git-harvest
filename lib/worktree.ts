@@ -1,5 +1,4 @@
-import { existsSync, realpathSync } from "node:fs";
-import nodePath from "node:path";
+import { existsSync } from "node:fs";
 import type {
   ActionResult,
   CleanupDecisionResult,
@@ -10,6 +9,7 @@ import type {
 import { hasRunningClaudeSession, scopeOfPath } from "./agent";
 import { git, gitExitOk, gitText } from "./git";
 import { classifyBranch } from "./merge-detect";
+import { canonical, isInside } from "./path";
 import { atOrSafer } from "./types";
 
 export type WorktreeInfo = {
@@ -115,20 +115,14 @@ export async function listWorktrees(
   return { main, others };
 }
 
-function canonical(p: string): string {
-  try {
-    return realpathSync(p);
-  } catch {
-    return p;
-  }
-}
-
 // 1 worktree → 1 結果。fail-soft の catch を内側に持ち、呼び出し側へは throw しない契約
 async function harvestOne(rec: WtRecord, context: HarvestContext): Promise<ActionResult> {
   try {
     const invariantReason = invariantOf(rec, context);
-    // invariant があっても無条件に収集する: 壊れた ref はここで throw → failed になり exit code を保つ
-    const hasUncommittedChanges = await hasUncommitted(rec.path);
+    // invariant 確定時は decide が値を読まないので probe（git 3 連発）を省略する。
+    // hasUncommitted は throw しないため exit code にも影響しない（classifyBranch の throw → failed は維持）
+    const hasUncommittedChanges =
+      invariantReason === undefined ? await hasUncommitted(rec.path) : false;
     const classification =
       rec.branch === undefined
         ? undefined
@@ -181,8 +175,8 @@ function invariantOf(rec: WtRecord, context: HarvestContext): string | undefined
     return "main";
   }
 
-  // cwd が worktree 直下でもサブディレクトリでも current 扱い（sep 付き比較で /wt-foo の前方一致誤判定を防ぐ）
-  if ((context.current + nodePath.sep).startsWith(rec.canon + nodePath.sep)) {
+  // cwd が worktree 直下でもサブディレクトリでも current 扱い
+  if (isInside({ child: context.current, parent: rec.canon })) {
     return "current";
   }
 
