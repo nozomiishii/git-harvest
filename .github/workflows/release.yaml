@@ -160,7 +160,6 @@ jobs:
       - name: Publish to npm
         run: pnpm publish --no-git-checks
 
-  # publish 後に次の release PR を作成/更新（npm publish 失敗時は止めて、Re-run failed jobs で復旧できるようにする）
   release-pr:
     needs: [create-draft-release, npm-publish, publish-release]
     if: ${{ always() && !cancelled() && needs.npm-publish.result != 'failure' && needs.publish-release.result != 'failure' }}
