@@ -44,5 +44,10 @@ export async function classifyBranch(
   );
   const unique = uniqueResult.stdout;
 
+  // git 失敗時は stdout が空でも merged に倒さず keep 側に倒す（fail-closed）
+  if (uniqueResult.code !== 0) {
+    return "other";
+  }
+
   return unique.trim() ? "other" : "merged";
 }

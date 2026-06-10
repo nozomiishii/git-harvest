@@ -1,4 +1,5 @@
-import { realpathSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync } from "node:fs";
+import path from "node:path";
 import { expect, test } from "vitest";
 import { defaultFlags } from "./flags";
 import { makeRepo } from "./test-helpers";
@@ -16,8 +17,8 @@ function wt(over: Partial<WorktreeInfo>): WorktreeInfo {
   };
 }
 
-// invariant は yolo でも保護
-test("decideWorktree keeps an invariant worktree even under yolo", () => {
+// invariant は yolo でも保護し、generic な protected でなく「残した理由」をそのまま reason に返す
+test("decideWorktree keeps an invariant worktree even under yolo and surfaces the reason", () => {
   const yolo = {
     detached: true,
     dryRun: false,
@@ -29,18 +30,13 @@ test("decideWorktree keeps an invariant worktree even under yolo", () => {
     untouched: true,
   } as const;
 
-  expect(decideWorktree(wt({ invariantReason: "locked" }), yolo).remove).toBe(false);
-});
-
-// invariant は generic な protected でなく「残した理由」をそのまま reason に返す
-test("decideWorktree surfaces the invariant reason instead of a generic label", () => {
-  const result = decideWorktree(wt({ invariantReason: "session running" }), defaultFlags());
+  const result = decideWorktree(wt({ invariantReason: "locked" }), yolo);
 
   if (result.remove) {
     throw new Error("expected kept");
   }
 
-  expect(result.reason).toBe("session running");
+  expect(result.reason).toBe("locked");
 });
 
 // merged は default で削除
@@ -109,4 +105,25 @@ test("cleanupWorktrees removes a merged linked worktree by default", async () =>
   const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
 
   expect(result.results.some((r) => r.action === "removed" && r.name === canonWt)).toBe(true);
+});
+
+// cwd が worktree のサブディレクトリでも current invariant で保護（post-merge hook はサブディレクトリで動く）
+test("cleanupWorktrees keeps the worktree containing cwd even from a subdirectory", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+  const sub = path.join(wtPath, "sub");
+  mkdirSync(sub);
+
+  try {
+    const result = await cleanupWorktrees("main", defaultFlags(), { cwd: sub });
+
+    expect(result.results.some((r) => r.action === "kept" && r.reason === "current")).toBe(true);
+  } finally {
+    rmSync(wtPath, { force: true, recursive: true });
+  }
 });

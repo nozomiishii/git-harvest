@@ -48,16 +48,13 @@ test("classifyBranch returns merged for a squash-merged branch", async () => {
   );
 });
 
-// cherry-pick: patch-id 一致で merged（段4）
-test("classifyBranch returns merged for a cherry-picked branch", async () => {
+// git が失敗して判定不能なら merged に倒さず other（keep）に倒す
+test("classifyBranch fails closed when the base cannot be resolved", async () => {
   await using repo = await makeRepo();
-  await repo.git("switch", "-c", "picked");
-  await repo.commitFile("b.txt", "world", "add b");
-  const sha = await repo.git("rev-parse", "HEAD");
-  await repo.git("switch", "main");
-  await repo.git("cherry-pick", sha);
+  await repo.git("switch", "-c", "wip");
+  await repo.commit("unmerged work");
 
-  expect(await classifyBranch({ base: "main", branch: "picked" }, { cwd: repo.dir })).toBe(
-    "merged",
+  expect(await classifyBranch({ base: "missing-base", branch: "wip" }, { cwd: repo.dir })).toBe(
+    "other",
   );
 });

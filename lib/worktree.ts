@@ -1,4 +1,5 @@
 import { realpathSync } from "node:fs";
+import nodePath from "node:path";
 import type { CleanupDecisionResult, CleanupResult, Flags, Stage } from "./types";
 import { hasRunningClaudeSession, scopeOfPath } from "./agent";
 import { git, gitExitOk, gitText } from "./git";
@@ -40,7 +41,8 @@ export async function cleanupWorktrees(
 
       if (canon === mainPath) {
         invariantReason = "main";
-      } else if (canon === current) {
+      } else if ((current + nodePath.sep).startsWith(canon + nodePath.sep)) {
+        // cwd が worktree 直下でもサブディレクトリでも current 扱い（sep 付き比較で /wt-foo の前方一致誤判定を防ぐ）
         invariantReason = "current";
       } else if (rec.branch === base) {
         invariantReason = "base branch";
