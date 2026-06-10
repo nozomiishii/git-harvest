@@ -102,9 +102,10 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
-  # draft release を publish（npm が配布元なので単体バイナリは添付しない）
+  # draft release を publish（npm が配布元なので単体バイナリは添付しない）。
+  # npm publish が失敗したのに GitHub release だけ確定するのを防ぐため、npm-publish 成功後に実行する
   publish-release:
-    needs: create-draft-release
+    needs: [create-draft-release, npm-publish]
     if: needs.create-draft-release.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -161,10 +162,10 @@ jobs:
       - name: Publish to npm
         run: npm publish --ignore-scripts
 
-  # publish 後に次の release PR を作成/更新
+  # publish 後に次の release PR を作成/更新（npm publish 失敗時は止めて、Re-run failed jobs で復旧できるようにする）
   release-pr:
-    needs: [create-draft-release, publish-release]
-    if: ${{ always() && !cancelled() && needs.publish-release.result != 'failure' }}
+    needs: [create-draft-release, npm-publish, publish-release]
+    if: ${{ always() && !cancelled() && needs.npm-publish.result != 'failure' && needs.publish-release.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
