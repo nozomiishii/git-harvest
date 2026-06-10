@@ -1,12 +1,7 @@
 import { expect, test } from "vitest";
 import { isClaudeWorktree, scopeOfPath } from "./agent";
 
-// .claude/worktrees 配下は claude-worktree
-test("scopeOfPath classifies a .claude/worktrees path as claude-worktree", () => {
-  expect(scopeOfPath("/repo/.claude/worktrees/foo")).toBe("claude-worktree");
-});
-
-// 通常 path は worktree
+// 通常 path は worktree（claude-worktree 側は isClaudeWorktree の boundary テストでカバー）
 test("scopeOfPath classifies a normal path as worktree", () => {
   expect(scopeOfPath("/repo/feature-wt")).toBe("worktree");
 });

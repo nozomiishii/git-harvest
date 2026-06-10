@@ -19,12 +19,7 @@ test("decideBranch keeps an invariant branch and surfaces its reason", () => {
   expect(result.reason).toBe("current HEAD");
 });
 
-// merged は in-base として default 削除
-test("decideBranch removes a merged branch as in-base by default", () => {
-  expect(decideBranch(br({ classification: "merged" }), defaultFlags()).remove).toBe(true);
-});
-
-// untouched も in-base として default 削除
+// untouched は in-base として default 削除（merged も decideBranch では同一分岐）
 test("decideBranch removes an untouched branch as in-base by default", () => {
   expect(decideBranch(br({ classification: "untouched" }), defaultFlags()).remove).toBe(true);
 });

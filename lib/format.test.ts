@@ -8,15 +8,11 @@ test("relpath shortens the home directory to a tilde", () => {
   expect(relpath(`${home}/repo/x`)).toBe("~/repo/x");
 });
 
-// kept 行は reason ラベルと区切り · を含む
-test("statusLine renders a kept item with its reason label without color", () => {
-  const line = statusLine({ action: "kept", name: "wt", reason: "untouched" }, false);
+// kept 行は reason ラベルと区切り · を、removed 行は ✓ を含む
+test("statusLine renders each action", () => {
+  const kept = statusLine({ action: "kept", name: "wt", reason: "untouched" }, false);
 
-  expect(line).toContain("untouched");
-  expect(line).toContain("·");
-});
-
-// removed 行は ✓ を含む
-test("statusLine renders a removed item with a check mark", () => {
+  expect(kept).toContain("untouched");
+  expect(kept).toContain("·");
   expect(statusLine({ action: "removed", name: "wt" }, false)).toContain("✓");
 });

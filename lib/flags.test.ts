@@ -26,31 +26,25 @@ test("--committed=claude-worktree lowers only the claude scope", () => {
   expect(p.flags.thresholds.worktree).toBe("merged");
 });
 
-// 値無し --committed は全 scope に効く
-test("bare --committed lowers all scopes", () => {
-  const p = parseArgs(["--committed"]);
+// 値無し stage フラグは許可された全 scope に効く（--files-changed は branch 対象外）
+test("bare stage flags lower every allowed scope", () => {
+  const committed = parseArgs(["--committed"]);
+  const filesChanged = parseArgs(["--files-changed"]);
 
-  if (p.mode !== "run") {
+  if (committed.mode !== "run" || filesChanged.mode !== "run") {
     throw new Error("run");
   }
 
-  expect(p.flags.thresholds).toEqual({
+  expect(committed.flags.thresholds).toEqual({
     branch: "committed",
     "claude-worktree": "committed",
     worktree: "committed",
   });
-});
-
-// 値無し --files-changed は worktree 系のみで branch は対象外
-test("bare --files-changed affects worktree scopes but not branch", () => {
-  const p = parseArgs(["--files-changed"]);
-
-  if (p.mode !== "run") {
-    throw new Error("run");
-  }
-
-  expect(p.flags.thresholds.worktree).toBe("files-changed");
-  expect(p.flags.thresholds.branch).toBe("merged");
+  expect(filesChanged.flags.thresholds).toEqual({
+    branch: "merged",
+    "claude-worktree": "files-changed",
+    worktree: "files-changed",
+  });
 });
 
 // branch に files-changed は許さず error
