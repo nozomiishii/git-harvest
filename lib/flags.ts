@@ -1,7 +1,7 @@
 import type { Flags, Scope, Stage } from "./types";
 import { SAFETY, SCOPES, WORKTREE_SCOPES } from "./types";
 
-// 掃除を実行しない脱出口。argv のどこにあってもフラグより優先される
+// argv のどこにあってもフラグより優先される
 export type Subcommand = "help" | "logo" | "version";
 
 export class UsageError extends Error {}
