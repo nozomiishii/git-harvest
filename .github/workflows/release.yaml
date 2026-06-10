@@ -154,13 +154,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
-
-      # dist/ をビルドしてから publish する。--ignore-scripts で prepare（lefthook install）の失敗と
-      # prepublishOnly の二重ビルドを避ける（ビルドは上の Build ステップ済み、files は dist のみ）。
+      # publish 時に prepublishOnly（pnpm build）が dist/ を生成するため、別の Build step は不要。
+      # prepare（lefthook install）も devDependencies インストール済みなので publish 時に無害に通る。
+      # tag checkout は detached HEAD で publish-branch チェックに掛かるため --no-git-checks を付ける。
       - name: Publish to npm
-        run: npm publish --ignore-scripts
+        run: pnpm publish --no-git-checks
 
   # publish 後に次の release PR を作成/更新（npm publish 失敗時は止めて、Re-run failed jobs で復旧できるようにする）
   release-pr:
