@@ -1,5 +1,5 @@
 import { useColor } from "./format";
-import logoArt from "./logo.ascii";
+import { logoArt } from "./logo";
 
 const BRAND = "192;255;57";
 
