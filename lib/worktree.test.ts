@@ -105,6 +105,29 @@ test("cleanupWorktrees removes a merged linked worktree by default", async () =>
   expect(result.results.some((r) => r.action === "removed" && r.name === canonWt)).toBe(true);
 });
 
+// 生存 worktree（main + kept）の branch 名を返す。削除された worktree の branch は含まない
+test("cleanupWorktrees reports the branches of surviving worktrees", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  await repo.git("branch", "wip");
+  const doneWt = `${repo.dir}-done`;
+  const wipWt = `${repo.dir}-wip`;
+  await repo.git("worktree", "add", doneWt, "done");
+  await repo.git("worktree", "add", wipWt, "wip");
+
+  try {
+    // done worktree は merged で削除、wip worktree は untouched で kept
+    const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+
+    expect(result.survivingBranches).toStrictEqual(new Set(["main", "wip"]));
+  } finally {
+    rmSync(wipWt, { force: true, recursive: true });
+  }
+});
+
 // cwd が worktree のサブディレクトリでも current invariant で保護（post-merge hook はサブディレクトリで動く）
 test("cleanupWorktrees keeps the worktree containing cwd even from a subdirectory", async () => {
   await using repo = await makeRepo();

@@ -46,7 +46,9 @@ test("cleanupBranches removes an in-base branch by default", async () => {
   await repo.git("switch", "main");
   await repo.git("merge", "--no-ff", "done", "-m", "merge done");
 
-  const result = await cleanupBranches("main", defaultFlags(), [], { cwd: repo.dir });
+  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), {
+    cwd: repo.dir,
+  });
 
   expect(result.results.some((r) => r.action === "removed" && r.name === "done")).toBe(true);
 });
@@ -56,12 +58,14 @@ test("cleanupBranches ignores the detached HEAD placeholder line", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "--detach");
 
-  const result = await cleanupBranches("main", defaultFlags(), [], { cwd: repo.dir });
+  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), {
+    cwd: repo.dir,
+  });
 
   expect(result.failures).toBe(0);
 });
 
-// main worktree に checkout 中の branch も invariant 保護（survivingPaths に main worktree を含む）
+// main worktree に checkout 中の branch も invariant 保護（survivingBranches に main の branch を含む）
 test("cleanupBranches keeps a branch checked out in the main worktree", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "-c", "done");
@@ -75,7 +79,7 @@ test("cleanupBranches keeps a branch checked out in the main worktree", async ()
   try {
     const wt = await cleanupWorktrees("main", defaultFlags(), { cwd: wtPath });
 
-    const result = await cleanupBranches("main", defaultFlags(), wt.survivingPaths, {
+    const result = await cleanupBranches("main", defaultFlags(), wt.survivingBranches, {
       cwd: wtPath,
     });
 
@@ -94,14 +98,14 @@ test("cleanupBranches prunes stale remote-tracking branches", async () => {
   await using repo = await makeRepo();
   await repo.git("update-ref", "refs/remotes/origin/gone", "HEAD");
 
-  await cleanupBranches("main", defaultFlags(), [], { cwd: repo.dir });
+  await cleanupBranches("main", defaultFlags(), new Set<string>(), { cwd: repo.dir });
 
   await expect(repo.git("rev-parse", "--verify", "refs/remotes/origin/gone")).rejects.toThrow(
     /fatal/,
   );
 });
 
-// 生存 worktree が checkout 中の branch は invariant 保護（survivingPaths 経由）
+// 生存 worktree が checkout 中の branch は invariant 保護（survivingBranches 経由）
 test("cleanupBranches keeps a branch checked out in a surviving worktree", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "-c", "wip");
@@ -115,7 +119,7 @@ test("cleanupBranches keeps a branch checked out in a surviving worktree", async
     thresholds: { ...defaultFlags().thresholds, branch: "committed" as const },
   };
 
-  const result = await cleanupBranches("main", flags, wt.survivingPaths, { cwd: repo.dir });
+  const result = await cleanupBranches("main", flags, wt.survivingBranches, { cwd: repo.dir });
 
   expect(result.results.some((r) => r.action === "kept" && r.name === "wip")).toBe(true);
 });

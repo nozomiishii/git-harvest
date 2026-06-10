@@ -1,6 +1,12 @@
 import { realpathSync } from "node:fs";
 import nodePath from "node:path";
-import type { ActionResult, CleanupDecisionResult, CleanupResult, Flags, Stage } from "./types";
+import type {
+  ActionResult,
+  CleanupDecisionResult,
+  Flags,
+  Stage,
+  WorktreeCleanupResult,
+} from "./types";
 import { hasRunningClaudeSession, scopeOfPath } from "./agent";
 import { git, gitExitOk, gitText } from "./git";
 import { classifyBranch } from "./merge-detect";
@@ -27,14 +33,14 @@ type HarvestContext = {
 
 type Opts = { cwd?: string };
 
-// harvestOne の結果に canon を添えて、survivingPaths を raw path でなく realpath 済みで導出できるようにする
-type WorktreeOutcome = { canon: string; result: ActionResult };
+// harvestOne の結果に元の record を添えて、生存 worktree の branch 名を後から導出できるようにする
+type WorktreeOutcome = { rec: WtRecord; result: ActionResult };
 
 export async function cleanupWorktrees(
   base: string,
   flags: Flags,
   opts: Opts = {},
-): Promise<CleanupResult> {
+): Promise<WorktreeCleanupResult> {
   const { main, others } = await listWorktrees(opts);
   const mainPath = main ? main.canon : "";
   const current = canonical(opts.cwd ?? process.cwd());
@@ -43,7 +49,7 @@ export async function cleanupWorktrees(
 
   // 並列化しない: git の index.lock 競合と results の順序を守るため直列 await
   for (const rec of others) {
-    outcomes.push({ canon: rec.canon, result: await harvestOne(rec, context) });
+    outcomes.push({ rec, result: await harvestOne(rec, context) });
   }
 
   if (!flags.dryRun) {
@@ -52,12 +58,22 @@ export async function cleanupWorktrees(
   const results = outcomes.map((outcome) => outcome.result);
   const failures = results.filter((r) => r.action === "failed").length;
   // 生存 = main + kept + failed（would-remove / removed は消えるもの扱い）
-  const survivingPaths = [
-    ...(main ? [main.canon] : []),
-    ...outcomes.filter((o) => o.result.action === "kept" || o.result.action === "failed").map((o) => o.canon),
+  const survivors = [
+    ...(main ? [main] : []),
+    ...outcomes
+      .filter((o) => o.result.action === "kept" || o.result.action === "failed")
+      .map((o) => o.rec),
   ];
+  // branch 掃除へは「生存 worktree が checkout 中の branch 名」だけを引き継ぐ
+  const survivingBranches = new Set<string>();
 
-  return { failures, results, survivingPaths };
+  for (const rec of survivors) {
+    if (rec.branch !== undefined) {
+      survivingBranches.add(rec.branch);
+    }
+  }
+
+  return { failures, results, survivingBranches };
 }
 
 // yolo は flags に展開済みなので判定に yolo 分岐は無い

@@ -9,7 +9,6 @@ import type {
 import { git, gitText } from "./git";
 import { classifyBranch } from "./merge-detect";
 import { atOrSafer } from "./types";
-import { listWorktrees } from "./worktree";
 
 export type BranchInfo = {
   classification: Classification;
@@ -19,10 +18,10 @@ export type BranchInfo = {
 
 type HarvestContext = {
   base: string;
-  checkedOut: Set<string>;
   currentHead: string;
   flags: Flags;
   opts: Opts;
+  survivingBranches: Set<string>;
 };
 
 type Opts = { cwd?: string };
@@ -30,14 +29,13 @@ type Opts = { cwd?: string };
 export async function cleanupBranches(
   base: string,
   flags: Flags,
-  survivingPaths: string[],
+  survivingBranches: Set<string>,
   opts: Opts = {},
 ): Promise<CleanupResult> {
   const branchesOut = await gitText(["branch", "--format=%(refname:short)"], opts);
   // detached HEAD では symbolic-ref が失敗するので ""（どの branch 名とも一致しない）
   const currentHead = await gitText(["symbolic-ref", "--short", "HEAD"], opts).catch(() => "");
-  const checkedOut = await checkedOutBranches(survivingPaths, opts);
-  const context: HarvestContext = { base, checkedOut, currentHead, flags, opts };
+  const context: HarvestContext = { base, currentHead, flags, opts, survivingBranches };
   const results: ActionResult[] = [];
 
   // base 自身は掃除対象外（results にも出さない）。並列化しない: 直列 await で順序と index.lock を守る
@@ -51,7 +49,7 @@ export async function cleanupBranches(
   }
   const failures = results.filter((r) => r.action === "failed").length;
 
-  return { failures, results, survivingPaths };
+  return { failures, results };
 }
 
 export function decideBranch(info: BranchInfo, flags: Flags): CleanupDecisionResult {
@@ -67,22 +65,6 @@ export function decideBranch(info: BranchInfo, flags: Flags): CleanupDecisionRes
 
 function branchStage(c: Classification): Stage {
   return c === "other" ? "committed" : "merged";
-}
-
-// 生存 worktree に checkout 中の branch 名を集める
-async function checkedOutBranches(survivingPaths: string[], opts: Opts): Promise<Set<string>> {
-  const { main, others } = await listWorktrees(opts);
-  const surviving = new Set(survivingPaths);
-  const checkedOut = new Set<string>();
-
-  // branch 掃除は main を含む全 worktree を見る。照合は raw path でなく realpath 済み canon で行う
-  for (const rec of main ? [main, ...others] : others) {
-    if (rec.branch !== undefined && surviving.has(rec.canon)) {
-      checkedOut.add(rec.branch);
-    }
-  }
-
-  return checkedOut;
 }
 
 // 1 branch → 1 結果。fail-soft の catch を内側に持ち、呼び出し側へは throw しない契約
@@ -112,7 +94,7 @@ function invariantOf(name: string, context: HarvestContext): string | undefined 
     return "current HEAD";
   }
 
-  if (context.checkedOut.has(name)) {
+  if (context.survivingBranches.has(name)) {
     return "checked out";
   }
 

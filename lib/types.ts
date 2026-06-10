@@ -20,7 +20,7 @@ export type Classification = "merged" | "other" | "untouched";
 // worktree / branch の両 decide が返す共有の判定結果（どちらの所有でもないので types に置く）
 export type CleanupDecisionResult = { reason: string; remove: false } | { remove: true };
 
-export type CleanupResult = { failures: number; results: ActionResult[]; survivingPaths: string[] };
+export type CleanupResult = { failures: number; results: ActionResult[] };
 
 export type Flags = {
   detached: boolean;
@@ -28,6 +28,9 @@ export type Flags = {
   thresholds: Record<Scope, Stage>;
   untouched: boolean;
 };
+
+// worktree 掃除が branch 掃除へ引き継ぐ情報: 生存 worktree（main + kept + failed）が checkout 中の branch 名
+export type WorktreeCleanupResult = CleanupResult & { survivingBranches: Set<string> };
 
 // stage が threshold 以降（安全側）なら削除対象
 export function atOrSafer(stage: Stage, threshold: Stage): boolean {

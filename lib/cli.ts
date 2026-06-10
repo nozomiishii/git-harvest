@@ -47,7 +47,7 @@ export async function main(argv: string[]): Promise<void> {
     process.stdout.write(`\n${dim("Dry run mode - nothing will be deleted")}\n`);
   }
   const wt = await cleanupWorktrees(base, flags);
-  const br = await cleanupBranches(base, flags, wt.survivingPaths);
+  const br = await cleanupBranches(base, flags, wt.survivingBranches);
 
   if (wt.results.length > 0) {
     process.stdout.write(
