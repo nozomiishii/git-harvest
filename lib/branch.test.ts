@@ -53,6 +53,23 @@ test("cleanupBranches removes an in-base branch by default", async () => {
   expect(result.results.some((r) => r.action === "removed" && r.name === "done")).toBe(true);
 });
 
+// branch と同名の tag があっても素の branch 名で列挙・削除できる（refname:short の曖昧性解消対策）
+test("cleanupBranches handles a branch shadowed by a same-named tag", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "feature");
+  await repo.commitFile("t.txt", "t", "feature work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "feature", "-m", "merge feature");
+  await repo.git("tag", "feature");
+
+  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), {
+    cwd: repo.dir,
+  });
+
+  expect(result.results.some((r) => r.action === "removed" && r.name === "feature")).toBe(true);
+  await expect(repo.git("rev-parse", "--verify", "refs/heads/feature")).rejects.toThrow(/fatal/);
+});
+
 // detached HEAD のプレースホルダ行 "(HEAD detached at ...)" はブランチとして扱わない
 test("cleanupBranches ignores the detached HEAD placeholder line", async () => {
   await using repo = await makeRepo();

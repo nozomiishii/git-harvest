@@ -32,7 +32,12 @@ export async function cleanupBranches(
   survivingBranches: Set<string>,
   opts: Opts = {},
 ): Promise<CleanupResult> {
-  const branchesOut = await gitText(["branch", "--format=%(refname:short)"], opts);
+  // for-each-ref は refs/heads 配下の ref だけを出す: detached のプレースホルダ行が混ざらず、
+  // 同名 tag があっても refname:short のような曖昧性解消名（heads/x）にならない
+  const branchesOut = await gitText(
+    ["for-each-ref", "refs/heads", "--format=%(refname:lstrip=2)"],
+    opts,
+  );
   // detached HEAD では symbolic-ref が失敗するので ""（どの branch 名とも一致しない）
   const currentHead = await gitText(["symbolic-ref", "--short", "HEAD"], opts).catch(() => "");
   const context: HarvestContext = { base, currentHead, flags, opts, survivingBranches };
@@ -44,8 +49,9 @@ export async function cleanupBranches(
   }
 
   if (!flags.dryRun) {
-    // リモートで削除済みの追跡ブランチ (origin/*) を整理。offline 等の失敗は無視（git は throw しない）
-    await git(["fetch", "--prune"], opts);
+    // リモートで削除済みの追跡ブランチ (origin/*) を整理。fetch と違いオブジェクト転送をしない。
+    // offline 等の失敗は無視（git は throw しない）し、hook をブロックしないよう 5 秒で打ち切る
+    await git(["remote", "prune", "origin"], { ...opts, timeoutMs: 5000 });
   }
   const failures = results.filter((r) => r.action === "failed").length;
 
@@ -101,12 +107,11 @@ function invariantOf(name: string, context: HarvestContext): string | undefined 
   return undefined;
 }
 
-// detached HEAD では "(HEAD detached at ...)" 行が混ざるので除外
 function listLocalBranches(branchesOut: string): string[] {
   return branchesOut
     .split("\n")
     .map((line) => line.trim())
-    .filter((name) => name !== "" && !name.startsWith("("));
+    .filter((name) => name !== "");
 }
 
 // 競合 rescue とエラー整形だけを持つ実行関数
