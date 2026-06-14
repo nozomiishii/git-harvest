@@ -10,8 +10,12 @@ export default defineConfig([
   {
     name: "project/overrides",
     rules: {
-      // test は execSync(bash) で子プロセスに env を渡すため、必要な変数だけ process.env から読む
-      "n/no-process-env": ["error", { allowedVariables: ["HOME", "PATH"] }],
+      // runtime が読む env のみ許可（NO_COLOR は format.ts、SESSIONS_DIR は agent.ts + テスト）
+      "n/no-process-env": [
+        "error",
+        { allowedVariables: ["NO_COLOR", "GIT_HARVEST_CLAUDE_SESSIONS_DIR"] },
+      ],
     },
   },
+
 ]);

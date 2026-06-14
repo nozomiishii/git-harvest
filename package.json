@@ -1,6 +1,6 @@
 {
   "name": "git-harvest",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Clean up branches and worktrees",
   "keywords": [
     "git",
@@ -18,24 +18,26 @@
   "author": "Nozomi Ishii",
   "type": "module",
   "bin": {
-    "git-harvest": "./lib/git-harvest"
+    "git-harvest": "./dist/cli.mjs"
   },
   "files": [
-    "lib/git-harvest"
+    "dist",
+    "README.md",
+    "README.ja.md",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "echo 'no build step yet: lib/git-harvest is a shell script. tsdown is staged for the TypeScript migration (#180).'",
-    "dev": "./lib/git-harvest --dry-run",
+    "build": "tsdown",
+    "dev": "tsx lib/cli.ts --dry-run",
     "eslint": "eslint --max-warnings=0 --cache",
     "format": "pnpm prettier . --check",
     "format:fix": "pnpm prettier . --write",
-    "install:local": "bash install.sh",
     "lint": "pnpm eslint",
     "lint:fix": "pnpm eslint --fix",
     "prepare": "lefthook install --force",
+    "prepublishOnly": "pnpm build",
     "prettier": "prettier --ignore-unknown --cache",
-    "test": "vitest",
-    "uninstall:local": "bash uninstall.sh"
+    "test": "vitest"
   },
   "devDependencies": {
     "@nozomiishii/commitlint-config": "1.7.0",
@@ -49,6 +51,7 @@
     "prettier": "3.8.4",
     "release-please": "17.9.0",
     "tsdown": "0.22.2",
+    "tsx": "4.22.4",
     "typescript": "6.0.3",
     "vitest": "4.1.8"
   },

@@ -12,64 +12,56 @@ English | [日本語](./README.ja.md)
 </p>
 <br>
 
-Clean up branches and worktrees.
+Clean up branches and worktrees automatically, by their commit lifecycle stage.
 
+## Try it (`--dry-run`)
 
-## Try it out (`--dry-run`)
-
-See what would be deleted without deleting anything:
+Shows what would be deleted without deleting anything:
 
 ```sh
 npx -y git-harvest@latest --dry-run
 ```
 
-## Run directly without installing (Recommended)
+## Run directly without installing (recommended)
 
-Always runs the latest version — no separate update step needed.
+Always runs the latest version, so there is nothing to update.
 
 ```sh
-# bun
-bunx git-harvest@latest
+# npm
+npx -y git-harvest@latest
 
 # pnpm
 pnpx git-harvest@latest
 
-# npm
-npx -y git-harvest@latest
+# bun
+bunx git-harvest@latest
 ```
 
 ### (Optional) Set up aliases
 
 ```sh
-# bun
-echo "alias ghv='bunx git-harvest@latest'" >> ~/.zshrc
-echo "alias 'ghv!'='bunx git-harvest@latest --all'" >> ~/.zshrc
-
-# pnpm
-echo "alias ghv='pnpx git-harvest@latest'" >> ~/.zshrc
-echo "alias 'ghv!'='pnpx git-harvest@latest --all'" >> ~/.zshrc
-
-# npm
+# normal (default = delete merged only)
 echo "alias ghv='npx -y git-harvest@latest'" >> ~/.zshrc
-echo "alias 'ghv!'='npx -y git-harvest@latest --all'" >> ~/.zshrc
+# sweep (--yolo = delete uncommitted and detached too)
+echo "alias 'ghv!'='npx -y git-harvest@latest --yolo'" >> ~/.zshrc
 ```
 
 `git harvest`
+
 ```sh
-# Git subcommand — run as `git harvest` (no install)
-git config --global alias.harvest '!pnpm dlx git-harvest@latest'
+# git subcommand — run as `git harvest` (no install)
+git config --global alias.harvest '!npx -y git-harvest@latest'
+# or: git config --global alias.harvest '!pnpx git-harvest@latest'
 # or: git config --global alias.harvest '!bunx git-harvest@latest'
-# or: git config --global alias.harvest '!npx -y git-harvest@latest'
 ```
 
-## Recommended workflow
+## Recommended usage
 
-By combining with Git hooks' post-merge command, you can automatically harvest after every merge or pull.
+Pair it with a Git post-merge hook to harvest automatically on every merge or pull.
 
 ### With [lefthook](https://github.com/evilmartians/lefthook)
 
-There are many Git hook tools such as husky, pre-commit, and simple-git-hooks, but Lefthook is recommended because it is language-agnostic and easy to integrate into monorepos. Additionally, by using lefthook-local.yaml, you can run hooks only for yourself without affecting other team members.
-
+There are many Git Hooks tools (husky, pre-commit, simple-git-hooks), but Lefthook is language-agnostic and easy to drop into a monorepo. With `lefthook-local.yaml` you can run it only for yourself without affecting teammates.
 
 ```yaml
 # lefthook-local.yaml
@@ -77,186 +69,162 @@ post-merge:
   commands:
     git-harvest:
       run: npx -y git-harvest@latest
-      # or: bunx git-harvest@latest
       # or: pnpx git-harvest@latest
+      # or: bunx git-harvest@latest
 ```
-
-<details>
-<summary><b>Other install methods</b></summary>
-
-<br>
-
-### Shell (macOS/Linux)
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/install.sh | bash
-```
-
-Restart your terminal or run `source ~/.zshrc` to start using git-harvest.
-
-### Homebrew
-
-```sh
-brew install nozomiishii/tap/git-harvest
-```
-
-### (Optional) Set up aliases
-
-Set up aliases for quicker access. You can use both or just the one you prefer:
-
-`ghv` / `ghv!`
-```sh
-# Shell alias
-echo "alias ghv='git-harvest'" >> ~/.zshrc
-echo "alias 'ghv!'='git-harvest --all'" >> ~/.zshrc
-```
-
-`git harvest`
-```sh
-# Git subcommand — run as `git harvest`
-git config --global alias.harvest '!git-harvest'
-```
-
-### Uninstall
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/nozomiishii/git-harvest/main/uninstall.sh | bash
-```
-
-</details>
 
 ## Usage
 
 ```sh
-git-harvest
+npx -y git-harvest@latest
 ```
 
 ### Options
 
-```sh
-git-harvest --help     # Show help
-git-harvest --version  # Show version
-git-harvest --dry-run  # Show what would be deleted without actually deleting
-git-harvest --all      # Delete all branches and worktrees except the default branch
-git-harvest logo       # Show the git-harvest logo
+```
+-h, --help                   Show help
+-v, --version                Show version
+-n, --dry-run                Show what would be deleted without deleting
+
+--committed[=<scope>]        Lower the threshold to committed (delete committed + merged; keep uncommitted)
+--files-changed[=<scope>]    Lower the threshold to files-changed (delete uncommitted too; worktree scopes only)
+--untouched                  Also delete untouched worktrees (no work, identical to base)
+--detached                   Also delete detached worktrees (no branch)
+                             WARNING: a detached worktree's commits are unreachable -- removal can lose them permanently (no reflog recovery)
+--yolo                       Preset: --files-changed --committed --untouched --detached (all scopes)
+
+logo                         Show the logo
 ```
 
+`<scope>` is `worktree` / `claude-worktree` / `branch`. When omitted it applies to all applicable scopes. List multiple scopes comma-separated (`--committed=worktree,branch`) or by repeating the flag. `--files-changed` has no branch stage, so it applies to worktree scopes only.
 
-## What it does
+## How it works
 
-Status markers:
+### Stages (risky → safe)
 
-| Marker | Meaning |
+The git commit lifecycle, organized as states:
+
+```
+untouched
+  ↓
+files-changed  →  committed  →  merged
+  ↑
+  └─ editing brings it back to files-changed (from any state)
+```
+
+git-harvest classifies each worktree / branch by its most at-risk stage. A flag lowers the threshold and deletes that stage and everything safer (✓ = deleted):
+
+| stage | risk when deleted | no flag | `--committed` | `--files-changed` |
+| --- | --- | --- | --- | --- |
+| files-changed | unrecoverable once lost | · | · | ✓ |
+| committed | reflog recovery (tedious) | · | ✓ | ✓ |
+| merged | fully safe | ✓ | ✓ | ✓ |
+
+The default deletes `merged` only — the most conservative choice, safe even in a post-merge hook.
+
+For example, `--committed` deletes committed and merged while keeping uncommitted work; `--files-changed` deletes uncommitted work too.
+
+### Scopes (narrowing the target)
+
+| scope | target |
 |---|---|
-| `✓` | Removed |
-| `→` | Will be removed (dry-run) |
-| `·` | Kept (followed by reason) |
+| `worktree` | worktrees on a normal path (human-made checkouts) |
+| `claude-worktree` | worktrees under `.claude/worktrees/` |
+| `branch` | branches |
+
+Thresholds are kept per scope. `--committed` affects every scope; `--committed=claude-worktree` affects only that scope.
+
+### Off-ladder (outside the stages, protected by default)
+
+| state | definition | default | delete |
+|---|---|---|---|
+| `untouched` | clean and no unique commits (identical to base) | kept | `--untouched` / `--yolo` |
+| `detached` | a worktree with no branch (detached HEAD) | kept | `--detached` / `--yolo` |
+
+An untouched branch is just a ref identical to base, so it is deleted by default — asymmetric with worktrees on purpose (a worktree signals intent to use it; a branch is residue to sweep).
+
+> WARNING: a detached worktree's commits have no branch ref, and removing the worktree deletes its reflog with it — they can be lost permanently (no reflog recovery). Only `--detached` / `--yolo` target them.
+
+### Status markers
+
+| marker | meaning |
+|---|---|
+| `✓` | deleted |
+| `→` | would delete (dry-run) |
+| `·` | kept (reason on the right) |
+| `✗` | failed to delete |
+
+```
+Worktrees
+  ·  ~/.claude/worktrees/foo        untouched      identical to base, no work
+  ·  ~/repo-hotfix                  detached       no branch
+  ·  ~/.claude/worktrees/bar        committed      below the threshold (merged), kept
+  ✓  ~/.claude/worktrees/done
+
+Branches
+  ·  feature/wip                    committed      below the threshold, kept
+  ✓  feature/done
+```
+
+The keep reason is a state label (files-changed / committed / untouched / detached) or an invariant reason.
+
+### Invariants (always protected — no flag or `--yolo` overrides them)
+
+- the main / default worktree
+- the worktree on the base branch (`base branch`)
+- the worktree of the current working directory (`current`)
+- a locked worktree (`git worktree lock`)
+- a worktree with a running agent session (`session running`)
+- the current HEAD branch (`current HEAD`)
+- a branch checked out in a surviving worktree (`checked out`)
 
 ### Worktree decision flow
 
+The decision tree with no flags (default = every scope thresholded at merged). Flags lower the threshold and flip keep → delete, so each keep node notes which flag would delete it. Invariants are absolute — no flag moves them.
+
 ```mermaid
 flowchart TD
-    Start([evaluate worktree]) --> Main{main<br/>worktree?}
+    Start([evaluate worktree]) --> Main{"main / default<br/>worktree?"}
     Main -->|Yes| KeepMain[keep<br/>not displayed]
-    Main -->|No| Locked{git worktree<br/>lock?}
+    Main -->|No| Current{"current cwd<br/>worktree?"}
+    Current -->|Yes| KeepCurrent["·  current"]
+    Current -->|No| Base{"base branch<br/>checked out?"}
+    Base -->|Yes| KeepBase["·  base branch"]
+    Base -->|No| Locked{"git worktree<br/>lock?"}
     Locked -->|Yes| KeepLocked["·  locked"]
-    Locked -->|No| Running{running<br/>Claude session?}
+    Locked -->|No| Running{"running<br/>agent session?"}
     Running -->|Yes| KeepRunning["·  session running"]
-    Running -->|No| ManagedPath{under<br/>.claude/worktrees/?}
-    ManagedPath -->|Yes| DeleteManaged["✓  delete<br/>(forces through uncommitted / unmerged)"]
-    ManagedPath -->|No| Merged{merged?}
-    Merged -->|Yes| Uncommitted{uncommitted<br/>changes?}
-    Uncommitted -->|Yes| KeepUncommitted["·  uncommitted changes"]
-    Uncommitted -->|No| DeleteMerged["✓  delete"]
-    Merged -->|No| NoUnique{no unique<br/>commits?}
-    NoUnique -->|Yes| KeepNoUnique["·  no unique commits"]
-    NoUnique -->|No| KeepNotMerged["·  not merged"]
+    Running -->|No| Detached{"detached<br/>(no branch)?"}
+    Detached -->|Yes| KeepDetached["·  detached<br/>delete: --detached / --yolo"]
+    Detached -->|No| Untouched{"untouched?<br/>no unique commits + clean"}
+    Untouched -->|Yes| KeepUntouched["·  untouched<br/>delete: --untouched / --yolo"]
+    Untouched -->|No| Files{"uncommitted<br/>changes?"}
+    Files -->|Yes| KeepFiles["·  files-changed<br/>delete: --files-changed / --yolo"]
+    Files -->|No| Merged{"merged?"}
+    Merged -->|No| KeepCommitted["·  committed<br/>delete: --committed / --yolo"]
+    Merged -->|Yes| DeleteMerged["✓  delete<br/>(merged = default)"]
     classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
     classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
-    class KeepMain,KeepLocked,KeepRunning,KeepUncommitted,KeepNoUnique,KeepNotMerged keep
-    class DeleteManaged,DeleteMerged delete
+    class KeepMain,KeepCurrent,KeepBase,KeepLocked,KeepRunning,KeepDetached,KeepUntouched,KeepFiles,KeepCommitted keep
+    class DeleteMerged delete
 ```
 
-| Order | Condition | Display | Default | `--all` |
-|---|---|---|---|---|
-| 1 | Locked with `git worktree lock` | `·  locked` | Keep | Delete (forced through with `-f -f`, shown as `(was locked)`) |
-| 2 | Running Claude session (`~/.claude/sessions/<pid>.json` matches `cwd` and `pid` is alive) | `·  session running` | Keep | Delete |
-| 3 | Path is under `.claude/worktrees/` and no running session | `✓` / `→` | **Delete** (forces through uncommitted / unmerged commits) | Delete |
-| 4 | Merged + uncommitted changes | `·  uncommitted changes` | Keep | Delete |
-| 5 | Merged + clean | `✓` / `→` | Delete | Delete |
-| 6 | No unique commits | `·  no unique commits` | Keep | Delete |
-| 7 | Not merged | `·  not merged` | Keep | Delete |
-| - | Main working tree | *(not shown)* | Keep | Keep |
+Branches follow the same idea — current HEAD → checked out → classification — and by default only branches already in base (in-base) are deleted.
 
-Row 1 (lock) is the top-priority guard. `git worktree lock` is an explicit "don't touch this" signal, so the default mode keeps it regardless of running session or `.claude/worktrees/` membership. Only `--all` breaks through it with `git worktree remove --force --force`, leaving a `✓ <path> (was locked)` trace.
+### Claude Code integration
 
-Row 3 is **path-regime**: worktrees under `.claude/worktrees/` are treated as Claude-managed workspaces and aggressively deleted when no active session backs them (i.e. the session was archived or the local CLI exited). Worktrees outside this path fall through to rows 4+ — the original conservative logic — to avoid touching anything Claude didn't create.
+git-harvest detects running [Claude Code](https://claude.ai/code) sessions and protects their worktrees.
 
-**Deletion behavior under `.claude/worktrees/`**: the worktree is removed with `--force` even when it has uncommitted changes or unmerged commits. The following are preserved, however:
-
-- **Conversation history**: stays on the Claude Code side, so `claude --resume <session-id>` can pick up where you left off.
-- **Unmerged commits**: the branch ref is retained (`cleanup_branches` protects unmerged branches), so `git checkout <branch>` recovers them.
-
-The only thing genuinely lost is **uncommitted changes**, so commit before closing a Claude session. Conversely, keeping the session open is a way to protect WIP that you can't commit yet.
-
-#### About the "Disconnected" indicator on iPhone
-
-A Remote Control session shown as **"Disconnected"** on iPhone / the claude app is **not a paused-and-resumable state**. It means the session has fully ended — the [official docs](https://code.claude.com/docs/en/remote-control#limitations) make this explicit:
-
-> **Local process must keep running**: Remote Control runs as a local process. If you close the terminal, quit VS Code, or otherwise stop the `claude` process, the session ends.
->
-> **Extended network outage**: if your machine is awake but unable to reach the network for more than roughly 10 minutes, the session times out and the process exits.
-
-So a Disconnected session means **the local process has already exited and the session is over**. What remains on iPhone is server-side bookkeeping — messages sent there don't reach anything.
-
-git-harvest mirrors this reality by only checking for an **active local process** (a matching entry in `~/.claude/sessions/<pid>.json` with a live `pid`). It does not distinguish Connected / Disconnected / Archived on the iPhone side. Disconnected worktrees are therefore subject to the path-regime delete.
-
-The conversation history (`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`) is kept separately, so `claude --resume <session-id>` can start a new session from where you left off. The worktree dir itself needs to be recreated separately (via `git worktree add` or `EnterWorktree`).
-
-### Branch decision flow
-
-```mermaid
-flowchart TD
-    Start([evaluate branch]) --> Default{default<br/>branch?}
-    Default -->|Yes| KeepDefault[keep<br/>not displayed]
-    Default -->|No| Deletable{merged<br/>or<br/>no unique commits?}
-    Deletable -->|No| KeepNotMerged["·  not merged"]
-    Deletable -->|Yes| CheckedOut{checked out in<br/>another worktree?}
-    CheckedOut -->|Yes| KeepCheckedOut["·  currently checked out"]
-    CheckedOut -->|No| Delete["✓  delete"]
-    classDef keep fill:#f5f5f5,stroke:#9e9e9e,color:#424242
-    classDef delete fill:#eeffc4,stroke:#C0FF39,color:#000
-    class KeepDefault,KeepNotMerged,KeepCheckedOut keep
-    class Delete delete
-```
-
-| State | Display | Default | `--all` |
-|---|---|---|---|
-| Merged | `✓` / `→` | Delete | Delete |
-| Merged + checked out | `·  currently checked out` | Keep | Error |
-| Not merged | `·  not merged` | Keep | Delete |
-| No unique commits | `✓` / `→` | Delete | Delete |
-| Default branch | *(not shown)* | Keep | Keep |
-
-> `--all` exits with an error if a non-default branch is currently checked out. `--dry-run --all` shows all resources as `→` without errors.
-
-### Claude Code integration details
-
-git-harvest reads these paths from [Claude Code](https://claude.ai/code):
-
-| Path | Used for |
+| path | purpose |
 |---|---|
-| `~/.claude/sessions/<pid>.json` | Detecting a running Claude session (`cwd` matches worktree path AND `pid` is alive) |
+| `~/.claude/sessions/<pid>.json` | detect a running session (match the worktree by `cwd` + confirm the process with `kill -0 pid`) |
 
-Archiving or deleting a session from Claude Code Agent View or the claude app remote control removes the corresponding `~/.claude/sessions/<pid>.json`. git-harvest interprets the missing session file as "the user no longer needs this".
+Worktrees under `.claude/worktrees/` are treated as the `claude-worktree` scope and judged by the same stage thresholds as normal worktrees (always protected while a session is running). Use a scope, e.g. `--committed=claude-worktree`, to lower the threshold for claude worktrees only.
 
-**`--all`** bypasses every guard and force-removes worktrees. Only the worktree directories are removed; session metadata is left untouched.
+A "running session" is decided solely by whether a local process is active (a matching `~/.claude/sessions/<pid>.json`). It ignores Remote Control's iPhone status (Connected / Disconnected / Archived). The conversation history (`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`) survives even when the worktree is removed, so `claude --resume <session-id>` resumes where you left off.
 
-**Without Claude Code installed**, worktrees under `.claude/worktrees/` are still subject to the path-regime delete. If you happen to create worktrees under that path manually without using Claude, they will be deleted — but most users without Claude won't adopt that path convention, so the impact is limited.
+Environment variable to override the path (for tests or non-standard installs):
 
-Override paths for testing or non-standard installs:
-
-| Env var | Default |
+| variable | default |
 |---|---|
 | `GIT_HARVEST_CLAUDE_SESSIONS_DIR` | `~/.claude/sessions` |
-

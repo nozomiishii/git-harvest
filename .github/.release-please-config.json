@@ -15,8 +15,7 @@
   ],
   "packages": {
     ".": {
-      "release-type": "node",
-      "extra-files": ["lib/git-harvest"]
+      "release-type": "node"
     }
   }
 }

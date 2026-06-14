@@ -36,6 +36,9 @@ jobs:
               - 'lib/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
+              - 'tsconfig.json'
+              - 'tsdown.config.ts'
+              - 'vitest.config.ts'
 
       - name: Setup pnpm
         if: steps.changes.outputs.src == 'true'
@@ -55,3 +58,9 @@ jobs:
       - name: Run tests
         if: steps.changes.outputs.src == 'true'
         run: pnpm test
+
+      - name: Build and smoke-test the CLI
+        if: steps.changes.outputs.src == 'true'
+        run: |
+          pnpm build
+          node dist/cli.mjs --version
