@@ -90,20 +90,14 @@ export async function cleanupWorktrees(
 
       // detached = branch を持たない worktree。off-ladder なので --detached でだけ消す
       if (worktree.branch === undefined) {
-        record(
-          worktree,
-          await sweepOffLadder(worktree, flags.detached, "detached", flags.dryRun, opts),
-        );
+        record(worktree, await removeDetached(worktree, flags.detached, flags.dryRun, opts));
         continue;
       }
       const category = await categorize(worktree, base, opts);
 
       // untouched も off-ladder。--untouched でだけ消す
       if (category === "untouched") {
-        record(
-          worktree,
-          await sweepOffLadder(worktree, flags.untouched, "untouched", flags.dryRun, opts),
-        );
+        record(worktree, await removeUntouched(worktree, flags.untouched, flags.dryRun, opts));
         continue;
       }
       // category に対応した削除関数を呼ぶ。各関数が「消し方」と結果（removed / kept）を返す
@@ -171,6 +165,26 @@ export async function removeCommitted(
   return removeWorktree(worktree.path, opts, false);
 }
 
+// detached（branch 無し）の worktree。--detached があれば消す、無ければ理由付きで残す。
+// detached は未コミット変更を持ちうるので、その場合は force（commit を指す参照ごと失われる前提）
+export async function removeDetached(
+  worktree: WtRecord,
+  detached: boolean,
+  dryRun: boolean,
+  opts: Opts = {},
+): Promise<ActionResult> {
+  if (!detached) {
+    return { action: "kept", name: worktree.path, reason: "detached" };
+  }
+
+  if (dryRun) {
+    return { action: "would-remove", name: worktree.path };
+  }
+  const dirty = await hasUncommittedChanges(worktree.path);
+
+  return removeWorktree(worktree.path, opts, dirty);
+}
+
 // files-changed の worktree。--files-changed が立っていれば消す（未コミットを承知で force）、無ければ残す
 export async function removeFilesChanged(
   worktree: WtRecord,
@@ -202,26 +216,23 @@ export async function removeMerged(
   return removeWorktree(worktree.path, opts, false);
 }
 
-// off-ladder（detached / untouched）の削除 or kept。toggle が立っていれば消し、無ければ理由付きで残す。
-// 消す前に未コミット変更を見て force を決める。detached は dirty なら force、
-// untouched は categorize 済みで clean なので dirty は false（force 無し）になる
-export async function sweepOffLadder(
+// untouched（独自コミット無し）の worktree。--untouched があれば消す、無ければ理由付きで残す。
+// categorize で clean が確定しているので force は不要
+export async function removeUntouched(
   worktree: WtRecord,
-  toggle: boolean,
-  reason: string,
+  untouched: boolean,
   dryRun: boolean,
   opts: Opts = {},
 ): Promise<ActionResult> {
-  if (!toggle) {
-    return { action: "kept", name: worktree.path, reason };
+  if (!untouched) {
+    return { action: "kept", name: worktree.path, reason: "untouched" };
   }
 
   if (dryRun) {
     return { action: "would-remove", name: worktree.path };
   }
-  const dirty = await hasUncommittedChanges(worktree.path);
 
-  return removeWorktree(worktree.path, opts, dirty);
+  return removeWorktree(worktree.path, opts, false);
 }
 
 // 「未コミットの作業があるか」を git status --porcelain 1 回で調べる。

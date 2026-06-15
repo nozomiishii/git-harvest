@@ -7,9 +7,10 @@ import {
   categorize,
   cleanupWorktrees,
   removeCommitted,
+  removeDetached,
   removeFilesChanged,
   removeMerged,
-  sweepOffLadder,
+  removeUntouched,
   type WtRecord,
 } from "./worktree";
 
@@ -80,38 +81,38 @@ test("removeFilesChanged keeps a files-changed worktree without the files-change
   expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "files-changed" });
 });
 
-// untouched worktree は toggle 無しで保護（reason=untouched）
-test("sweepOffLadder keeps an untouched worktree without the toggle", async () => {
+// untouched worktree は --untouched が無ければ理由付きで残す
+test("removeUntouched keeps an untouched worktree without the flag", async () => {
   const worktree = wtRecord();
 
-  const result = await sweepOffLadder(worktree, false, "untouched", true);
+  const result = await removeUntouched(worktree, false, true, {});
 
   expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "untouched" });
 });
 
-// --untouched toggle で untouched worktree を削除
-test("sweepOffLadder removes an untouched worktree with the toggle", async () => {
+// untouched worktree は --untouched があれば削除対象
+test("removeUntouched marks an untouched worktree for removal with the flag", async () => {
   const worktree = wtRecord();
 
-  const result = await sweepOffLadder(worktree, true, "untouched", true);
+  const result = await removeUntouched(worktree, true, true, {});
 
   expect(result).toStrictEqual({ action: "would-remove", name: worktree.path });
 });
 
-// detached worktree は toggle 無しで保護（reason=detached）
-test("sweepOffLadder keeps a detached worktree without the toggle", async () => {
+// detached worktree は --detached が無ければ理由付きで残す
+test("removeDetached keeps a detached worktree without the flag", async () => {
   const worktree = wtRecord({ branch: undefined });
 
-  const result = await sweepOffLadder(worktree, false, "detached", true);
+  const result = await removeDetached(worktree, false, true, {});
 
   expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "detached" });
 });
 
-// --detached toggle で detached worktree を削除
-test("sweepOffLadder removes a detached worktree with the toggle", async () => {
+// detached worktree は --detached があれば削除対象
+test("removeDetached marks a detached worktree for removal with the flag", async () => {
   const worktree = wtRecord({ branch: undefined });
 
-  const result = await sweepOffLadder(worktree, true, "detached", true);
+  const result = await removeDetached(worktree, true, true, {});
 
   expect(result).toStrictEqual({ action: "would-remove", name: worktree.path });
 });
