@@ -5,10 +5,10 @@ type ResolveOpts = { cwd?: string; offline?: boolean };
 // base = 掃除の基準になるデフォルトブランチ（main 等）。
 // origin/HEAD という「リモートのデフォルトブランチを指すポインタ」から解決する
 export async function resolveBase(opts: ResolveOpts = {}): Promise<string | undefined> {
-  const cached = await originHead(opts);
+  const current = await originHead(opts);
 
-  if (cached) {
-    return cached;
+  if (current) {
+    return current;
   }
 
   if (opts.offline !== true) {
@@ -18,10 +18,10 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
       ...opts,
       timeoutMs: NETWORK_TIMEOUT_MS,
     }).catch(() => "");
-    const refreshed = await originHead(opts);
+    const afterRefresh = await originHead(opts);
 
-    if (refreshed) {
-      return refreshed;
+    if (afterRefresh) {
+      return afterRefresh;
     }
   }
   process.stderr.write(
