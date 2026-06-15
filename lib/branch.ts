@@ -54,21 +54,14 @@ export async function cleanupBranches(
   return { failures, results };
 }
 
-// 絶対に消してはいけない branch の判定。該当すれば理由ラベルを返す（どのフラグでも上書き不可）
-export function keepReason(
-  name: string,
-  currentHead: string,
-  survivingBranches: Set<string>,
-): string | undefined {
-  if (name === currentHead) {
-    return "current HEAD";
-  }
+// 守る理由ごとの述語。どれか true ならその branch はどのフラグでも消さない
 
-  if (survivingBranches.has(name)) {
-    return "checked out";
-  }
+function isCheckedOut(name: string, survivingBranches: Set<string>): boolean {
+  return survivingBranches.has(name);
+}
 
-  return undefined;
+function isCurrentHead(name: string, currentHead: string): boolean {
+  return name === currentHead;
 }
 
 // 空リポジトリでは出力が空文字になり split が [""] を返すため除外する
@@ -100,10 +93,13 @@ async function sweepBranch(
   opts: Opts,
 ): Promise<ActionResult> {
   try {
-    const keep = keepReason(name, currentHead, survivingBranches);
+    // 守る理由を上から1つずつ確認。当たればその理由で残す
+    if (isCurrentHead(name, currentHead)) {
+      return { action: "kept", name, reason: "current HEAD" };
+    }
 
-    if (keep !== undefined) {
-      return { action: "kept", name, reason: keep };
+    if (isCheckedOut(name, survivingBranches)) {
+      return { action: "kept", name, reason: "checked out" };
     }
     const category = await categorizeBranch(name, base, opts);
     // merged は常に消し、committed は --committed(=branch) のときだけ消す

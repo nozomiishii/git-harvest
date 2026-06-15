@@ -1,13 +1,27 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
-import { categorizeBranch, cleanupBranches, keepReason } from "./branch";
+import { categorizeBranch, cleanupBranches } from "./branch";
 import { defaultFlags } from "./flags";
 import { makeRepo } from "./test-helpers";
 import { cleanupWorktrees } from "./worktree";
 
-// current HEAD の branch はどのフラグでも消さず、理由 "current HEAD" を返す
-test("keepReason protects the current HEAD branch and surfaces its reason", () => {
-  expect(keepReason("done", "done", new Set<string>())).toBe("current HEAD");
+// current HEAD の branch は merged でも消さず、reason="current HEAD" で守る
+test("cleanupBranches keeps the current HEAD branch", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "feature");
+  await repo.commitFile("x.txt", "x", "feature work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "feature", "-m", "merge feature");
+  await repo.git("switch", "feature");
+  const flags = { ...defaultFlags(), branchCommitted: true };
+
+  const result = await cleanupBranches("main", flags, new Set<string>(), { cwd: repo.dir });
+
+  expect(
+    result.results.some(
+      (r) => r.action === "kept" && r.name === "feature" && r.reason === "current HEAD",
+    ),
+  ).toBe(true);
 });
 
 // 独自コミット無し（untouched）の branch は in-base 残骸として merged 扱い

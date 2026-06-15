@@ -63,6 +63,10 @@ export async function cleanupWorktrees(
       survivors.push(worktree);
     }
   };
+  // 守る理由が当たった worktree を、その理由で kept にする
+  const keepWorktree = (worktree: WtRecord, reason: string): void => {
+    record(worktree, { action: "kept", name: worktree.path, reason });
+  };
 
   // 並列化しない: git の index.lock 競合と results の順序を守るため直列 await
   for (const worktree of linked) {
@@ -72,10 +76,24 @@ export async function cleanupWorktrees(
     }
 
     try {
-      const keep = keepReason(worktree, base, current);
+      // 守る理由を上から1つずつ確認。当たればその理由で残す
+      if (isCwd(worktree, current)) {
+        keepWorktree(worktree, "current");
+        continue;
+      }
 
-      if (keep !== undefined) {
-        record(worktree, { action: "kept", name: worktree.path, reason: keep });
+      if (isOnBaseBranch(worktree, base)) {
+        keepWorktree(worktree, "base branch");
+        continue;
+      }
+
+      if (isLocked(worktree)) {
+        keepWorktree(worktree, "locked");
+        continue;
+      }
+
+      if (isSessionRunning(worktree)) {
+        keepWorktree(worktree, "session running");
         continue;
       }
 
@@ -132,29 +150,6 @@ export async function cleanupWorktrees(
   }
 
   return { failures, results, survivingBranches };
-}
-
-// 絶対に消してはいけない worktree の判定。該当すれば理由ラベルを返す（どのフラグでも上書き不可）。
-// main は listWorktrees が先頭分離するためここに来ず、判定不要
-export function keepReason(worktree: WtRecord, base: string, current: string): string | undefined {
-  // cwd が worktree 直下でもサブディレクトリでも current 扱い
-  if (isInside({ child: current, parent: worktree.canon })) {
-    return "current";
-  }
-
-  if (worktree.branch === base) {
-    return "base branch";
-  }
-
-  if (worktree.locked) {
-    return "locked";
-  }
-
-  if (hasRunningClaudeSession(worktree.path)) {
-    return "session running";
-  }
-
-  return undefined;
 }
 
 export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
@@ -224,6 +219,26 @@ async function hasUncommittedChanges(wt: string): Promise<boolean> {
   const { stdout } = await git(["-C", wt, "status", "--porcelain", "-unormal"]);
 
   return stdout.trim().length > 0;
+}
+
+// 守る理由ごとの述語。どれか true ならその worktree はどのフラグでも消さない。
+// main は listWorktrees が先頭分離するためここに来ず、判定不要。
+
+// cwd が worktree 直下でもサブディレクトリでも current 扱い
+function isCwd(worktree: WtRecord, current: string): boolean {
+  return isInside({ child: current, parent: worktree.canon });
+}
+
+function isLocked(worktree: WtRecord): boolean {
+  return worktree.locked;
+}
+
+function isOnBaseBranch(worktree: WtRecord, base: string): boolean {
+  return worktree.branch === base;
+}
+
+function isSessionRunning(worktree: WtRecord): boolean {
+  return hasRunningClaudeSession(worktree.path);
 }
 
 function parseWorktreeBlock(block: string): WtRecord {

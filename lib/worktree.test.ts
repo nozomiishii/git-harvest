@@ -6,7 +6,6 @@ import { makeRepo } from "./test-helpers";
 import {
   categorize,
   cleanupWorktrees,
-  keepReason,
   removeForScope,
   sweepOffLadder,
   type WtRecord,
@@ -16,9 +15,26 @@ function wtRecord(over: Partial<WtRecord> = {}): WtRecord {
   return { branch: "feature", canon: "/repo/wt", locked: false, path: "/repo/wt", ...over };
 }
 
-// locked worktree はどのフラグでも消さず、理由 "locked" を返す
-test("keepReason protects a locked worktree and surfaces the reason", () => {
-  expect(keepReason(wtRecord({ locked: true }), "main", "/elsewhere")).toBe("locked");
+// locked worktree はどのフラグでも守る（merged でも reason=locked で kept）
+test("cleanupWorktrees keeps a locked worktree even under aggressive flags", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+  await repo.git("worktree", "lock", wtPath);
+
+  try {
+    const flags = { ...defaultFlags(), worktree: { committed: true, filesChanged: true } };
+    const result = await cleanupWorktrees("main", flags, { cwd: repo.dir });
+
+    expect(result.results.some((r) => r.action === "kept" && r.reason === "locked")).toBe(true);
+  } finally {
+    await repo.git("worktree", "unlock", wtPath).catch(() => "");
+    rmSync(wtPath, { force: true, recursive: true });
+  }
 });
 
 // merged worktree は default フラグで削除対象（dry-run で would-remove）
