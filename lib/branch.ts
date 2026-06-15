@@ -83,14 +83,14 @@ async function removeBranch(name: string, opts: Opts): Promise<ActionResult> {
   return { action: "failed", error: `exit ${String(code)}: ${stderr.trim()}`, name };
 }
 
-// committed の branch は --committed(=branch) があれば消す、なければ理由付きで残す
+// committed の branch は committed の対象に branch が入っていれば消す、なければ理由付きで残す
 async function removeCommittedBranch(
   name: string,
-  branchCommitted: boolean,
+  isTarget: boolean,
   dryRun: boolean,
   opts: Opts,
 ): Promise<ActionResult> {
-  if (!branchCommitted) {
+  if (!isTarget) {
     return { action: "kept", name, reason: "committed" };
   }
 
@@ -138,7 +138,7 @@ async function sweepBranch(
       return await removeMergedBranch(name, flags.dryRun, opts);
     }
 
-    return await removeCommittedBranch(name, flags.branchCommitted, flags.dryRun, opts);
+    return await removeCommittedBranch(name, flags.committed.includes("branch"), flags.dryRun, opts);
   } catch (error) {
     // 1 件の throw（壊れた ref 等）で全体を止めない
     return { action: "failed", error: String(error), name };

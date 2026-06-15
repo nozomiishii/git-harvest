@@ -1,42 +1,36 @@
 import { expect, test } from "vitest";
 import { defaultFlags, parseFlags, subcommandOf } from "./flags";
 
-// default は全 scope の段フラグも off-ladder toggle も無効
-test("defaultFlags keeps every scope off and toggles off", () => {
+// default は committed / files-changed の対象 scope が空で、off-ladder toggle も無効
+test("defaultFlags targets no scope and leaves toggles off", () => {
   const f = defaultFlags();
 
-  expect(f.worktree).toStrictEqual({ committed: false, filesChanged: false });
-  expect(f["claude-worktree"]).toStrictEqual({ committed: false, filesChanged: false });
-  expect(f.branchCommitted).toBe(false);
+  expect(f.committed).toStrictEqual([]);
+  expect(f.filesChanged).toStrictEqual([]);
   expect(f.untouched).toBe(false);
   expect(f.detached).toBe(false);
 });
 
-// scope 指定は対象 scope だけ committed を立てる
-test("--committed=claude-worktree sets only the claude scope", () => {
-  const flags = parseFlags(["--committed=claude-worktree"]);
-
-  expect(flags["claude-worktree"].committed).toBe(true);
-  expect(flags.worktree.committed).toBe(false);
-  expect(flags.branchCommitted).toBe(false);
+// scope 指定は対象 scope だけ committed に入れる
+test("--committed=claude-worktree targets only the claude scope", () => {
+  expect(parseFlags(["--committed=claude-worktree"]).committed).toStrictEqual(["claude-worktree"]);
 });
 
-// 値無し --committed は branch を含む全 scope に効く
-test("a bare --committed sets every scope including branch", () => {
-  const flags = parseFlags(["--committed"]);
-
-  expect(flags.worktree.committed).toBe(true);
-  expect(flags["claude-worktree"].committed).toBe(true);
-  expect(flags.branchCommitted).toBe(true);
+// 値無し --committed は branch を含む全 scope を対象にする
+test("a bare --committed targets every scope including branch", () => {
+  expect(parseFlags(["--committed"]).committed).toStrictEqual([
+    "worktree",
+    "claude-worktree",
+    "branch",
+  ]);
 });
 
 // 値無し --files-changed は worktree 系のみ（branch は files-changed 段を持たない）
-test("a bare --files-changed sets worktree scopes but leaves branch untouched", () => {
+test("a bare --files-changed targets worktree scopes but not branch", () => {
   const flags = parseFlags(["--files-changed"]);
 
-  expect(flags.worktree.filesChanged).toBe(true);
-  expect(flags["claude-worktree"].filesChanged).toBe(true);
-  expect(flags.branchCommitted).toBe(false);
+  expect(flags.filesChanged).toStrictEqual(["worktree", "claude-worktree"]);
+  expect(flags.committed).toStrictEqual([]);
 });
 
 // branch に files-changed は許さず error
@@ -54,12 +48,12 @@ test("an empty scope value like --committed= is rejected", () => {
   expect(() => parseFlags(["--committed="])).toThrow(/invalid scope/);
 });
 
-// カンマ区切りで列挙した各 scope に適用
+// カンマ区切りで列挙した各 scope を対象にする
 test("comma-separated scopes apply to each listed scope", () => {
-  const flags = parseFlags(["--files-changed=worktree,claude-worktree"]);
-
-  expect(flags.worktree.filesChanged).toBe(true);
-  expect(flags["claude-worktree"].filesChanged).toBe(true);
+  expect(parseFlags(["--files-changed=worktree,claude-worktree"]).filesChanged).toStrictEqual([
+    "worktree",
+    "claude-worktree",
+  ]);
 });
 
 // --untouched / --detached は off-ladder toggle を立てる
@@ -71,22 +65,21 @@ test("--untouched and --detached set the off-ladder toggles", () => {
 });
 
 // --yolo の展開結果を spec の具体値で固定（経路非依存に検証）
-test("--yolo sets every scope to its most aggressive stage and enables both toggles", () => {
+test("--yolo targets every scope and enables both toggles", () => {
   const flags = parseFlags(["--yolo"]);
 
-  expect(flags.worktree).toStrictEqual({ committed: true, filesChanged: true });
-  expect(flags["claude-worktree"]).toStrictEqual({ committed: true, filesChanged: true });
-  expect(flags.branchCommitted).toBe(true);
+  expect(flags.committed).toStrictEqual(["worktree", "claude-worktree", "branch"]);
+  expect(flags.filesChanged).toStrictEqual(["worktree", "claude-worktree"]);
   expect(flags.untouched).toBe(true);
   expect(flags.detached).toBe(true);
 });
 
-// 危険側フラグを立てた後に安全側フラグを足しても、危険側の段は残る（toggle は単調）
-test("setting --committed after --files-changed keeps the files-changed stage active", () => {
+// 同じ scope を committed と files-changed の両方の対象にできる（重ねても両方残る）
+test("a scope can be targeted by both committed and files-changed", () => {
   const flags = parseFlags(["--files-changed=worktree", "--committed=worktree"]);
 
-  expect(flags.worktree.filesChanged).toBe(true);
-  expect(flags.worktree.committed).toBe(true);
+  expect(flags.filesChanged).toContain("worktree");
+  expect(flags.committed).toContain("worktree");
 });
 
 // -n は dry-run を立てる

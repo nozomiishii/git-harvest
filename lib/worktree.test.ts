@@ -1,6 +1,7 @@
 import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
+import type { Flags } from "./types";
 import { defaultFlags } from "./flags";
 import { makeRepo } from "./test-helpers";
 import {
@@ -30,7 +31,7 @@ test("cleanupWorktrees keeps a locked worktree even under aggressive flags", asy
   await repo.git("worktree", "lock", wtPath);
 
   try {
-    const flags = { ...defaultFlags(), worktree: { committed: true, filesChanged: true } };
+    const flags: Flags = { ...defaultFlags(), committed: ["worktree"], filesChanged: ["worktree"] };
     const result = await cleanupWorktrees("main", flags, { cwd: repo.dir });
 
     expect(result.results.some((r) => r.action === "kept" && r.reason === "locked")).toBe(true);
@@ -53,7 +54,7 @@ test("removeMerged marks a merged worktree for removal", async () => {
 test("removeCommitted keeps a committed worktree without the committed flag", async () => {
   const worktree = wtRecord();
 
-  const result = await removeCommitted(worktree, { committed: false, filesChanged: false }, true, {});
+  const result = await removeCommitted(worktree, false, true, {});
 
   expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "committed" });
 });
@@ -62,7 +63,7 @@ test("removeCommitted keeps a committed worktree without the committed flag", as
 test("removeCommitted marks a committed worktree for removal with the committed flag", async () => {
   const worktree = wtRecord();
 
-  const result = await removeCommitted(worktree, { committed: true, filesChanged: false }, true, {});
+  const result = await removeCommitted(worktree, true, true, {});
 
   expect(result).toStrictEqual({ action: "would-remove", name: worktree.path });
 });
@@ -71,12 +72,7 @@ test("removeCommitted marks a committed worktree for removal with the committed 
 test("removeFilesChanged keeps a files-changed worktree without the files-changed flag", async () => {
   const worktree = wtRecord();
 
-  const result = await removeFilesChanged(
-    worktree,
-    { committed: false, filesChanged: false },
-    true,
-    {},
-  );
+  const result = await removeFilesChanged(worktree, false, true, {});
 
   expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "files-changed" });
 });

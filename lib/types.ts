@@ -16,19 +16,14 @@ export type ActionResult =
 export type CleanupResult = { failures: number; results: ActionResult[] };
 
 export type Flags = {
-  branchCommitted: boolean; // branch は files-changed 段を持たない
-  "claude-worktree": ScopeFlags;
+  committed: Scope[]; // committed を消す対象 scope（worktree / claude-worktree / branch）
   detached: boolean;
   dryRun: boolean;
+  filesChanged: Scope[]; // files-changed を消す対象 scope（worktree 系のみ）
   untouched: boolean;
-  worktree: ScopeFlags;
 };
 
 export type Scope = (typeof SCOPES)[number];
-
-// worktree 系 scope が持つ削除フラグ。committed を立てれば committed + merged を、
-// filesChanged を立てれば files-changed も含めた全段を消す（立てた段以降＝安全側を削除）
-export type ScopeFlags = { committed: boolean; filesChanged: boolean };
 
 // worktree 掃除が branch 掃除へ引き継ぐ情報: 生存 worktree（main + kept + failed）が checkout 中の branch 名
 export type WorktreeCleanupResult = CleanupResult & { survivingBranches: Set<string> };

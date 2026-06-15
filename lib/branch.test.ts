@@ -1,5 +1,6 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
+import type { Flags } from "./types";
 import { categorizeBranch, cleanupBranches } from "./branch";
 import { defaultFlags } from "./flags";
 import { makeRepo } from "./test-helpers";
@@ -13,7 +14,7 @@ test("cleanupBranches keeps the current HEAD branch", async () => {
   await repo.git("switch", "main");
   await repo.git("merge", "--no-ff", "feature", "-m", "merge feature");
   await repo.git("switch", "feature");
-  const flags = { ...defaultFlags(), branchCommitted: true };
+  const flags: Flags = { ...defaultFlags(), committed: ["branch"] };
 
   const result = await cleanupBranches("main", flags, new Set<string>(), { cwd: repo.dir });
 
@@ -55,7 +56,7 @@ test("cleanupBranches removes a committed branch under --committed", async () =>
   await repo.git("switch", "-c", "wip");
   await repo.commit("wip work");
   await repo.git("switch", "main");
-  const flags = { ...defaultFlags(), branchCommitted: true };
+  const flags: Flags = { ...defaultFlags(), committed: ["branch"] };
 
   const result = await cleanupBranches("main", flags, new Set<string>(), { cwd: repo.dir });
 
@@ -155,7 +156,7 @@ test("cleanupBranches keeps a branch checked out in a surviving worktree", async
   const wtPath = `${repo.dir}-wip`;
   await repo.git("worktree", "add", wtPath, "wip");
   const wt = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
-  const flags = { ...defaultFlags(), branchCommitted: true };
+  const flags: Flags = { ...defaultFlags(), committed: ["branch"] };
 
   const result = await cleanupBranches("main", flags, wt.survivingBranches, { cwd: repo.dir });
 

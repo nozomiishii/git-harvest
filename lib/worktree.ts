@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import type { ActionResult, Flags, ScopeFlags, Stage, WorktreeCleanupResult } from "./types";
+import type { ActionResult, Flags, Stage, WorktreeCleanupResult } from "./types";
 import { hasRunningClaudeSession, scopeOfPath } from "./agent";
 import { git, gitText } from "./git";
 import { isMerged, isUntouched } from "./merged";
@@ -100,8 +100,9 @@ export async function cleanupWorktrees(
         record(worktree, await removeUntouched(worktree, flags.untouched, flags.dryRun, opts));
         continue;
       }
-      // category に対応した削除関数を呼ぶ。各関数が「消し方」と結果（removed / kept）を返す
-      const scope = flags[scopeOfPath(worktree.path)];
+      // category に対応した削除関数を呼ぶ。各関数が「消し方」と結果（removed / kept）を返す。
+      // この worktree の scope が committed / files-changed の対象に入っているかを渡す
+      const scope = scopeOfPath(worktree.path);
 
       if (category === "merged") {
         record(worktree, await removeMerged(worktree, flags.dryRun, opts));
@@ -109,11 +110,17 @@ export async function cleanupWorktrees(
       }
 
       if (category === "committed") {
-        record(worktree, await removeCommitted(worktree, scope, flags.dryRun, opts));
+        record(
+          worktree,
+          await removeCommitted(worktree, flags.committed.includes(scope), flags.dryRun, opts),
+        );
         continue;
       }
 
-      record(worktree, await removeFilesChanged(worktree, scope, flags.dryRun, opts));
+      record(
+        worktree,
+        await removeFilesChanged(worktree, flags.filesChanged.includes(scope), flags.dryRun, opts),
+      );
     } catch (error) {
       // 1 件の throw（壊れた ref で rev-parse 失敗 等）で全体を止めない
       record(worktree, { action: "failed", error: String(error), name: worktree.path });
@@ -147,14 +154,14 @@ export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
     .filter((rec) => rec.path !== "");
 }
 
-// committed の worktree。--committed が立っていれば消す（force 不要）、無ければ理由付きで残す
+// committed の worktree。scope が --committed の対象なら消す（force 不要）、無ければ理由付きで残す
 export async function removeCommitted(
   worktree: WtRecord,
-  scope: ScopeFlags,
+  isTarget: boolean,
   dryRun: boolean,
   opts: Opts,
 ): Promise<ActionResult> {
-  if (!scope.committed) {
+  if (!isTarget) {
     return { action: "kept", name: worktree.path, reason: "committed" };
   }
 
@@ -185,14 +192,14 @@ export async function removeDetached(
   return removeWorktree(worktree.path, opts, dirty);
 }
 
-// files-changed の worktree。--files-changed が立っていれば消す（未コミットを承知で force）、無ければ残す
+// files-changed の worktree。scope が --files-changed の対象なら消す（未コミットごと force）、無ければ残す
 export async function removeFilesChanged(
   worktree: WtRecord,
-  scope: ScopeFlags,
+  isTarget: boolean,
   dryRun: boolean,
   opts: Opts,
 ): Promise<ActionResult> {
-  if (!scope.filesChanged) {
+  if (!isTarget) {
     return { action: "kept", name: worktree.path, reason: "files-changed" };
   }
 
