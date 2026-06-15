@@ -1,9 +1,5 @@
 import { git, gitExitOk, gitText } from "./git";
 
-// untouched=独自コミット無し / merged=base 取り込み済み / other=未取り込み。
-// classifyBranch だけが使う（worktree.ts / branch.ts は isMerged / isUntouched へ移行済み）
-type Classification = "merged" | "other" | "untouched";
-
 type Opts = { cwd?: string };
 
 // base と branch は同型 string なのでオブジェクトで受けて取り違えを防ぐ
@@ -16,29 +12,6 @@ type Refs = { base: string; branch: string };
 //     - isSquashMerged:   squash マージ（GitHub のデフォルト）
 //     - isRebaseMerged:   rebase / cherry-pick
 // 「merged でも untouched でもない」状態に名前は付けない（呼び出し側で committed と判断する）。
-
-// 本体は isMerged / isUntouched へ移行済み。classifyBranch は未使用化したので後続タスクで削除する。
-// fail-closed の極性: 段1〜3 は失敗時 false で次段へ落ち、最終段 isRebaseMerged も失敗時 false
-// （= other）で keep 側に倒す
-export async function classifyBranch(refs: Refs, opts: Opts = {}): Promise<Classification> {
-  // 段1: base の first-parent 履歴上にあれば独自コミット無し
-  if (await isUntouched(refs, opts)) {
-    return "untouched";
-  }
-
-  // 段2: 通常マージ（fast-forward 含む）
-  if (await isAncestorMerged(refs, opts)) {
-    return "merged";
-  }
-
-  // 段3: squash マージ検出。段4と相補（multi-commit の squash / rebase で互いに補う）ため統合不可
-  if (await isSquashMerged(refs, opts)) {
-    return "merged";
-  }
-
-  // 段4: rebase / cherry-pick マージ検出
-  return (await isRebaseMerged(refs, opts)) ? "merged" : "other";
-}
 
 // 3 段を順に試し、どれかが true なら取り込み済み。段ごとに「git 失敗 = この段では判定不能」
 // として false で次段へ落ちる（段を増やす時はこの性質を守ること）
