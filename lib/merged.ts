@@ -6,16 +6,25 @@ type Opts = { cwd?: string };
 // base と branch は同型 string なのでオブジェクトで受けて取り違えを防ぐ
 type Refs = { base: string; branch: string };
 
-// 不変条件: 段1〜3 は「git 失敗 = この段では判定できない」として false で次段へ落ち、
-// 最終段 hasUniqueCommits だけが fail-closed で keep 側に倒す（段を増やす時はこの性質を守ること）
+// このファイルは「ブランチが base にどう取り込まれているか」を boolean 2つで答える。
+//   isUntouched: 作業なし（base の本流上、独自コミット無し）       … 旧 first-parent
+//   isMerged:    通常マージ / squash / rebase のいずれかで取り込み済み
+//     - isAncestorMerged: 通常マージ / fast-forward
+//     - isSquashMerged:   squash マージ（GitHub のデフォルト）
+//     - isRebaseMerged:   rebase / cherry-pick
+// 「merged でも untouched でもない」状態に名前は付けない（呼び出し側で committed と判断する）。
+
+// worktree.ts / branch.ts が isUntouched / isMerged へ移るまで残す（後続タスクで削除）。
+// fail-closed の極性: 段1〜3 は失敗時 false で次段へ落ち、最終段 isRebaseMerged も失敗時 false
+// （= other）で keep 側に倒す
 export async function classifyBranch(refs: Refs, opts: Opts = {}): Promise<Classification> {
   // 段1: base の first-parent 履歴上にあれば独自コミット無し
-  if (await isInFirstParentHistory(refs, opts)) {
+  if (await isUntouched(refs, opts)) {
     return "untouched";
   }
 
   // 段2: 通常マージ（fast-forward 含む）
-  if (await isAncestorOfBase(refs, opts)) {
+  if (await isAncestorMerged(refs, opts)) {
     return "merged";
   }
 
@@ -25,37 +34,26 @@ export async function classifyBranch(refs: Refs, opts: Opts = {}): Promise<Class
   }
 
   // 段4: rebase / cherry-pick マージ検出
-  const unique = await hasUniqueCommits(refs, opts);
-
-  return unique ? "other" : "merged";
+  return (await isRebaseMerged(refs, opts)) ? "merged" : "other";
 }
 
-// branch 側だけにあり、同じ内容の commit が base にも無いものを探す。
-// --cherry-pick は commit ID でなく変更内容で照合するため、rebase / cherry-pick で
-// ID が変わって base に入った commit も「取り込み済み」と判定できる
-async function hasUniqueCommits({ base, branch }: Refs, opts: Opts): Promise<boolean> {
-  const uniqueResult = await git(
-    ["log", "--cherry-pick", "--right-only", "--no-merges", "--oneline", `${base}...${branch}`],
-    opts,
-  );
-
-  // git 失敗時は stdout が空でも merged に倒さず keep 側に倒す（fail-closed）
-  if (uniqueResult.code !== 0) {
+// 3 段を順に試し、どれかが true なら取り込み済み。段ごとに「git 失敗 = この段では判定不能」
+// として false で次段へ落ちる（段を増やす時はこの性質を守ること）
+export async function isMerged(refs: Refs, opts: Opts = {}): Promise<boolean> {
+  if (await isAncestorMerged(refs, opts)) {
     return true;
   }
 
-  return uniqueResult.stdout.trim() !== "";
-}
+  if (await isSquashMerged(refs, opts)) {
+    return true;
+  }
 
-// merge-base --is-ancestor A B = 「A は B の歴史に含まれるか」。
-// branch が base の歴史に含まれる = branch の commit はすべて base に到達済み = マージ済み
-async function isAncestorOfBase({ base, branch }: Refs, opts: Opts): Promise<boolean> {
-  return gitExitOk(["merge-base", "--is-ancestor", branch, base], opts);
+  return isRebaseMerged(refs, opts);
 }
 
 // first-parent = マージで合流してきた側の枝を無視した、base の本流だけの commit 一覧。
 // branch の先頭 commit が本流上にある = このブランチではまだ独自の作業をしていない
-async function isInFirstParentHistory({ base, branch }: Refs, opts: Opts): Promise<boolean> {
+export async function isUntouched({ base, branch }: Refs, opts: Opts = {}): Promise<boolean> {
   // rev-parse はブランチ名を commit ID に解決する。
   // 壊れた ref は gitText がここで throw → 呼び出し側の fail-soft で failed になる（git() に変えない）
   const head = await gitText(["rev-parse", branch], opts);
@@ -63,6 +61,28 @@ async function isInFirstParentHistory({ base, branch }: Refs, opts: Opts): Promi
   const firstParent = firstParentResult.stdout;
 
   return firstParent.split("\n").includes(head);
+}
+
+// merge-base --is-ancestor A B = 「A は B の歴史に含まれるか」。
+// branch が base の歴史に含まれる = branch の commit はすべて base に到達済み = マージ済み
+async function isAncestorMerged({ base, branch }: Refs, opts: Opts): Promise<boolean> {
+  return gitExitOk(["merge-base", "--is-ancestor", branch, base], opts);
+}
+
+// branch 側の commit がすべて base に取り込み済みなら true。
+// --cherry-pick は commit ID でなく変更内容で照合するため、rebase / cherry-pick で
+// ID が変わって base に入った commit も「取り込み済み」と判定できる
+async function isRebaseMerged({ base, branch }: Refs, opts: Opts): Promise<boolean> {
+  const result = await git(
+    ["log", "--cherry-pick", "--right-only", "--no-merges", "--oneline", `${base}...${branch}`],
+    opts,
+  );
+
+  if (result.code !== 0) {
+    return false; // 判定不能は「マージ済みでない」に倒す（従来の keep 側と同結果）
+  }
+
+  return result.stdout.trim() === "";
 }
 
 // squash マージ = ブランチの全 commit を 1 つに潰して base に積む方式。元の commit は base の

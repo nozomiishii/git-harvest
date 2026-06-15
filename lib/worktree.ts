@@ -8,7 +8,7 @@ import type {
 } from "./types";
 import { hasRunningClaudeSession, scopeOfPath } from "./agent";
 import { git, gitExitOk, gitText } from "./git";
-import { classifyBranch } from "./merge-detect";
+import { classifyBranch } from "./merged";
 import { canonical, isInside } from "./path";
 import { atOrSafer } from "./types";
 

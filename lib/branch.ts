@@ -7,7 +7,7 @@ import type {
   Stage,
 } from "./types";
 import { git, gitText, NETWORK_TIMEOUT_MS } from "./git";
-import { classifyBranch } from "./merge-detect";
+import { classifyBranch } from "./merged";
 import { atOrSafer } from "./types";
 
 export type BranchInfo = {
