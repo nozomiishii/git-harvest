@@ -83,6 +83,37 @@ async function removeBranch(name: string, opts: Opts): Promise<ActionResult> {
   return { action: "failed", error: `exit ${String(code)}: ${stderr.trim()}`, name };
 }
 
+// committed の branch は --committed(=branch) があれば消す、なければ理由付きで残す
+async function removeCommittedBranch(
+  name: string,
+  branchCommitted: boolean,
+  dryRun: boolean,
+  opts: Opts,
+): Promise<ActionResult> {
+  if (!branchCommitted) {
+    return { action: "kept", name, reason: "committed" };
+  }
+
+  if (dryRun) {
+    return { action: "would-remove", name };
+  }
+
+  return removeBranch(name, opts);
+}
+
+// merged の branch は base 取り込み済みの残骸なので常に消す
+async function removeMergedBranch(
+  name: string,
+  dryRun: boolean,
+  opts: Opts,
+): Promise<ActionResult> {
+  if (dryRun) {
+    return { action: "would-remove", name };
+  }
+
+  return removeBranch(name, opts);
+}
+
 // 1 branch → 1 結果。fail-soft の catch を内側に持ち、呼び出し側へは throw しない契約
 async function sweepBranch(
   name: string,
@@ -102,18 +133,12 @@ async function sweepBranch(
       return { action: "kept", name, reason: "checked out" };
     }
     const category = await categorizeBranch(name, base, opts);
-    // merged は常に消し、committed は --committed(=branch) のときだけ消す
-    const remove = category === "merged" || flags.branchCommitted;
 
-    if (!remove) {
-      return { action: "kept", name, reason: category };
+    if (category === "merged") {
+      return await removeMergedBranch(name, flags.dryRun, opts);
     }
 
-    if (flags.dryRun) {
-      return { action: "would-remove", name };
-    }
-
-    return await removeBranch(name, opts);
+    return await removeCommittedBranch(name, flags.branchCommitted, flags.dryRun, opts);
   } catch (error) {
     // 1 件の throw（壊れた ref 等）で全体を止めない
     return { action: "failed", error: String(error), name };

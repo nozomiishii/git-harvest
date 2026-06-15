@@ -6,7 +6,9 @@ import { makeRepo } from "./test-helpers";
 import {
   categorize,
   cleanupWorktrees,
-  removeForScope,
+  removeCommitted,
+  removeFilesChanged,
+  removeMerged,
   sweepOffLadder,
   type WtRecord,
 } from "./worktree";
@@ -37,56 +39,45 @@ test("cleanupWorktrees keeps a locked worktree even under aggressive flags", asy
   }
 });
 
-// merged worktree は default フラグで削除対象（dry-run で would-remove）
-test("removeForScope removes a merged worktree by default", async () => {
+// merged worktree はどの scope でも常に削除対象（dry-run で would-remove）
+test("removeMerged marks a merged worktree for removal", async () => {
   const worktree = wtRecord();
 
-  const results = await removeForScope(
-    [{ category: "merged", worktree }],
-    defaultFlags().worktree,
-    true,
-  );
+  const result = await removeMerged(worktree, true, {});
 
-  expect(results.some((r) => r.action === "would-remove" && r.name === worktree.path)).toBe(true);
+  expect(result).toStrictEqual({ action: "would-remove", name: worktree.path });
 });
 
-// committed worktree は default で保護（reason=committed）
-test("removeForScope keeps a committed worktree by default", async () => {
+// committed worktree は --committed が無ければ理由付きで残す
+test("removeCommitted keeps a committed worktree without the committed flag", async () => {
   const worktree = wtRecord();
 
-  const results = await removeForScope(
-    [{ category: "committed", worktree }],
-    defaultFlags().worktree,
-    true,
-  );
+  const result = await removeCommitted(worktree, { committed: false, filesChanged: false }, true, {});
 
-  expect(results).toStrictEqual([{ action: "kept", name: worktree.path, reason: "committed" }]);
+  expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "committed" });
 });
 
-// committed フラグ（--committed=claude-worktree 相当）が立つと committed worktree を削除
-test("removeForScope removes a committed worktree when the committed flag is set", async () => {
+// committed worktree は --committed があれば削除対象
+test("removeCommitted marks a committed worktree for removal with the committed flag", async () => {
   const worktree = wtRecord();
 
-  const results = await removeForScope(
-    [{ category: "committed", worktree }],
-    { committed: true, filesChanged: false },
-    true,
-  );
+  const result = await removeCommitted(worktree, { committed: true, filesChanged: false }, true, {});
 
-  expect(results.some((r) => r.action === "would-remove" && r.name === worktree.path)).toBe(true);
+  expect(result).toStrictEqual({ action: "would-remove", name: worktree.path });
 });
 
-// files-changed（未コミット）worktree は default で保護
-test("removeForScope keeps a files-changed worktree by default", async () => {
+// files-changed worktree は --files-changed が無ければ理由付きで残す
+test("removeFilesChanged keeps a files-changed worktree without the files-changed flag", async () => {
   const worktree = wtRecord();
 
-  const results = await removeForScope(
-    [{ category: "files-changed", worktree }],
-    defaultFlags().worktree,
+  const result = await removeFilesChanged(
+    worktree,
+    { committed: false, filesChanged: false },
     true,
+    {},
   );
 
-  expect(results).toStrictEqual([{ action: "kept", name: worktree.path, reason: "files-changed" }]);
+  expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "files-changed" });
 });
 
 // untouched worktree は toggle 無しで保護（reason=untouched）

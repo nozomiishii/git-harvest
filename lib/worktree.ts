@@ -4,11 +4,6 @@ import { hasRunningClaudeSession, scopeOfPath } from "./agent";
 import { git, gitText } from "./git";
 import { isMerged, isUntouched } from "./merged";
 import { canonical, isInside } from "./path";
-import { WORKTREE_SCOPES } from "./types";
-
-// scope ごとの削除候補。category は files-changed / committed / merged のいずれか
-// （untouched は off-ladder として candidates に積まず、sweepOffLadder で処理する）
-export type Removable = { category: Stage; worktree: WtRecord };
 
 export type WtRecord = { branch: string | undefined; canon: string; locked: boolean; path: string };
 
@@ -39,7 +34,7 @@ export async function categorize(
 }
 
 // worktree = 同じリポジトリの履歴を共有する、もう 1 つの作業ディレクトリ（git worktree add で作る）。
-// 一覧を取り、1 つずつ「守る / 分類」し、scope ごとにフラグで「どこまで消すか」を決めて削除する
+// 一覧を取り、1 つずつ「守る → 分類 → category に対応した削除関数」と上から下りる
 export async function cleanupWorktrees(
   base: string,
   flags: Flags,
@@ -51,10 +46,6 @@ export async function cleanupWorktrees(
   const current = canonical(opts.cwd ?? process.cwd());
   const results: ActionResult[] = [];
   const survivors: WtRecord[] = mainWorktree ? [mainWorktree] : [];
-  const candidates: Record<"claude-worktree" | "worktree", Removable[]> = {
-    "claude-worktree": [],
-    worktree: [],
-  };
   // 生存 = kept / failed（物理的に残る）。result を積み、生存なら survivors にも積む
   const record = (worktree: WtRecord, result: ActionResult): void => {
     results.push(result);
@@ -115,24 +106,23 @@ export async function cleanupWorktrees(
         );
         continue;
       }
-      candidates[scopeOfPath(worktree.path)].push({ category, worktree });
+      // category に対応した削除関数を呼ぶ。各関数が「消し方」と結果（removed / kept）を返す
+      const scope = flags[scopeOfPath(worktree.path)];
+
+      if (category === "merged") {
+        record(worktree, await removeMerged(worktree, flags.dryRun, opts));
+        continue;
+      }
+
+      if (category === "committed") {
+        record(worktree, await removeCommitted(worktree, scope, flags.dryRun, opts));
+        continue;
+      }
+
+      record(worktree, await removeFilesChanged(worktree, scope, flags.dryRun, opts));
     } catch (error) {
       // 1 件の throw（壊れた ref で rev-parse 失敗 等）で全体を止めない
       record(worktree, { action: "failed", error: String(error), name: worktree.path });
-    }
-  }
-
-  for (const scope of WORKTREE_SCOPES) {
-    const items = candidates[scope];
-    const byPath = new Map(items.map((it) => [it.worktree.path, it.worktree]));
-
-    for (const result of await removeForScope(items, flags[scope], flags.dryRun, opts)) {
-      // result.name は candidates 由来の path なので rec は必ず引ける
-      const rec = byPath.get(result.name);
-
-      if (rec !== undefined) {
-        record(rec, result);
-      }
     }
   }
 
@@ -163,30 +153,53 @@ export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
     .filter((rec) => rec.path !== "");
 }
 
-// scope ごとに、そのフラグで「どこまで消すか」を 1 回選ぶ累積実行関数。
-// 消されなかった（より危険な段の）worktree は理由＝カテゴリで kept として返す
-export async function removeForScope(
-  items: Removable[],
-  scopeFlags: ScopeFlags,
+// committed の worktree。--committed が立っていれば消す（force 不要）、無ければ理由付きで残す
+export async function removeCommitted(
+  worktree: WtRecord,
+  scope: ScopeFlags,
   dryRun: boolean,
-  opts: Opts = {},
-): Promise<ActionResult[]> {
-  const removed = scopeFlags.filesChanged
-    ? await removeFilesChanged(items, dryRun, opts)
-    : scopeFlags.committed
-      ? await removeCommitted(items, dryRun, opts)
-      : await removeMerged(items, dryRun, opts);
-  const handled = new Set(removed.map((r) => r.name));
-  const kept: ActionResult[] = [];
-
-  for (const { category, worktree } of items) {
-    if (handled.has(worktree.path)) {
-      continue;
-    }
-    kept.push({ action: "kept", name: worktree.path, reason: category });
+  opts: Opts,
+): Promise<ActionResult> {
+  if (!scope.committed) {
+    return { action: "kept", name: worktree.path, reason: "committed" };
   }
 
-  return [...removed, ...kept];
+  if (dryRun) {
+    return { action: "would-remove", name: worktree.path };
+  }
+
+  return removeWorktree(worktree.path, opts, false);
+}
+
+// files-changed の worktree。--files-changed が立っていれば消す（未コミットを承知で force）、無ければ残す
+export async function removeFilesChanged(
+  worktree: WtRecord,
+  scope: ScopeFlags,
+  dryRun: boolean,
+  opts: Opts,
+): Promise<ActionResult> {
+  if (!scope.filesChanged) {
+    return { action: "kept", name: worktree.path, reason: "files-changed" };
+  }
+
+  if (dryRun) {
+    return { action: "would-remove", name: worktree.path };
+  }
+
+  return removeWorktree(worktree.path, opts, true);
+}
+
+// merged の worktree は安全（base 取り込み済み）なので、どの scope でも常に消す（force 不要）
+export async function removeMerged(
+  worktree: WtRecord,
+  dryRun: boolean,
+  opts: Opts,
+): Promise<ActionResult> {
+  if (dryRun) {
+    return { action: "would-remove", name: worktree.path };
+  }
+
+  return removeWorktree(worktree.path, opts, false);
 }
 
 // off-ladder（detached / untouched）の削除 or kept。toggle が立っていれば消し、無ければ理由付きで残す。
@@ -252,65 +265,6 @@ function parseWorktreeBlock(block: string): WtRecord {
     locked: lines.some((l) => l.startsWith("locked")),
     path,
   };
-}
-
-// 指定カテゴリの worktree だけを消す。fail-soft は各削除で 1 件 failed に閉じる
-async function removeCategory(
-  items: Removable[],
-  category: Stage,
-  dryRun: boolean,
-  opts: Opts,
-  force: boolean,
-): Promise<ActionResult[]> {
-  const results: ActionResult[] = [];
-
-  for (const { worktree } of items.filter((it) => it.category === category)) {
-    if (dryRun) {
-      results.push({ action: "would-remove", name: worktree.path });
-      continue;
-    }
-
-    try {
-      results.push(await removeWorktree(worktree.path, opts, force));
-    } catch (error) {
-      results.push({ action: "failed", error: String(error), name: worktree.path });
-    }
-  }
-
-  return results;
-}
-
-// merged + committed を消す
-async function removeCommitted(
-  items: Removable[],
-  dryRun: boolean,
-  opts: Opts,
-): Promise<ActionResult[]> {
-  return [
-    ...(await removeMerged(items, dryRun, opts)),
-    ...(await removeCategory(items, "committed", dryRun, opts, false)),
-  ];
-}
-
-// merged + committed + files-changed を消す（files-changed は未コミットを承知で force）
-async function removeFilesChanged(
-  items: Removable[],
-  dryRun: boolean,
-  opts: Opts,
-): Promise<ActionResult[]> {
-  return [
-    ...(await removeCommitted(items, dryRun, opts)),
-    ...(await removeCategory(items, "files-changed", dryRun, opts, true)),
-  ];
-}
-
-// merged を消す（force 不要）
-async function removeMerged(
-  items: Removable[],
-  dryRun: boolean,
-  opts: Opts,
-): Promise<ActionResult[]> {
-  return removeCategory(items, "merged", dryRun, opts, false);
 }
 
 // 競合 rescue とエラー整形だけを持つ実行関数。
