@@ -5,10 +5,10 @@ type ResolveOpts = { cwd?: string; offline?: boolean };
 // base = 掃除の基準になるデフォルトブランチ（main 等）。
 // origin/HEAD という「リモートのデフォルトブランチを指すポインタ」から解決する
 export async function resolveBase(opts: ResolveOpts = {}): Promise<string | undefined> {
-  const current = await originHead(opts);
+  const existing = await originHead(opts);
 
-  if (current) {
-    return current;
+  if (existing) {
+    return existing;
   }
 
   if (opts.offline !== true) {

@@ -195,7 +195,8 @@ export async function removeForScope(
 }
 
 // off-ladder（detached / untouched）の削除 or kept。toggle が立っていれば消し、無ければ理由付きで残す。
-// detached は未コミット変更を持ちうるので dirty なら force。untouched は定義上 clean なので force 無し
+// 消す前に未コミット変更を見て force を決める。detached は dirty なら force、
+// untouched は categorize 済みで clean なので dirty は false（force 無し）になる
 export async function sweepOffLadder(
   worktree: WtRecord,
   toggle: boolean,
