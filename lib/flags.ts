@@ -1,30 +1,25 @@
-import type { Flags, Scope, Stage } from "./types";
-import { SAFETY, SCOPES, WORKTREE_SCOPES } from "./types";
+import type { Flags } from "./types";
+import { SCOPES, WORKTREE_SCOPES } from "./types";
 
 // argv のどこにあってもフラグより優先される
 export type Subcommand = "help" | "logo" | "version";
 
 export class UsageError extends Error {}
 
-// stage ごとに指定できる scope。branch は作業ディレクトリを持たず
-// 「未コミットの変更」が存在しないため、files-changed に branch scope は無い
-const STAGE_SCOPES: Record<"committed" | "files-changed", readonly Scope[]> = {
-  committed: SCOPES,
-  "files-changed": WORKTREE_SCOPES,
-};
-
-// preset を増やすときはここに 1 entry 足す。applyToken は threshold を下げる・toggle を true に
-// するだけ（単調）なので、preset と単体フラグはどの順で並んでも同じ結果になる
+// preset を増やすときはここに 1 entry 足す。applyToken は toggle を true にするだけ（単調）なので、
+// preset と単体フラグはどの順で並んでも同じ結果になる
 const PRESETS: Record<string, readonly string[]> = {
   "--yolo": ["--files-changed", "--committed", "--untouched", "--detached"],
 };
 
 export function defaultFlags(): Flags {
   return {
+    branchCommitted: false,
+    "claude-worktree": { committed: false, filesChanged: false },
     detached: false,
     dryRun: false,
-    thresholds: { branch: "merged", "claude-worktree": "merged", worktree: "merged" },
     untouched: false,
+    worktree: { committed: false, filesChanged: false },
   };
 }
 
@@ -114,19 +109,33 @@ export function subcommandOf(argv: string[]): Subcommand | undefined {
   return undefined;
 }
 
-function applyStage(
+// 値無しは許可された全 scope を対象にする（--files-changed は worktree 系のみ、--committed は branch も）。
+// scope ごとに対応する toggle を立てる。立てるだけで下げ直さないため order 非依存
+function applyStageFlag(
   flags: Flags,
   stage: "committed" | "files-changed",
   value: string | undefined,
 ): void {
-  const allowed = STAGE_SCOPES[stage];
-  const targets = value === undefined ? [...allowed] : value.split(",");
+  const scopes =
+    value === undefined
+      ? stage === "files-changed"
+        ? [...WORKTREE_SCOPES]
+        : [...SCOPES]
+      : value.split(",");
 
-  for (const scope of targets) {
-    if (!allowed.includes(scope as Scope)) {
-      throw new UsageError(`invalid scope for --${stage}: ${scope}`);
+  for (const scope of scopes) {
+    if (stage === "files-changed") {
+      if (scope !== "worktree" && scope !== "claude-worktree") {
+        throw new UsageError(`invalid scope for --files-changed: ${scope}`);
+      }
+      flags[scope].filesChanged = true;
+    } else if (scope === "branch") {
+      flags.branchCommitted = true;
+    } else if (scope === "worktree" || scope === "claude-worktree") {
+      flags[scope].committed = true;
+    } else {
+      throw new UsageError(`invalid scope for --committed: ${scope}`);
     }
-    flags.thresholds[scope as Scope] = lower(flags.thresholds[scope as Scope], stage);
   }
 }
 
@@ -148,14 +157,10 @@ function applyToken(flags: Flags, arg: string): boolean {
   const value = eq === -1 ? undefined : arg.slice(eq + 1);
 
   if (token === "--committed" || token === "--files-changed") {
-    applyStage(flags, token === "--committed" ? "committed" : "files-changed", value);
+    applyStageFlag(flags, token === "--committed" ? "committed" : "files-changed", value);
 
     return true;
   }
 
   return false;
-}
-
-function lower(current: Stage, candidate: Stage): Stage {
-  return SAFETY.indexOf(candidate) < SAFETY.indexOf(current) ? candidate : current;
 }

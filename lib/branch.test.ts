@@ -1,41 +1,51 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
-import { type BranchInfo, cleanupBranches, decideBranch } from "./branch";
+import { categorizeBranch, cleanupBranches, keepReason } from "./branch";
 import { defaultFlags } from "./flags";
-import { assertKept, makeRepo } from "./test-helpers";
+import { makeRepo } from "./test-helpers";
 import { cleanupWorktrees } from "./worktree";
 
-function br(over: Partial<BranchInfo>): BranchInfo {
-  return { classification: "other", invariantReason: undefined, ...over };
-}
-
-// invariant branch は理由をそのまま reason に返す
-test("decideBranch keeps an invariant branch and surfaces its reason", () => {
-  const result = decideBranch(br({ invariantReason: "current HEAD" }), defaultFlags());
-
-  assertKept(result);
-
-  expect(result.reason).toBe("current HEAD");
+// current HEAD の branch はどのフラグでも消さず、理由 "current HEAD" を返す
+test("keepReason protects the current HEAD branch and surfaces its reason", () => {
+  expect(keepReason("done", "done", new Set<string>())).toBe("current HEAD");
 });
 
-// untouched は in-base として default 削除（merged も decideBranch では同一分岐）
-test("decideBranch removes an untouched branch as in-base by default", () => {
-  expect(decideBranch(br({ classification: "untouched" }), defaultFlags()).remove).toBe(true);
+// 独自コミット無し（untouched）の branch は in-base 残骸として merged 扱い
+test("categorizeBranch treats an untouched branch as merged (in-base)", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "fresh");
+  await repo.git("switch", "main");
+
+  expect(await categorizeBranch("fresh", "main", { cwd: repo.dir })).toBe("merged");
 });
 
-// committed（other）な branch は default で保護
-test("decideBranch keeps a committed branch by default", () => {
-  expect(decideBranch(br({ classification: "other" }), defaultFlags()).remove).toBe(false);
+// committed（未取り込みの独自コミットあり）な branch は default で保護（reason=committed）
+test("cleanupBranches keeps a committed branch by default", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "wip");
+  await repo.commit("wip work");
+  await repo.git("switch", "main");
+
+  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), {
+    cwd: repo.dir,
+  });
+
+  expect(
+    result.results.some((r) => r.action === "kept" && r.name === "wip" && r.reason === "committed"),
+  ).toBe(true);
 });
 
-// committed 閾値で committed な branch を削除
-test("decideBranch removes a committed branch at the committed threshold", () => {
-  const flags = {
-    ...defaultFlags(),
-    thresholds: { ...defaultFlags().thresholds, branch: "committed" as const },
-  };
+// --committed（branchCommitted）で committed な branch を削除
+test("cleanupBranches removes a committed branch under --committed", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "wip");
+  await repo.commit("wip work");
+  await repo.git("switch", "main");
+  const flags = { ...defaultFlags(), branchCommitted: true };
 
-  expect(decideBranch(br({ classification: "other" }), flags).remove).toBe(true);
+  const result = await cleanupBranches("main", flags, new Set<string>(), { cwd: repo.dir });
+
+  expect(result.results.some((r) => r.action === "removed" && r.name === "wip")).toBe(true);
 });
 
 // base に取り込まれた branch は default で削除
@@ -131,10 +141,7 @@ test("cleanupBranches keeps a branch checked out in a surviving worktree", async
   const wtPath = `${repo.dir}-wip`;
   await repo.git("worktree", "add", wtPath, "wip");
   const wt = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
-  const flags = {
-    ...defaultFlags(),
-    thresholds: { ...defaultFlags().thresholds, branch: "committed" as const },
-  };
+  const flags = { ...defaultFlags(), branchCommitted: true };
 
   const result = await cleanupBranches("main", flags, wt.survivingBranches, { cwd: repo.dir });
 

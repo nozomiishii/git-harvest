@@ -1,5 +1,8 @@
-import type { Classification } from "./types";
 import { git, gitExitOk, gitText } from "./git";
+
+// untouched=独自コミット無し / merged=base 取り込み済み / other=未取り込み。
+// classifyBranch だけが使う（worktree.ts / branch.ts は isMerged / isUntouched へ移行済み）
+type Classification = "merged" | "other" | "untouched";
 
 type Opts = { cwd?: string };
 
@@ -14,7 +17,7 @@ type Refs = { base: string; branch: string };
 //     - isRebaseMerged:   rebase / cherry-pick
 // 「merged でも untouched でもない」状態に名前は付けない（呼び出し側で committed と判断する）。
 
-// worktree.ts / branch.ts が isUntouched / isMerged へ移るまで残す（後続タスクで削除）。
+// 本体は isMerged / isUntouched へ移行済み。classifyBranch は未使用化したので後続タスクで削除する。
 // fail-closed の極性: 段1〜3 は失敗時 false で次段へ落ち、最終段 isRebaseMerged も失敗時 false
 // （= other）で keep 側に倒す
 export async function classifyBranch(refs: Refs, opts: Opts = {}): Promise<Classification> {

@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { env } from "node:process";
 import { promisify } from "node:util";
-import type { CleanupDecisionResult } from "./types";
 
 const exec = promisify(execFile);
 
@@ -15,15 +14,6 @@ export type Repo = {
   dir: string;
   git: (...args: string[]) => Promise<string>;
 };
-
-// kept 側へ型を絞る assertion。「残すなら必ず reason がある」union を保ったままテストで reason を読める
-export function assertKept(
-  result: CleanupDecisionResult,
-): asserts result is Extract<CleanupDecisionResult, { remove: false }> {
-  if (result.remove) {
-    throw new Error("expected kept");
-  }
-}
 
 // `await using repo = await makeRepo()` でスコープ離脱時に自動削除
 export async function makeRepo(): Promise<Repo> {

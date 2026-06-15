@@ -1,91 +1,130 @@
-import { mkdirSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { defaultFlags } from "./flags";
-import { assertKept, makeRepo } from "./test-helpers";
-import { cleanupWorktrees, decideWorktree, type WorktreeInfo } from "./worktree";
+import { makeRepo } from "./test-helpers";
+import {
+  categorize,
+  cleanupWorktrees,
+  keepReason,
+  removeForScope,
+  sweepOffLadder,
+  type WtRecord,
+} from "./worktree";
 
-function wt(over: Partial<WorktreeInfo>): WorktreeInfo {
-  return {
-    hasBranch: true,
-    hasUncommittedChanges: false,
-    invariantReason: undefined,
-    isMerged: false,
-    isUntouched: false,
-    path: "/repo/.claude/worktrees/x",
-    ...over,
-  };
+function wtRecord(over: Partial<WtRecord> = {}): WtRecord {
+  return { branch: "feature", canon: "/repo/wt", locked: false, path: "/repo/wt", ...over };
 }
 
-// invariant は yolo でも保護し、generic な protected でなく「残した理由」をそのまま reason に返す
-test("decideWorktree keeps an invariant worktree even under yolo and surfaces the reason", () => {
-  const yolo = {
-    detached: true,
-    dryRun: false,
-    thresholds: {
-      branch: "committed",
-      "claude-worktree": "files-changed",
-      worktree: "files-changed",
-    },
-    untouched: true,
-  } as const;
-
-  const result = decideWorktree(wt({ invariantReason: "locked" }), yolo);
-
-  assertKept(result);
-
-  expect(result.reason).toBe("locked");
+// locked worktree はどのフラグでも消さず、理由 "locked" を返す
+test("keepReason protects a locked worktree and surfaces the reason", () => {
+  expect(keepReason(wtRecord({ locked: true }), "main", "/elsewhere")).toBe("locked");
 });
 
-// merged は default で削除
-test("decideWorktree removes a merged worktree by default", () => {
-  expect(decideWorktree(wt({ isMerged: true }), defaultFlags()).remove).toBe(true);
+// merged worktree は default フラグで削除対象（dry-run で would-remove）
+test("removeForScope removes a merged worktree by default", async () => {
+  const worktree = wtRecord();
+
+  const results = await removeForScope(
+    [{ category: "merged", worktree }],
+    defaultFlags().worktree,
+    true,
+  );
+
+  expect(results.some((r) => r.action === "would-remove" && r.name === worktree.path)).toBe(true);
 });
 
-// committed は default で保護
-test("decideWorktree keeps a committed worktree by default", () => {
-  expect(decideWorktree(wt({ isMerged: false }), defaultFlags()).remove).toBe(false);
+// committed worktree は default で保護（reason=committed）
+test("removeForScope keeps a committed worktree by default", async () => {
+  const worktree = wtRecord();
+
+  const results = await removeForScope(
+    [{ category: "committed", worktree }],
+    defaultFlags().worktree,
+    true,
+  );
+
+  expect(results).toStrictEqual([{ action: "kept", name: worktree.path, reason: "committed" }]);
 });
 
-// --committed=claude-worktree で committed な claude worktree を削除
-test("decideWorktree removes a committed claude worktree under --committed=claude-worktree", () => {
-  const flags = {
-    ...defaultFlags(),
-    thresholds: { ...defaultFlags().thresholds, "claude-worktree": "committed" as const },
-  };
+// committed フラグ（--committed=claude-worktree 相当）が立つと committed worktree を削除
+test("removeForScope removes a committed worktree when the committed flag is set", async () => {
+  const worktree = wtRecord();
 
-  expect(decideWorktree(wt({ isMerged: false }), flags).remove).toBe(true);
+  const results = await removeForScope(
+    [{ category: "committed", worktree }],
+    { committed: true, filesChanged: false },
+    true,
+  );
+
+  expect(results.some((r) => r.action === "would-remove" && r.name === worktree.path)).toBe(true);
 });
 
-// untouched は default で保護
-test("decideWorktree keeps untouched by default", () => {
-  expect(decideWorktree(wt({ isUntouched: true }), defaultFlags()).remove).toBe(false);
+// files-changed（未コミット）worktree は default で保護
+test("removeForScope keeps a files-changed worktree by default", async () => {
+  const worktree = wtRecord();
+
+  const results = await removeForScope(
+    [{ category: "files-changed", worktree }],
+    defaultFlags().worktree,
+    true,
+  );
+
+  expect(results).toStrictEqual([{ action: "kept", name: worktree.path, reason: "files-changed" }]);
 });
 
-// --untouched toggle で untouched を削除
-test("decideWorktree removes untouched with the untouched toggle", () => {
-  expect(
-    decideWorktree(wt({ isUntouched: true }), { ...defaultFlags(), untouched: true }).remove,
-  ).toBe(true);
+// untouched worktree は toggle 無しで保護（reason=untouched）
+test("sweepOffLadder keeps an untouched worktree without the toggle", async () => {
+  const worktree = wtRecord();
+
+  const result = await sweepOffLadder(worktree, false, "untouched", true);
+
+  expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "untouched" });
 });
 
-// detached は default で保護
-test("decideWorktree keeps detached by default", () => {
-  expect(decideWorktree(wt({ hasBranch: false }), defaultFlags()).remove).toBe(false);
+// --untouched toggle で untouched worktree を削除
+test("sweepOffLadder removes an untouched worktree with the toggle", async () => {
+  const worktree = wtRecord();
+
+  const result = await sweepOffLadder(worktree, true, "untouched", true);
+
+  expect(result).toStrictEqual({ action: "would-remove", name: worktree.path });
 });
 
-// --detached toggle で detached を削除
-test("decideWorktree removes detached with the detached toggle", () => {
-  expect(
-    decideWorktree(wt({ hasBranch: false }), { ...defaultFlags(), detached: true }).remove,
-  ).toBe(true);
+// detached worktree は toggle 無しで保護（reason=detached）
+test("sweepOffLadder keeps a detached worktree without the toggle", async () => {
+  const worktree = wtRecord({ branch: undefined });
+
+  const result = await sweepOffLadder(worktree, false, "detached", true);
+
+  expect(result).toStrictEqual({ action: "kept", name: worktree.path, reason: "detached" });
 });
 
-// 未コミット変更は files-changed 扱いで default 保護
-test("decideWorktree treats uncommitted changes as files-changed and keeps them by default", () => {
-  expect(
-    decideWorktree(wt({ hasUncommittedChanges: true, isMerged: true }), defaultFlags()).remove,
-  ).toBe(false);
+// --detached toggle で detached worktree を削除
+test("sweepOffLadder removes a detached worktree with the toggle", async () => {
+  const worktree = wtRecord({ branch: undefined });
+
+  const result = await sweepOffLadder(worktree, true, "detached", true);
+
+  expect(result).toStrictEqual({ action: "would-remove", name: worktree.path });
+});
+
+// 未コミットの変更がある worktree は files-changed に分類（消すと復元できない最優先段）
+test("categorize classifies a worktree with uncommitted changes as files-changed", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "wip");
+  await repo.git("switch", "main");
+  const wtPath = `${repo.dir}-wip`;
+  await repo.git("worktree", "add", wtPath, "wip");
+  writeFileSync(path.join(wtPath, "dirty.txt"), "x");
+
+  try {
+    const worktree = wtRecord({ branch: "wip", path: wtPath });
+
+    expect(await categorize(worktree, "main", { cwd: repo.dir })).toBe("files-changed");
+  } finally {
+    rmSync(wtPath, { force: true, recursive: true });
+  }
 });
 
 // main にマージ済みの linked worktree は default で削除
