@@ -1,11 +1,9 @@
-import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import type { Flags } from "./types";
 import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch";
 import { helpText, parseFlags, subcommandOf, UsageError } from "./flags";
-import { bold, dim, logo, statusLine, summaryLine } from "./ui";
 import { resolveBase } from "./resolve-base";
+import { bold, dim, logo, statusLine, summaryLine } from "./ui";
 import { cleanupWorktrees } from "./worktree";
 
 // 実行の流れ: subcommand 判定 → フラグ解釈 → base branch 解決 → worktree 掃除 → branch 掃除 → 集計表示
@@ -37,6 +35,11 @@ export async function main(argv: string[]): Promise<void> {
   const base = await resolveBase();
 
   if (base === undefined) {
+    process.stderr.write(
+      "git-harvest: cannot determine default branch (try: git remote set-head origin <branch>)\n",
+    );
+    process.exitCode = 1;
+
     return;
   }
   process.stdout.write(`\n${bold("git harvest")}\n`);
@@ -67,21 +70,6 @@ export async function main(argv: string[]): Promise<void> {
   process.exitCode = wt.failures + br.failures > 0 ? 2 : 0;
 }
 
-// このファイルが node のエントリとして直接実行された時だけ true（import 時は false）
-function isEntrypoint(): boolean {
-  const entry = process.argv[1];
-
-  if (entry === undefined) {
-    return false;
-  }
-
-  try {
-    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
-  } catch {
-    return false;
-  }
-}
-
 // UsageError は usage 表示 + exit code 1 に変換する（成功時は Flags、失敗時は undefined）
 function readFlags(argv: string[]): Flags | undefined {
   try {
@@ -95,7 +83,7 @@ function readFlags(argv: string[]): Flags | undefined {
   }
 }
 
-if (isEntrypoint()) {
+if (import.meta.main) {
   try {
     await main(process.argv.slice(2));
   } catch (error) {

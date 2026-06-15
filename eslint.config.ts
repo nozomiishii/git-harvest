@@ -15,6 +15,8 @@ export default defineConfig([
         "error",
         { allowedVariables: ["NO_COLOR", "GIT_HARVEST_CLAUDE_SESSIONS_DIR"] },
       ],
+      // import.meta.main は Node.js 24 でも experimental 扱いだが intentional に使用
+      "n/no-unsupported-features/node-builtins": ["error", { ignores: ["import.meta.main"] }],
     },
   },
 

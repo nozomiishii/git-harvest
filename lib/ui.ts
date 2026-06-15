@@ -2,7 +2,7 @@
 import { homedir } from "node:os";
 import type { ActionResult } from "./types";
 
-const ESC = String.fromCharCode(27); // エスケープ文字(0x1b)。cat -v での ^[ の正体
+const ESC = String.fromCodePoint(27); // エスケープ文字(0x1b)。cat -v での ^[ の正体
 const BRAND = "192;255;57";
 
 // VHS 風ロゴ。String.raw でバックスラッシュをエスケープ無しのまま保持する

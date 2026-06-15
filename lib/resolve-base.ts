@@ -24,10 +24,6 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
       return afterRefresh;
     }
   }
-  process.stderr.write(
-    "git-harvest: cannot determine default branch (try: git remote set-head origin <branch>)\n",
-  );
-  process.exitCode = 1;
 
   return undefined;
 }

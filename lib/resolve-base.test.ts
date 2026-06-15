@@ -9,17 +9,13 @@ test("resolveBase resolves the default branch from origin/HEAD", async () => {
   expect(await resolveBase({ cwd: repo.dir })).toBe("main");
 });
 
-// origin/HEAD 不明なら exit 1 で fail-closed
-test("resolveBase fails closed when origin/HEAD cannot be determined", async () => {
+// origin/HEAD 不明なら undefined を返す（エラー表示と exit code は cli.ts 側の責務）
+test("resolveBase returns undefined when origin/HEAD cannot be determined", async () => {
   await using repo = await makeRepo();
   await repo.git("remote", "remove", "origin");
   await repo.git("symbolic-ref", "-d", "refs/remotes/origin/HEAD").catch(() => "");
-  process.exitCode = 0;
 
   const base = await resolveBase({ cwd: repo.dir, offline: true });
 
   expect(base).toBeUndefined();
-  expect(process.exitCode).toBe(1);
-
-  process.exitCode = 0; // global を後続テストに残さない
 });
