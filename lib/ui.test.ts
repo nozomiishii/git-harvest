@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { expect, test } from "vitest";
-import { relpath, statusLine, summaryLine } from "./format";
+import { relpath, statusLine, summaryLine } from "./ui";
 
 // home dir は ~ に短縮
 test("relpath shortens the home directory to a tilde", () => {

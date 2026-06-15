@@ -3,9 +3,8 @@ import { fileURLToPath } from "node:url";
 import type { Flags } from "./types";
 import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch";
-import { logo } from "./brand";
 import { helpText, parseFlags, subcommandOf, UsageError } from "./flags";
-import { bold, dim, statusLine, summaryLine } from "./format";
+import { bold, dim, logo, statusLine, summaryLine } from "./ui";
 import { resolveBase } from "./resolve-base";
 import { cleanupWorktrees } from "./worktree";
 
