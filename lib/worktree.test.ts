@@ -127,6 +127,25 @@ test("categorize classifies a worktree with uncommitted changes as files-changed
   }
 });
 
+// status.showUntrackedFiles=no 設定下でも未追跡ファイルを files-changed と判定（config 非依存）
+test("categorize detects untracked files even when status.showUntrackedFiles is off", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "wip");
+  await repo.git("switch", "main");
+  const wtPath = `${repo.dir}-wip`;
+  await repo.git("worktree", "add", wtPath, "wip");
+  await repo.git("-C", wtPath, "config", "status.showUntrackedFiles", "no");
+  writeFileSync(path.join(wtPath, "dirty.txt"), "x");
+
+  try {
+    const worktree = wtRecord({ branch: "wip", path: wtPath });
+
+    expect(await categorize(worktree, "main", { cwd: repo.dir })).toBe("files-changed");
+  } finally {
+    rmSync(wtPath, { force: true, recursive: true });
+  }
+});
+
 // main にマージ済みの linked worktree は default で削除
 test("cleanupWorktrees removes a merged linked worktree by default", async () => {
   await using repo = await makeRepo();
