@@ -1,3 +1,5 @@
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { Flags } from "./types";
 import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch";
@@ -70,6 +72,21 @@ export async function main(argv: string[]): Promise<void> {
   process.exitCode = wt.failures + br.failures > 0 ? 2 : 0;
 }
 
+// このファイルが node のエントリとして直接実行された時だけ true（import 時は false）
+function isEntrypoint(): boolean {
+  const entry = process.argv[1];
+
+  if (entry === undefined) {
+    return false;
+  }
+
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
 // UsageError は usage 表示 + exit code 1 に変換する（成功時は Flags、失敗時は undefined）
 function readFlags(argv: string[]): Flags | undefined {
   try {
@@ -83,7 +100,7 @@ function readFlags(argv: string[]): Flags | undefined {
   }
 }
 
-if (import.meta.main) {
+if (isEntrypoint()) {
   try {
     await main(process.argv.slice(2));
   } catch (error) {

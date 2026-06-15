@@ -10,13 +10,11 @@ export default defineConfig([
   {
     name: "project/overrides",
     rules: {
-      // runtime が読む env のみ許可（NO_COLOR は format.ts、SESSIONS_DIR は agent.ts + テスト）
+      // runtime が読む env のみ許可（NO_COLOR は ui.ts、SESSIONS_DIR は agent.ts + テスト）
       "n/no-process-env": [
         "error",
         { allowedVariables: ["NO_COLOR", "GIT_HARVEST_CLAUDE_SESSIONS_DIR"] },
       ],
-      // import.meta.main は Node.js 24 でも experimental 扱いだが intentional に使用
-      "n/no-unsupported-features/node-builtins": ["error", { ignores: ["import.meta.main"] }],
     },
   },
 
