@@ -109,33 +109,35 @@ export function subcommandOf(argv: string[]): Subcommand | undefined {
   return undefined;
 }
 
-// 値無しは許可された全 scope を対象にする（--files-changed は worktree 系のみ、--committed は branch も）。
-// scope ごとに対応する toggle を立てる。立てるだけで下げ直さないため order 非依存
-function applyStageFlag(
-  flags: Flags,
-  stage: "committed" | "files-changed",
-  value: string | undefined,
-): void {
-  const scopes =
-    value === undefined
-      ? stage === "files-changed"
-        ? [...WORKTREE_SCOPES]
-        : [...SCOPES]
-      : value.split(",");
+// --committed: worktree 系 + branch。値無しは全 scope。toggle を立てるだけで下げ直さず order 非依存
+function applyCommittedFlag(flags: Flags, value: string | undefined): void {
+  const scopes = value === undefined ? [...SCOPES] : value.split(",");
 
   for (const scope of scopes) {
-    if (stage === "files-changed") {
-      if (scope !== "worktree" && scope !== "claude-worktree") {
-        throw new UsageError(`invalid scope for --files-changed: ${scope}`);
-      }
-      flags[scope].filesChanged = true;
-    } else if (scope === "branch") {
+    if (scope === "branch") {
       flags.branchCommitted = true;
-    } else if (scope === "worktree" || scope === "claude-worktree") {
-      flags[scope].committed = true;
-    } else {
-      throw new UsageError(`invalid scope for --committed: ${scope}`);
+      continue;
     }
+
+    if (scope === "worktree" || scope === "claude-worktree") {
+      flags[scope].committed = true;
+      continue;
+    }
+
+    throw new UsageError(`invalid scope for --committed: ${scope}`);
+  }
+}
+
+// --files-changed: worktree 系 scope のみ。値無しは全 worktree 系。toggle を立てるだけで order 非依存
+function applyFilesChangedFlag(flags: Flags, value: string | undefined): void {
+  const scopes = value === undefined ? [...WORKTREE_SCOPES] : value.split(",");
+
+  for (const scope of scopes) {
+    if (scope !== "worktree" && scope !== "claude-worktree") {
+      throw new UsageError(`invalid scope for --files-changed: ${scope}`);
+    }
+
+    flags[scope].filesChanged = true;
   }
 }
 
@@ -156,8 +158,14 @@ function applyToken(flags: Flags, arg: string): boolean {
   const token = eq === -1 ? arg : arg.slice(0, eq);
   const value = eq === -1 ? undefined : arg.slice(eq + 1);
 
-  if (token === "--committed" || token === "--files-changed") {
-    applyStageFlag(flags, token === "--committed" ? "committed" : "files-changed", value);
+  if (token === "--committed") {
+    applyCommittedFlag(flags, value);
+
+    return true;
+  }
+
+  if (token === "--files-changed") {
+    applyFilesChangedFlag(flags, value);
 
     return true;
   }
