@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import type { ActionResult, Flags, ScopeFlags, Stage, WorktreeCleanupResult } from "./types";
 import { hasRunningClaudeSession, scopeOfPath } from "./agent";
-import { git, gitExitOk, gitText } from "./git";
+import { git, gitText } from "./git";
 import { isMerged, isUntouched } from "./merged";
 import { canonical, isInside } from "./path";
 import { WORKTREE_SCOPES } from "./types";
@@ -215,21 +215,13 @@ export async function sweepOffLadder(
   return removeWorktree(worktree.path, opts, dirty);
 }
 
-// 「未コミットの作業があるか」を、変更が置かれうる 3 か所すべてで調べる
+// 「未コミットの作業があるか」を git status --porcelain 1 回で調べる。
+// porcelain は編集・ステージ・未追跡（.gitignore 対象は除く）をまとめて 1 行ずつ出すので、
+// 出力が空でなければ未コミットの変更あり
 async function hasUncommittedChanges(wt: string): Promise<boolean> {
-  // 編集したがまだ commit していないファイル。HEAD = 最後の commit との差分で見る
-  if (!(await gitExitOk(["-C", wt, "diff", "--quiet", "HEAD"]))) {
-    return true;
-  }
+  const { stdout } = await git(["-C", wt, "status", "--porcelain"]);
 
-  // git add でステージしたが commit していない変更
-  if (!(await gitExitOk(["-C", wt, "diff", "--quiet", "--cached"]))) {
-    return true;
-  }
-  // まだ一度も git add していない新規ファイル。.gitignore 対象は除く
-  const others = await git(["-C", wt, "ls-files", "--others", "--exclude-standard"]);
-
-  return others.stdout.trim().length > 0;
+  return stdout.trim().length > 0;
 }
 
 function parseWorktreeBlock(block: string): WtRecord {
