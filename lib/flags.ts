@@ -6,7 +6,7 @@ export type Subcommand = "help" | "logo" | "version";
 
 export class UsageError extends Error {}
 
-// preset を増やすときはここに 1 entry 足す。applyToken は toggle を true にするだけ（単調）なので、
+// preset を増やすときはここに 1 entry 足す。各フラグは toggle を立てるだけ（単調）なので、
 // preset と単体フラグはどの順で並んでも同じ結果になる
 const PRESETS: Record<string, readonly string[]> = {
   "--yolo": ["--files-changed", "--committed", "--untouched", "--detached"],
@@ -67,21 +67,37 @@ Invariants are always protected (no flag or --yolo can override):
 export function parseFlags(argv: string[]): Flags {
   const flags = defaultFlags();
 
-  for (const arg of argv) {
+  // --yolo などの preset は先に個別フラグへ展開し、以降は arg を上から1つずつ解釈する
+  const args = argv.flatMap((arg) => PRESETS[arg] ?? [arg]);
+
+  for (const arg of args) {
     if (arg === "--dry-run" || arg === "-n") {
       flags.dryRun = true;
       continue;
     }
-    const preset = PRESETS[arg];
 
-    if (preset !== undefined) {
-      for (const token of preset) {
-        applyToken(flags, token);
-      }
+    if (arg === "--untouched") {
+      flags.untouched = true;
       continue;
     }
 
-    if (applyToken(flags, arg)) {
+    if (arg === "--detached") {
+      flags.detached = true;
+      continue;
+    }
+
+    // --committed[=scope] / --files-changed[=scope]。先頭の = だけで分割し、残り全体を scope 指定にする
+    const eq = arg.indexOf("=");
+    const name = eq === -1 ? arg : arg.slice(0, eq);
+    const scopes = eq === -1 ? undefined : arg.slice(eq + 1);
+
+    if (name === "--committed") {
+      applyCommittedFlag(flags, scopes);
+      continue;
+    }
+
+    if (name === "--files-changed") {
+      applyFilesChangedFlag(flags, scopes);
       continue;
     }
 
@@ -139,36 +155,4 @@ function applyFilesChangedFlag(flags: Flags, value: string | undefined): void {
 
     flags[scope].filesChanged = true;
   }
-}
-
-function applyToken(flags: Flags, arg: string): boolean {
-  if (arg === "--untouched") {
-    flags.untouched = true;
-
-    return true;
-  }
-
-  if (arg === "--detached") {
-    flags.detached = true;
-
-    return true;
-  }
-  // split("=", 2) は3つ目以降を黙って捨てるため、先頭の = だけで分割して残り全体を value にする
-  const eq = arg.indexOf("=");
-  const token = eq === -1 ? arg : arg.slice(0, eq);
-  const value = eq === -1 ? undefined : arg.slice(eq + 1);
-
-  if (token === "--committed") {
-    applyCommittedFlag(flags, value);
-
-    return true;
-  }
-
-  if (token === "--files-changed") {
-    applyFilesChangedFlag(flags, value);
-
-    return true;
-  }
-
-  return false;
 }
