@@ -1,26 +1,10 @@
-import type { ActionResult, CleanupResult, Flags, Stage } from "./types";
+import type { ActionResult, CleanupResult, Flags } from "./types";
 import { git, gitText, NETWORK_TIMEOUT_MS } from "./git";
 import { isMerged, isUntouched } from "./merged";
 
 type Opts = { cwd?: string };
 
-// branch は作業ディレクトリを持たないので files-changed 段が無い。
-// untouched も merged も「取り込み済み残骸」として merged 扱い。それ以外（未取り込みの独自コミット）は committed
-export async function categorizeBranch(
-  branch: string,
-  base: string,
-  opts: Opts = {},
-): Promise<Stage> {
-  const refs = { base, branch };
-
-  if ((await isUntouched(refs, opts)) || (await isMerged(refs, opts))) {
-    return "merged";
-  }
-
-  return "committed";
-}
-
-// ローカルブランチの一覧を取り、1 つずつ「守る / 分類 / 削除」する
+// ローカルブランチの一覧を取り、1 つずつ「守る → 状態を判定 → 削除」する
 export async function cleanupBranches(
   base: string,
   flags: Flags,
@@ -41,7 +25,33 @@ export async function cleanupBranches(
 
   // base 自身は掃除対象外（results にも出さない）。並列化しない: 直列 await で順序と index.lock を守る
   for (const name of listLocalBranches(branchesOut).filter((branchName) => branchName !== base)) {
-    results.push(await sweepBranch(name, base, currentHead, survivingBranches, flags, opts));
+    try {
+      // 守る理由を上から1つずつ確認。当たればその理由で残す
+      if (isCurrentHead(name, currentHead)) {
+        results.push({ action: "kept", name, reason: "current HEAD" });
+        continue;
+      }
+
+      if (isCheckedOut(name, survivingBranches)) {
+        results.push({ action: "kept", name, reason: "checked out" });
+        continue;
+      }
+      // branch は files-changed 段が無い。untouched / merged は in-base 残骸として常に消す。
+      // それ以外（未取り込みの独自コミット）は committed で、--committed=branch のときだけ消す
+      const refs = { base, branch: name };
+
+      if ((await isUntouched(refs, opts)) || (await isMerged(refs, opts))) {
+        results.push(await removeMergedBranch(name, flags.dryRun, opts));
+        continue;
+      }
+
+      results.push(
+        await removeCommittedBranch(name, flags.committed.includes("branch"), flags.dryRun, opts),
+      );
+    } catch (error) {
+      // 1 件の throw（壊れた ref 等）で全体を止めない
+      results.push({ action: "failed", error: String(error), name });
+    }
   }
 
   if (!flags.dryRun) {
@@ -71,7 +81,7 @@ function listLocalBranches(branchesOut: string): string[] {
 
 // 競合 rescue とエラー整形だけを持つ実行関数。
 // branch -D は「base に取り込み済みか」を git 側で確認しない強制削除（-d は未マージを拒否する）。
-// 取り込み済み確認は categorizeBranch で済んでいるため -D で良い
+// 取り込み済み確認は上の isUntouched / isMerged 判定で済んでいるため -D で良い
 async function removeBranch(name: string, opts: Opts): Promise<ActionResult> {
   const { code, stderr } = await git(["branch", "-D", name], opts);
 
@@ -114,33 +124,3 @@ async function removeMergedBranch(
   return removeBranch(name, opts);
 }
 
-// 1 branch → 1 結果。fail-soft の catch を内側に持ち、呼び出し側へは throw しない契約
-async function sweepBranch(
-  name: string,
-  base: string,
-  currentHead: string,
-  survivingBranches: Set<string>,
-  flags: Flags,
-  opts: Opts,
-): Promise<ActionResult> {
-  try {
-    // 守る理由を上から1つずつ確認。当たればその理由で残す
-    if (isCurrentHead(name, currentHead)) {
-      return { action: "kept", name, reason: "current HEAD" };
-    }
-
-    if (isCheckedOut(name, survivingBranches)) {
-      return { action: "kept", name, reason: "checked out" };
-    }
-    const category = await categorizeBranch(name, base, opts);
-
-    if (category === "merged") {
-      return await removeMergedBranch(name, flags.dryRun, opts);
-    }
-
-    return await removeCommittedBranch(name, flags.committed.includes("branch"), flags.dryRun, opts);
-  } catch (error) {
-    // 1 件の throw（壊れた ref 等）で全体を止めない
-    return { action: "failed", error: String(error), name };
-  }
-}

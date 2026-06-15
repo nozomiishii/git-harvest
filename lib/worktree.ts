@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import type { ActionResult, Flags, Stage, WorktreeCleanupResult } from "./types";
+import type { ActionResult, Flags, WorktreeCleanupResult } from "./types";
 import { hasRunningClaudeSession, scopeOfPath } from "./agent";
 import { git, gitText } from "./git";
 import { isMerged, isUntouched } from "./merged";
@@ -9,32 +9,8 @@ export type WtRecord = { branch: string | undefined; canon: string; locked: bool
 
 type Opts = { cwd?: string };
 
-// 仕様カテゴリだけ返す（branch を持つ前提）。未コミット変更が最優先（消すと復元できないため）
-export async function categorize(
-  worktree: WtRecord,
-  base: string,
-  opts: Opts = {},
-): Promise<"untouched" | Stage> {
-  if (await hasUncommittedChanges(worktree.path)) {
-    return "files-changed";
-  }
-  const { branch } = worktree;
-
-  // detached（branch 無し）は呼び出し側で除外済み。型を満たすためのガードで、実際にはここに来ない
-  if (branch === undefined) {
-    return "committed";
-  }
-  const refs = { base, branch };
-
-  if (await isUntouched(refs, opts)) {
-    return "untouched";
-  }
-
-  return (await isMerged(refs, opts)) ? "merged" : "committed";
-}
-
 // worktree = 同じリポジトリの履歴を共有する、もう 1 つの作業ディレクトリ（git worktree add で作る）。
-// 一覧を取り、1 つずつ「守る → 分類 → category に対応した削除関数」と上から下りる
+// 一覧を取り、1 つずつ「守る → 状態を判定 → 対応する削除関数」と上から下りる
 export async function cleanupWorktrees(
   base: string,
   flags: Flags,
@@ -93,33 +69,35 @@ export async function cleanupWorktrees(
         record(worktree, await removeDetached(worktree, flags.detached, flags.dryRun, opts));
         continue;
       }
-      const category = await categorize(worktree, base, opts);
-
-      // untouched も off-ladder。--untouched でだけ消す
-      if (category === "untouched") {
-        record(worktree, await removeUntouched(worktree, flags.untouched, flags.dryRun, opts));
-        continue;
-      }
-      // category に対応した削除関数を呼ぶ。各関数が「消し方」と結果（removed / kept）を返す。
-      // この worktree の scope が committed / files-changed の対象に入っているかを渡す
+      // 状態を上から1つずつ判定し、対応する削除関数を即実行する。
+      // committed / files-changed は、この worktree の scope が対象に入っているかを渡す
       const scope = scopeOfPath(worktree.path);
+      const refs = { base, branch: worktree.branch };
 
-      if (category === "merged") {
-        record(worktree, await removeMerged(worktree, flags.dryRun, opts));
-        continue;
-      }
-
-      if (category === "committed") {
+      // 未コミットの変更が最優先（消すと復元できない）
+      if (await hasUncommittedChanges(worktree.path)) {
         record(
           worktree,
-          await removeCommitted(worktree, flags.committed.includes(scope), flags.dryRun, opts),
+          await removeFilesChanged(worktree, flags.filesChanged.includes(scope), flags.dryRun, opts),
         );
         continue;
       }
 
+      // 独自コミット無し（off-ladder）。--untouched でだけ消す
+      if (await isUntouched(refs, opts)) {
+        record(worktree, await removeUntouched(worktree, flags.untouched, flags.dryRun, opts));
+        continue;
+      }
+
+      if (await isMerged(refs, opts)) {
+        record(worktree, await removeMerged(worktree, flags.dryRun, opts));
+        continue;
+      }
+
+      // どれでもない = 未マージの独自コミットあり（committed）
       record(
         worktree,
-        await removeFilesChanged(worktree, flags.filesChanged.includes(scope), flags.dryRun, opts),
+        await removeCommitted(worktree, flags.committed.includes(scope), flags.dryRun, opts),
       );
     } catch (error) {
       // 1 件の throw（壊れた ref で rev-parse 失敗 等）で全体を止めない
@@ -141,6 +119,16 @@ export async function cleanupWorktrees(
   }
 
   return { failures, results, survivingBranches };
+}
+
+// 「未コミットの作業があるか」を git status --porcelain 1 回で調べる。
+// porcelain は編集・ステージ・未追跡（.gitignore 対象は除く）をまとめて 1 行ずつ出す。
+// -unormal は status.showUntrackedFiles=no 設定を上書きし、未追跡ファイルを必ず数える
+// （旧 3 コマンド版と同じく config に依存させない）。出力が空でなければ未コミットの変更あり
+export async function hasUncommittedChanges(wt: string): Promise<boolean> {
+  const { stdout } = await git(["-C", wt, "status", "--porcelain", "-unormal"]);
+
+  return stdout.trim().length > 0;
 }
 
 export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
@@ -224,7 +212,7 @@ export async function removeMerged(
 }
 
 // untouched（独自コミット無し）の worktree。--untouched があれば消す、無ければ理由付きで残す。
-// categorize で clean が確定しているので force は不要
+// 呼び出し側が hasUncommittedChanges を先に見て clean を確定済みなので force は不要
 export async function removeUntouched(
   worktree: WtRecord,
   untouched: boolean,
@@ -240,16 +228,6 @@ export async function removeUntouched(
   }
 
   return removeWorktree(worktree.path, opts, false);
-}
-
-// 「未コミットの作業があるか」を git status --porcelain 1 回で調べる。
-// porcelain は編集・ステージ・未追跡（.gitignore 対象は除く）をまとめて 1 行ずつ出す。
-// -unormal は status.showUntrackedFiles=no 設定を上書きし、未追跡ファイルを必ず数える
-// （旧 3 コマンド版と同じく config に依存させない）。出力が空でなければ未コミットの変更あり
-async function hasUncommittedChanges(wt: string): Promise<boolean> {
-  const { stdout } = await git(["-C", wt, "status", "--porcelain", "-unormal"]);
-
-  return stdout.trim().length > 0;
 }
 
 // 守る理由ごとの述語。どれか true ならその worktree はどのフラグでも消さない。

@@ -5,8 +5,8 @@ import type { Flags } from "./types";
 import { defaultFlags } from "./flags";
 import { makeRepo } from "./test-helpers";
 import {
-  categorize,
   cleanupWorktrees,
+  hasUncommittedChanges,
   removeCommitted,
   removeDetached,
   removeFilesChanged,
@@ -113,8 +113,8 @@ test("removeDetached marks a detached worktree for removal with the flag", async
   expect(result).toStrictEqual({ action: "would-remove", name: worktree.path });
 });
 
-// 未コミットの変更がある worktree は files-changed に分類（消すと復元できない最優先段）
-test("categorize classifies a worktree with uncommitted changes as files-changed", async () => {
+// 未コミットの変更がある worktree は hasUncommittedChanges が true（files-changed 判定の根拠）
+test("hasUncommittedChanges is true when a worktree has uncommitted changes", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "-c", "wip");
   await repo.git("switch", "main");
@@ -123,16 +123,14 @@ test("categorize classifies a worktree with uncommitted changes as files-changed
   writeFileSync(path.join(wtPath, "dirty.txt"), "x");
 
   try {
-    const worktree = wtRecord({ branch: "wip", path: wtPath });
-
-    expect(await categorize(worktree, "main", { cwd: repo.dir })).toBe("files-changed");
+    expect(await hasUncommittedChanges(wtPath)).toBe(true);
   } finally {
     rmSync(wtPath, { force: true, recursive: true });
   }
 });
 
-// status.showUntrackedFiles=no 設定下でも未追跡ファイルを files-changed と判定（config 非依存）
-test("categorize detects untracked files even when status.showUntrackedFiles is off", async () => {
+// status.showUntrackedFiles=no 設定下でも未追跡ファイルを数える（config 非依存）
+test("hasUncommittedChanges detects untracked files even when showUntrackedFiles is off", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "-c", "wip");
   await repo.git("switch", "main");
@@ -142,9 +140,7 @@ test("categorize detects untracked files even when status.showUntrackedFiles is 
   writeFileSync(path.join(wtPath, "dirty.txt"), "x");
 
   try {
-    const worktree = wtRecord({ branch: "wip", path: wtPath });
-
-    expect(await categorize(worktree, "main", { cwd: repo.dir })).toBe("files-changed");
+    expect(await hasUncommittedChanges(wtPath)).toBe(true);
   } finally {
     rmSync(wtPath, { force: true, recursive: true });
   }

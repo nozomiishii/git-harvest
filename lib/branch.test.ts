@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
 import type { Flags } from "./types";
-import { categorizeBranch, cleanupBranches } from "./branch";
+import { cleanupBranches } from "./branch";
 import { defaultFlags } from "./flags";
 import { makeRepo } from "./test-helpers";
 import { cleanupWorktrees } from "./worktree";
@@ -25,13 +25,15 @@ test("cleanupBranches keeps the current HEAD branch", async () => {
   ).toBe(true);
 });
 
-// 独自コミット無し（untouched）の branch は in-base 残骸として merged 扱い
-test("categorizeBranch treats an untouched branch as merged (in-base)", async () => {
+// 独自コミット無し（untouched）の branch も in-base 残骸として default で削除
+test("cleanupBranches removes an untouched branch by default", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "-c", "fresh");
   await repo.git("switch", "main");
 
-  expect(await categorizeBranch("fresh", "main", { cwd: repo.dir })).toBe("merged");
+  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), { cwd: repo.dir });
+
+  expect(result.results.some((r) => r.action === "removed" && r.name === "fresh")).toBe(true);
 });
 
 // committed（未取り込みの独自コミットあり）な branch は default で保護（reason=committed）
