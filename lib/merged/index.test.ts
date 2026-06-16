@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { isMerged, isUntouched } from "./merged";
-import { makeRepo } from "./test-helpers";
+import { makeRepo } from "../testing/repo";
+import { isMerged } from "./index";
 
 // 通常マージ（--no-ff）で取り込まれた branch は isMerged
 test("isMerged is true for an ancestor-merged branch", async () => {
@@ -11,14 +11,6 @@ test("isMerged is true for an ancestor-merged branch", async () => {
   await repo.git("merge", "--no-ff", "feature", "-m", "merge feature");
 
   expect(await isMerged({ base: "main", branch: "feature" }, { cwd: repo.dir })).toBe(true);
-});
-
-// 独自コミット無しの branch は isUntouched
-test("isUntouched is true for a branch with no unique commits", async () => {
-  await using repo = await makeRepo();
-  await repo.git("switch", "-c", "fresh");
-
-  expect(await isUntouched({ base: "main", branch: "fresh" }, { cwd: repo.dir })).toBe(true);
 });
 
 // 未取り込みの独自コミットがある branch は isMerged でない

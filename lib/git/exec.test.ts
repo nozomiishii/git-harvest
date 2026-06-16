@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { git } from "./git";
-import { makeRepo } from "./test-helpers";
+import { makeRepo } from "../testing/repo";
+import { git } from "./exec";
 
 // timeoutMs を超えた git コマンドは kill され非 0 で返る（hook を無限ブロックさせない）
 test("git kills a command that exceeds timeoutMs", async () => {

@@ -2,11 +2,14 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Flags } from "./types";
 import pkg from "../package.json" with { type: "json" };
-import { cleanupBranches } from "./branch";
-import { helpText, parseFlags, parseSubcommand, UsageError } from "./flags";
-import { resolveBase } from "./resolve-base";
-import { bold, dim, logo, statusLine, summaryLine } from "./ui";
-import { cleanupWorktrees } from "./worktree";
+import { cleanupBranches } from "./branch/cleanup";
+import { helpText } from "./flags/help";
+import { parseFlags, parseSubcommand, UsageError } from "./flags/parse";
+import { resolveBase } from "./resolve-base/index";
+import { bold, dim } from "./ui/color";
+import { logo } from "./ui/logo";
+import { statusLine, summaryLine } from "./ui/status";
+import { cleanupWorktrees } from "./worktree/cleanup";
 
 // 実行の流れ: subcommand 判定 → フラグ解釈 → base branch 解決 → worktree 掃除 → branch 掃除 → 集計表示
 export async function main(argv: string[]): Promise<void> {

@@ -1,10 +1,10 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
-import type { Flags, WorktreeCleanupResult } from "./types";
-import { cleanupBranches } from "./branch";
-import { defaultFlags } from "./flags";
-import { makeRepo } from "./test-helpers";
-import { cleanupWorktrees } from "./worktree";
+import { defaultFlags } from "../flags/parse";
+import { makeRepo } from "../testing/repo";
+import type { Flags, WorktreeCleanupResult } from "../types";
+import { cleanupWorktrees } from "../worktree/cleanup";
+import { cleanupBranches } from "./cleanup";
 
 // worktree 掃除で何も生き残らなかった状態（保護対象の branch なし）
 function noWorktrees(): WorktreeCleanupResult {

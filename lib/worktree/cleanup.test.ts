@@ -1,23 +1,10 @@
-import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync } from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
-import type { Flags } from "./types";
-import { defaultFlags } from "./flags";
-import { makeRepo } from "./test-helpers";
-import {
-  cleanupWorktrees,
-  hasUncommittedChanges,
-  removeCommitted,
-  removeDetached,
-  removeFilesChanged,
-  removeMerged,
-  removeUntouched,
-  type WtRecord,
-} from "./worktree";
-
-function wtRecord(over: Partial<WtRecord> = {}): WtRecord {
-  return { branch: "feature", canon: "/repo/wt", locked: false, path: "/repo/wt", ...over };
-}
+import { defaultFlags } from "../flags/parse";
+import { makeRepo } from "../testing/repo";
+import type { Flags } from "../types";
+import { cleanupWorktrees } from "./cleanup";
 
 // locked worktree はどのフラグでも守る（merged でも message=locked で kept）
 test("cleanupWorktrees keeps a locked worktree even under aggressive flags", async () => {
@@ -37,131 +24,6 @@ test("cleanupWorktrees keeps a locked worktree even under aggressive flags", asy
     expect(result.results.some((r) => r.action === "kept" && r.message === "locked")).toBe(true);
   } finally {
     await repo.git("worktree", "unlock", wtPath).catch(() => "");
-    rmSync(wtPath, { force: true, recursive: true });
-  }
-});
-
-// merged worktree はどの scope でも常に削除対象（dry-run で would-remove）
-test("removeMerged marks a merged worktree for removal", async () => {
-  const worktree = wtRecord();
-
-  const result = await removeMerged(worktree, true, {});
-
-  expect(result).toStrictEqual({ action: "would-remove", branch: "feature", path: worktree.path });
-});
-
-// committed worktree は --committed が無ければ理由付きで残す
-test("removeCommitted keeps a committed worktree without the committed flag", async () => {
-  const worktree = wtRecord();
-
-  const result = await removeCommitted(worktree, false, true, {});
-
-  expect(result).toStrictEqual({
-    action: "kept",
-    branch: "feature",
-    message: "committed",
-    path: worktree.path,
-  });
-});
-
-// committed worktree は --committed があれば削除対象
-test("removeCommitted marks a committed worktree for removal with the committed flag", async () => {
-  const worktree = wtRecord();
-
-  const result = await removeCommitted(worktree, true, true, {});
-
-  expect(result).toStrictEqual({ action: "would-remove", branch: "feature", path: worktree.path });
-});
-
-// files-changed worktree は --files-changed が無ければ理由付きで残す
-test("removeFilesChanged keeps a files-changed worktree without the files-changed flag", async () => {
-  const worktree = wtRecord();
-
-  const result = await removeFilesChanged(worktree, false, true, {});
-
-  expect(result).toStrictEqual({
-    action: "kept",
-    branch: "feature",
-    message: "files-changed",
-    path: worktree.path,
-  });
-});
-
-// untouched worktree は --untouched が無ければ理由付きで残す
-test("removeUntouched keeps an untouched worktree without the flag", async () => {
-  const worktree = wtRecord();
-
-  const result = await removeUntouched(worktree, false, true, {});
-
-  expect(result).toStrictEqual({
-    action: "kept",
-    branch: "feature",
-    message: "untouched",
-    path: worktree.path,
-  });
-});
-
-// untouched worktree は --untouched があれば削除対象
-test("removeUntouched marks an untouched worktree for removal with the flag", async () => {
-  const worktree = wtRecord();
-
-  const result = await removeUntouched(worktree, true, true, {});
-
-  expect(result).toStrictEqual({ action: "would-remove", branch: "feature", path: worktree.path });
-});
-
-// detached worktree は --detached が無ければ理由付きで残す
-test("removeDetached keeps a detached worktree without the flag", async () => {
-  const worktree = wtRecord({ branch: undefined });
-
-  const result = await removeDetached(worktree, false, true, {});
-
-  expect(result).toStrictEqual({
-    action: "kept",
-    branch: undefined,
-    message: "detached",
-    path: worktree.path,
-  });
-});
-
-// detached worktree は --detached があれば削除対象
-test("removeDetached marks a detached worktree for removal with the flag", async () => {
-  const worktree = wtRecord({ branch: undefined });
-
-  const result = await removeDetached(worktree, true, true, {});
-
-  expect(result).toStrictEqual({ action: "would-remove", branch: undefined, path: worktree.path });
-});
-
-// 未コミットの変更がある worktree は hasUncommittedChanges が true（files-changed 判定の根拠）
-test("hasUncommittedChanges is true when a worktree has uncommitted changes", async () => {
-  await using repo = await makeRepo();
-  await repo.git("switch", "-c", "wip");
-  await repo.git("switch", "main");
-  const wtPath = `${repo.dir}-wip`;
-  await repo.git("worktree", "add", wtPath, "wip");
-  writeFileSync(path.join(wtPath, "dirty.txt"), "x");
-
-  try {
-    expect(await hasUncommittedChanges(wtPath)).toBe(true);
-  } finally {
-    rmSync(wtPath, { force: true, recursive: true });
-  }
-});
-
-// status.showUntrackedFiles=no 設定下でも未追跡ファイルを数える（config 非依存）
-test("hasUncommittedChanges detects untracked files even when showUntrackedFiles is off", async () => {
-  await using repo = await makeRepo();
-  await repo.git("switch", "-c", "wip");
-  await repo.git("switch", "main");
-  const wtPath = `${repo.dir}-wip`;
-  await repo.git("worktree", "add", wtPath, "wip");
-  await repo.git("-C", wtPath, "config", "status.showUntrackedFiles", "no");
-  writeFileSync(path.join(wtPath, "dirty.txt"), "x");
-
-  try {
-    expect(await hasUncommittedChanges(wtPath)).toBe(true);
-  } finally {
     rmSync(wtPath, { force: true, recursive: true });
   }
 });

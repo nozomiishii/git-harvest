@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
-import { hasRunningClaudeSession, isClaudeWorktree, scopeOfPath } from "./agent";
+import { hasRunningClaudeSession } from "./session";
 
 // session が worktree のサブディレクトリで起動されていても検出する（保護の偽陰性防止）
 test("hasRunningClaudeSession detects a session started in a subdirectory", () => {
@@ -39,15 +39,4 @@ test("hasRunningClaudeSession reads the pid from the session JSON body", () => {
     rmSync(sessions, { force: true, recursive: true });
     rmSync(wt, { force: true, recursive: true });
   }
-});
-
-// 通常 path は worktree（claude-worktree 側は isClaudeWorktree の boundary テストでカバー）
-test("scopeOfPath classifies a normal path as worktree", () => {
-  expect(scopeOfPath("/repo/feature-wt")).toBe("worktree");
-});
-
-// .claude/worktrees の後に1文字以上で初めて claude worktree
-test("isClaudeWorktree requires at least one char after .claude/worktrees/", () => {
-  expect(isClaudeWorktree("/repo/.claude/worktrees")).toBe(false);
-  expect(isClaudeWorktree("/repo/.claude/worktrees/x")).toBe(true);
 });

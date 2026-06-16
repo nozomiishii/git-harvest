@@ -1,4 +1,4 @@
-import { gitText, NETWORK_TIMEOUT_MS } from "./git";
+import { gitText, NETWORK_TIMEOUT_MS } from "../git/exec";
 
 type ResolveOpts = { cwd?: string; offline?: boolean };
 

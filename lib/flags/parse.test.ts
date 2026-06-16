@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { defaultFlags, parseFlags, parseSubcommand } from "./flags";
+import { defaultFlags, parseFlags, parseSubcommand } from "./parse";
 
 // default は committed / files-changed の対象 scope が空で、off-ladder toggle も無効
 test("defaultFlags targets no scope and leaves toggles off", () => {
