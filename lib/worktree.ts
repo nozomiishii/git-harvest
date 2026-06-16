@@ -21,6 +21,8 @@ export async function cleanupWorktrees(
   const [mainWorktree, ...linkedWorktrees] = all;
   const current = canonical(opts.cwd ?? process.cwd());
   const results: WorktreeActionResult[] = [];
+  // files-changed は committed より危険な段なので、その scope は committed にも降りる（ladder cascade）
+  const committedScopes = [...flags.committed, ...flags.filesChanged];
 
   // 並列化しない: git の index.lock 競合と results の順序を守るため直列 await
   for (const worktree of linkedWorktrees) {
@@ -78,10 +80,8 @@ export async function cleanupWorktrees(
         continue;
       }
 
-      // どれでもない = 未マージの独自コミットあり（committed）。
-      // files-changed は committed より危険な段なので、--files-changed も committed worktree を巻き込む（ladder cascade）
-      const committedTargeted = flags.committed.includes(scope) || flags.filesChanged.includes(scope);
-      results.push(await removeCommitted(worktree, committedTargeted, flags.dryRun, opts));
+      // どれでもない = 未マージの独自コミットあり（committed）
+      results.push(await removeCommitted(worktree, committedScopes.includes(scope), flags.dryRun, opts));
     } catch (error) {
       // 1 件の throw（壊れた ref で rev-parse 失敗 等）で全体を止めない
       results.push({ action: "failed", branch: worktree.branch, message: String(error), path: worktree.path });
