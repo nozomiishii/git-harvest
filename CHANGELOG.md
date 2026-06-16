@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.3.0](https://github.com/nozomiishii/git-harvest/compare/v0.2.3...v0.3.0) (2026-06-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* migrate the CLI to TypeScript with scope-as-value flags ([#200](https://github.com/nozomiishii/git-harvest/issues/200))
+
+### Features
+
+* migrate the CLI to TypeScript with scope-as-value flags ([#200](https://github.com/nozomiishii/git-harvest/issues/200)) ([81a1203](https://github.com/nozomiishii/git-harvest/commit/81a1203a2305d6ac00266d19951097d3ccd77eb7))
+
+
+### Miscellaneous
+
+* add lint troubleshooting guide reference to eslint config ([#198](https://github.com/nozomiishii/git-harvest/issues/198)) ([8b5e39e](https://github.com/nozomiishii/git-harvest/commit/8b5e39e95c73c11a5471c377001d8f98cc90675b))
+* extract brand color section into docs ([#186](https://github.com/nozomiishii/git-harvest/issues/186)) ([b6b6c99](https://github.com/nozomiishii/git-harvest/commit/b6b6c99dbf69c314fadbdec8f9ff14978626aa28))
+* lock file maintenance ([#202](https://github.com/nozomiishii/git-harvest/issues/202)) ([09458a1](https://github.com/nozomiishii/git-harvest/commit/09458a1c4f4ecf6df9ef968bbfdb7243be388576))
+* migrate dev toolchain from bun to pnpm ([#194](https://github.com/nozomiishii/git-harvest/issues/194)) ([fa8bbad](https://github.com/nozomiishii/git-harvest/commit/fa8bbada54117bd382d3d5cf0223e6929168d9bb))
+* move git-workflow guide to brain inbox ([#185](https://github.com/nozomiishii/git-harvest/issues/185)) ([f7c9935](https://github.com/nozomiishii/git-harvest/commit/f7c9935f199a68977a5db3e14fa214e656ac0791))
+* pin 1password/load-secrets-action to semver tag ([#211](https://github.com/nozomiishii/git-harvest/issues/211)) ([7951f47](https://github.com/nozomiishii/git-harvest/commit/7951f472f75de15fac2d3875633c45f7b20cf168))
+* self-heal release PR lockfile drift via always-update ([#192](https://github.com/nozomiishii/git-harvest/issues/192)) ([74818f8](https://github.com/nozomiishii/git-harvest/commit/74818f87c1779b16936213d86ba82c9eaa2a6488))
+* update actions/checkout action to v6.0.3 ([#195](https://github.com/nozomiishii/git-harvest/issues/195)) ([944e556](https://github.com/nozomiishii/git-harvest/commit/944e556c2050f0d8a1b54106742e15ffbbe2b6f4))
+* update dependency @types/node to v24.13.1 ([#204](https://github.com/nozomiishii/git-harvest/issues/204)) ([9e90c77](https://github.com/nozomiishii/git-harvest/commit/9e90c7798b70d1616ec8b63c2a243b014b9e62df))
+* update dependency @types/node to v24.13.2 ([#210](https://github.com/nozomiishii/git-harvest/issues/210)) ([12f364e](https://github.com/nozomiishii/git-harvest/commit/12f364e86548315521a2ef3a9e3795d2f7c2f72c))
+* update dependency prettier to v3.8.4 ([#207](https://github.com/nozomiishii/git-harvest/issues/207)) ([a77cb52](https://github.com/nozomiishii/git-harvest/commit/a77cb52a5ea53e8885d2aae43aa6a12afd12435d))
+* update dependency release-please to v17.7.0 ([#191](https://github.com/nozomiishii/git-harvest/issues/191)) ([068945a](https://github.com/nozomiishii/git-harvest/commit/068945ac7b015e04d49e824fdd8e20f5e647a76e))
+* update dependency release-please to v17.8.0 ([#206](https://github.com/nozomiishii/git-harvest/issues/206)) ([7b555fd](https://github.com/nozomiishii/git-harvest/commit/7b555fd0d1b579a405dd739d92e6cd0696e2d55c))
+* update dependency release-please to v17.9.0 ([#208](https://github.com/nozomiishii/git-harvest/issues/208)) ([50abfdf](https://github.com/nozomiishii/git-harvest/commit/50abfdf4e0a651bd34428583acb76ba77829e4f8))
+* update dependency tsdown to v0.22.2 ([#201](https://github.com/nozomiishii/git-harvest/issues/201)) ([439db1f](https://github.com/nozomiishii/git-harvest/commit/439db1faf2b0a64a29a64d4e57466611034a9039))
+* update nozomiishii to v1.5.1 ([#190](https://github.com/nozomiishii/git-harvest/issues/190)) ([8002dbc](https://github.com/nozomiishii/git-harvest/commit/8002dbce4402f7b464f2059ae6dd218cccb582cb))
+* update nozomiishii to v1.6.0 ([#193](https://github.com/nozomiishii/git-harvest/issues/193)) ([374e5ff](https://github.com/nozomiishii/git-harvest/commit/374e5ff9cd0cc690b53a5ad4e1c0b07506a80354))
+* update nozomiishii to v1.7.0 ([#199](https://github.com/nozomiishii/git-harvest/issues/199)) ([16eea81](https://github.com/nozomiishii/git-harvest/commit/16eea81c696292cd6bf4dd265cc1f5697038b6cc))
+* update pnpm to v10.34.1 ([#196](https://github.com/nozomiishii/git-harvest/issues/196)) ([7b8185d](https://github.com/nozomiishii/git-harvest/commit/7b8185dcaa5bfa4d09080c37f80a8a8f01079419))
+* update pnpm to v11 ([#197](https://github.com/nozomiishii/git-harvest/issues/197)) ([385355e](https://github.com/nozomiishii/git-harvest/commit/385355ea55b3598ac96bd18239bfbc4a136fe081))
+* update pnpm to v11.5.2 ([#203](https://github.com/nozomiishii/git-harvest/issues/203)) ([d55bf8f](https://github.com/nozomiishii/git-harvest/commit/d55bf8f3e0adb03fd038556d14455e787168012c))
+* update pnpm to v11.5.3 ([#209](https://github.com/nozomiishii/git-harvest/issues/209)) ([0cae10e](https://github.com/nozomiishii/git-harvest/commit/0cae10ee2dad52910ec8cdaa7c6800686d30a716))
+
 ## [0.2.3](https://github.com/nozomiishii/git-harvest/compare/v0.2.2...v0.2.3) (2026-06-01)
 
 
