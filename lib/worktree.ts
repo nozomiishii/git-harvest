@@ -30,10 +30,6 @@ export async function cleanupWorktrees(
       survivors.push(worktree);
     }
   };
-  // 守る理由が当たった worktree を、その理由で kept にする
-  const keepWorktree = (worktree: WtRecord, reason: string): void => {
-    record(worktree, { action: "kept", name: worktree.path, reason });
-  };
 
   // 並列化しない: git の index.lock 競合と results の順序を守るため直列 await
   for (const worktree of linked) {
@@ -45,22 +41,22 @@ export async function cleanupWorktrees(
     try {
       // 守る理由を上から1つずつ確認。当たればその理由で残す
       if (isCwd(worktree, current)) {
-        keepWorktree(worktree, "current");
+        record(worktree, { action: "kept", name: worktree.path, reason: "current" });
         continue;
       }
 
       if (isOnBaseBranch(worktree, base)) {
-        keepWorktree(worktree, "base branch");
+        record(worktree, { action: "kept", name: worktree.path, reason: "base branch" });
         continue;
       }
 
       if (isLocked(worktree)) {
-        keepWorktree(worktree, "locked");
+        record(worktree, { action: "kept", name: worktree.path, reason: "locked" });
         continue;
       }
 
       if (isSessionRunning(worktree)) {
-        keepWorktree(worktree, "session running");
+        record(worktree, { action: "kept", name: worktree.path, reason: "session running" });
         continue;
       }
 
