@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.1](https://github.com/nozomiishii/git-harvest/compare/v0.3.0...v0.3.1) (2026-06-16)
+
+
+### Miscellaneous
+
+* adopt AGENTS.md and .hooks/ ([#213](https://github.com/nozomiishii/git-harvest/issues/213)) ([860a413](https://github.com/nozomiishii/git-harvest/commit/860a413683a0a6f1eeac0e72c1834c02751d3511))
+* lock file maintenance ([#215](https://github.com/nozomiishii/git-harvest/issues/215)) ([02af387](https://github.com/nozomiishii/git-harvest/commit/02af387f44c9ec72788fbdcaf32087d22165b55d))
+* make the internals readable without changing behavior ([#218](https://github.com/nozomiishii/git-harvest/issues/218)) ([28dad04](https://github.com/nozomiishii/git-harvest/commit/28dad042cf30d94425bd175113138df2eb714e7e))
+* update 1password/op docker tag to v2.34.1 ([#216](https://github.com/nozomiishii/git-harvest/issues/216)) ([9847ebb](https://github.com/nozomiishii/git-harvest/commit/9847ebbd67574bef530f5aebbd118504f7925c4e))
+* update eslint monorepo to v10.5.0 ([#219](https://github.com/nozomiishii/git-harvest/issues/219)) ([9de26b9](https://github.com/nozomiishii/git-harvest/commit/9de26b9fa835b67d11a1ed77b4f4f7acb23ccefb))
+* update pnpm to v11.6.0 ([#217](https://github.com/nozomiishii/git-harvest/issues/217)) ([c0af4be](https://github.com/nozomiishii/git-harvest/commit/c0af4bec6382241699e60437cdb1166b2bc0d8fd))
+
 ## [0.3.0](https://github.com/nozomiishii/git-harvest/compare/v0.2.3...v0.3.0) (2026-06-14)
 
 
