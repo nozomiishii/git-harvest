@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { canonical, isInside } from "./path";
@@ -66,9 +66,7 @@ function readSession(file: string): undefined | { cwd?: string; pid?: number } {
 // sessions dir が無い環境（Claude 未使用 等）は空扱い
 function sessionFiles(dir: string): string[] {
   try {
-    return readdirSync(dir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => path.join(dir, f));
+    return globSync(path.join(dir, "*.json"));
   } catch {
     return [];
   }

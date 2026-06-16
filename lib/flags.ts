@@ -1,29 +1,26 @@
-import type { Flags, Scope, Stage } from "./types";
-import { SAFETY, SCOPES, WORKTREE_SCOPES } from "./types";
+import type { Flags, Scope } from "./types";
+import { SCOPES, WORKTREE_SCOPES } from "./types";
 
 // argv のどこにあってもフラグより優先される
 export type Subcommand = "help" | "logo" | "version";
 
 export class UsageError extends Error {}
 
-// stage ごとに指定できる scope。branch は作業ディレクトリを持たず
-// 「未コミットの変更」が存在しないため、files-changed に branch scope は無い
-const STAGE_SCOPES: Record<"committed" | "files-changed", readonly Scope[]> = {
-  committed: SCOPES,
-  "files-changed": WORKTREE_SCOPES,
-};
+// 既知のフラグ名（= の前の部分）。これ以外は unknown として弾く
+const FLAG_NAMES = new Set(["--committed", "--detached", "--dry-run", "--files-changed", "--untouched", "-n"]);
 
-// preset を増やすときはここに 1 entry 足す。applyToken は threshold を下げる・toggle を true に
-// するだけ（単調）なので、preset と単体フラグはどの順で並んでも同じ結果になる
+// preset を増やすときはここに 1 entry 足す。各フラグは対象 scope を足すだけ（単調）なので、
+// preset と単体フラグはどの順で並んでも同じ結果になる
 const PRESETS: Record<string, readonly string[]> = {
   "--yolo": ["--files-changed", "--committed", "--untouched", "--detached"],
 };
 
 export function defaultFlags(): Flags {
   return {
+    committed: [],
     detached: false,
     dryRun: false,
-    thresholds: { branch: "merged", "claude-worktree": "merged", worktree: "merged" },
+    filesChanged: [],
     untouched: false,
   };
 }
@@ -69,34 +66,22 @@ Invariants are always protected (no flag or --yolo can override):
 `;
 }
 
+// argv を Flags へ変換する。各フィールドは args から 1 回ずつ求めるだけで、書き換えはしない
 export function parseFlags(argv: string[]): Flags {
-  const flags = defaultFlags();
+  // --yolo などの preset は先に個別フラグへ展開する
+  const args = argv.flatMap((arg) => PRESETS[arg] ?? [arg]);
+  rejectUnknown(args);
 
-  for (const arg of argv) {
-    if (arg === "--dry-run" || arg === "-n") {
-      flags.dryRun = true;
-      continue;
-    }
-    const preset = PRESETS[arg];
-
-    if (preset !== undefined) {
-      for (const token of preset) {
-        applyToken(flags, token);
-      }
-      continue;
-    }
-
-    if (applyToken(flags, arg)) {
-      continue;
-    }
-
-    throw new UsageError(`unknown option: ${arg}`);
-  }
-
-  return flags;
+  return {
+    committed: targetScopes(args, "--committed", SCOPES),
+    detached: args.includes("--detached"),
+    dryRun: args.includes("--dry-run") || args.includes("-n"),
+    filesChanged: targetScopes(args, "--files-changed", WORKTREE_SCOPES),
+    untouched: args.includes("--untouched"),
+  };
 }
 
-export function subcommandOf(argv: string[]): Subcommand | undefined {
+export function parseSubcommand(argv: string[]): Subcommand | undefined {
   for (const arg of argv) {
     if (arg === "logo") {
       return "logo";
@@ -114,48 +99,40 @@ export function subcommandOf(argv: string[]): Subcommand | undefined {
   return undefined;
 }
 
-function applyStage(
-  flags: Flags,
-  stage: "committed" | "files-changed",
-  value: string | undefined,
-): void {
-  const allowed = STAGE_SCOPES[stage];
-  const targets = value === undefined ? [...allowed] : value.split(",");
+// 既知フラグ以外が混ざっていれば弾く（= の前のフラグ名で判定）
+function rejectUnknown(args: string[]): void {
+  for (const arg of args) {
+    const eq = arg.indexOf("=");
+    const name = eq === -1 ? arg : arg.slice(0, eq);
 
-  for (const scope of targets) {
-    if (!allowed.includes(scope as Scope)) {
-      throw new UsageError(`invalid scope for --${stage}: ${scope}`);
+    if (!FLAG_NAMES.has(name)) {
+      throw new UsageError(`unknown option: ${arg}`);
     }
-    flags.thresholds[scope as Scope] = lower(flags.thresholds[scope as Scope], stage);
   }
 }
 
-function applyToken(flags: Flags, arg: string): boolean {
-  if (arg === "--untouched") {
-    flags.untouched = true;
+// 指定フラグ（--committed / --files-changed）が対象にする scope を args から集める。
+// 値無しは allowed 全部、値ありはカンマ区切り。allowed 外の scope は弾き、重複は除く
+function targetScopes(args: string[], flag: string, allowed: readonly Scope[]): Scope[] {
+  const scopes = new Set<Scope>();
 
-    return true;
+  for (const arg of args) {
+    const eq = arg.indexOf("=");
+    const name = eq === -1 ? arg : arg.slice(0, eq);
+
+    if (name !== flag) {
+      continue;
+    }
+    const value = eq === -1 ? undefined : arg.slice(eq + 1);
+    const targets = value === undefined ? allowed : value.split(",");
+
+    for (const scope of targets) {
+      if (!allowed.includes(scope as Scope)) {
+        throw new UsageError(`invalid scope for ${flag}: ${scope}`);
+      }
+      scopes.add(scope as Scope);
+    }
   }
 
-  if (arg === "--detached") {
-    flags.detached = true;
-
-    return true;
-  }
-  // split("=", 2) は3つ目以降を黙って捨てるため、先頭の = だけで分割して残り全体を value にする
-  const eq = arg.indexOf("=");
-  const token = eq === -1 ? arg : arg.slice(0, eq);
-  const value = eq === -1 ? undefined : arg.slice(eq + 1);
-
-  if (token === "--committed" || token === "--files-changed") {
-    applyStage(flags, token === "--committed" ? "committed" : "files-changed", value);
-
-    return true;
-  }
-
-  return false;
-}
-
-function lower(current: Stage, candidate: Stage): Stage {
-  return SAFETY.indexOf(candidate) < SAFETY.indexOf(current) ? candidate : current;
+  return [...scopes];
 }

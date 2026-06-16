@@ -3,15 +3,14 @@ import { fileURLToPath } from "node:url";
 import type { Flags } from "./types";
 import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch";
-import { logo } from "./brand";
-import { helpText, parseFlags, subcommandOf, UsageError } from "./flags";
-import { bold, dim, statusLine, summaryLine } from "./format";
+import { helpText, parseFlags, parseSubcommand, UsageError } from "./flags";
 import { resolveBase } from "./resolve-base";
+import { bold, dim, logo, statusLine, summaryLine } from "./ui";
 import { cleanupWorktrees } from "./worktree";
 
 // 実行の流れ: subcommand 判定 → フラグ解釈 → base branch 解決 → worktree 掃除 → branch 掃除 → 集計表示
 export async function main(argv: string[]): Promise<void> {
-  const sub = subcommandOf(argv);
+  const sub = parseSubcommand(argv);
 
   if (sub === "help") {
     process.stdout.write(helpText());
@@ -38,6 +37,11 @@ export async function main(argv: string[]): Promise<void> {
   const base = await resolveBase();
 
   if (base === undefined) {
+    process.stderr.write(
+      "git-harvest: cannot determine default branch (try: git remote set-head origin <branch>)\n",
+    );
+    process.exitCode = 1;
+
     return;
   }
   process.stdout.write(`\n${bold("git harvest")}\n`);
@@ -45,10 +49,10 @@ export async function main(argv: string[]): Promise<void> {
   if (flags.dryRun) {
     process.stdout.write(`\n${dim("Dry run mode - nothing will be deleted")}\n`);
   }
-  // worktree を先に掃除し、生き残った worktree が checkout 中の branch 名を branch 掃除へ引き継ぐ
-  // （使用中の branch を誤って消さないため）
+  // worktree を先に掃除し、その結果を branch 掃除へ渡す。branch 側が生存 worktree の
+  // checkout branch を保護リストにする（使用中の branch を誤って消さないため）
   const wt = await cleanupWorktrees(base, flags);
-  const br = await cleanupBranches(base, flags, wt.survivingBranches);
+  const br = await cleanupBranches(base, flags, wt);
 
   if (wt.results.length > 0) {
     process.stdout.write(

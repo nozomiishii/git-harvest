@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { expect, test } from "vitest";
-import { relpath, statusLine, summaryLine } from "./format";
+import { relpath, statusLine, summaryLine } from "./ui";
 
 // home dir は ~ に短縮
 test("relpath shortens the home directory to a tilde", () => {
@@ -15,7 +15,7 @@ test("summaryLine reports would-harvest in dry-run", () => {
 
 // kept 行は reason ラベルと区切り · を、removed 行は ✓ を含む
 test("statusLine renders each action", () => {
-  const kept = statusLine({ action: "kept", name: "wt", reason: "untouched" }, false);
+  const kept = statusLine({ action: "kept", message: "untouched", name: "wt" }, false);
 
   expect(kept).toContain("untouched");
   expect(kept).toContain("·");
