@@ -166,6 +166,30 @@ test("hasUncommittedChanges detects untracked files even when showUntrackedFiles
   }
 });
 
+// ladder cascade: --files-changed は committed worktree も巻き込む（より安全な段なので）
+test("cleanupWorktrees marks a committed worktree with --files-changed alone", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "wip");
+  await repo.commit("unmerged work");
+  await repo.git("switch", "main");
+  const wtPath = `${repo.dir}-wip`;
+  await repo.git("worktree", "add", wtPath, "wip");
+  const canonWt = realpathSync(wtPath);
+
+  try {
+    const flags: Flags = { ...defaultFlags(), dryRun: true, filesChanged: ["worktree"] };
+    const result = await cleanupWorktrees("main", flags, { cwd: repo.dir });
+
+    expect(result.results).toContainEqual({
+      action: "would-remove",
+      branch: "wip",
+      path: canonWt,
+    });
+  } finally {
+    rmSync(wtPath, { force: true, recursive: true });
+  }
+});
+
 // main にマージ済みの linked worktree は default で削除
 test("cleanupWorktrees removes a merged linked worktree by default", async () => {
   await using repo = await makeRepo();
