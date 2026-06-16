@@ -49,10 +49,10 @@ export async function main(argv: string[]): Promise<void> {
   if (flags.dryRun) {
     process.stdout.write(`\n${dim("Dry run mode - nothing will be deleted")}\n`);
   }
-  // worktree を先に掃除し、生き残った worktree が checkout 中の branch 名を branch 掃除へ引き継ぐ
-  // （使用中の branch を誤って消さないため）
+  // worktree を先に掃除し、その結果を branch 掃除へ渡す。branch 側が生存 worktree の
+  // checkout branch を保護リストにする（使用中の branch を誤って消さないため）
   const wt = await cleanupWorktrees(base, flags);
-  const br = await cleanupBranches(base, flags, wt.survivingBranches);
+  const br = await cleanupBranches(base, flags, wt);
 
   if (wt.results.length > 0) {
     process.stdout.write(

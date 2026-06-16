@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import type { ActionResult, Flags, WorktreeCleanupResult } from "./types";
+import type { Flags, WorktreeActionResult, WorktreeCleanupResult } from "./types";
 import { hasRunningClaudeSession, scopeOfPath } from "./agent";
 import { git, gitText } from "./git";
 import { isMerged, isUntouched } from "./merged";
@@ -17,23 +17,14 @@ export async function cleanupWorktrees(
   opts: Opts = {},
 ): Promise<WorktreeCleanupResult> {
   const all = await listWorktrees(opts);
-  // porcelain の先頭は main worktree。常に生存し、その checkout branch も branch 掃除へ引き継ぐ
-  const [mainWorktree, ...linked] = all;
+  // porcelain の先頭は main worktree。常に生存し、その checkout branch は mainBranch として branch 掃除へ渡す
+  const [mainWorktree, ...linkedWorktrees] = all;
   const current = canonical(opts.cwd ?? process.cwd());
-  const results: ActionResult[] = [];
-  const survivors: WtRecord[] = mainWorktree ? [mainWorktree] : [];
-  // 生存 = kept / failed（物理的に残る）。result を積み、生存なら survivors にも積む
-  const record = (worktree: WtRecord, result: ActionResult): void => {
-    results.push(result);
-
-    if (result.action === "kept" || result.action === "failed") {
-      survivors.push(worktree);
-    }
-  };
+  const results: WorktreeActionResult[] = [];
 
   // 並列化しない: git の index.lock 競合と results の順序を守るため直列 await
-  for (const worktree of linked) {
-    // ディレクトリごと消された prunable worktree は prune に任せ、表示にも生存にも含めない
+  for (const worktree of linkedWorktrees) {
+    // ディレクトリごと消された prunable worktree は prune に任せ、結果に含めない
     if (!existsSync(worktree.path)) {
       continue;
     }
@@ -41,28 +32,28 @@ export async function cleanupWorktrees(
     try {
       // 守る理由を上から1つずつ確認。当たればその理由で残す
       if (isCwd(worktree, current)) {
-        record(worktree, { action: "kept", name: worktree.path, reason: "current" });
+        results.push({ action: "kept", branch: worktree.branch, message: "current", path: worktree.path });
         continue;
       }
 
       if (isOnBaseBranch(worktree, base)) {
-        record(worktree, { action: "kept", name: worktree.path, reason: "base branch" });
+        results.push({ action: "kept", branch: worktree.branch, message: "base branch", path: worktree.path });
         continue;
       }
 
       if (isLocked(worktree)) {
-        record(worktree, { action: "kept", name: worktree.path, reason: "locked" });
+        results.push({ action: "kept", branch: worktree.branch, message: "locked", path: worktree.path });
         continue;
       }
 
       if (isSessionRunning(worktree)) {
-        record(worktree, { action: "kept", name: worktree.path, reason: "session running" });
+        results.push({ action: "kept", branch: worktree.branch, message: "session running", path: worktree.path });
         continue;
       }
 
       // detached = branch を持たない worktree。off-ladder なので --detached でだけ消す
       if (worktree.branch === undefined) {
-        record(worktree, await removeDetached(worktree, flags.detached, flags.dryRun, opts));
+        results.push(await removeDetached(worktree, flags.detached, flags.dryRun, opts));
         continue;
       }
       // 状態を上から1つずつ判定し、対応する削除関数を即実行する。
@@ -72,32 +63,26 @@ export async function cleanupWorktrees(
 
       // 未コミットの変更が最優先（消すと復元できない）
       if (await hasUncommittedChanges(worktree.path)) {
-        record(
-          worktree,
-          await removeFilesChanged(worktree, flags.filesChanged.includes(scope), flags.dryRun, opts),
-        );
+        results.push(await removeFilesChanged(worktree, flags.filesChanged.includes(scope), flags.dryRun, opts));
         continue;
       }
 
       // 独自コミット無し（off-ladder）。--untouched でだけ消す
       if (await isUntouched(refs, opts)) {
-        record(worktree, await removeUntouched(worktree, flags.untouched, flags.dryRun, opts));
+        results.push(await removeUntouched(worktree, flags.untouched, flags.dryRun, opts));
         continue;
       }
 
       if (await isMerged(refs, opts)) {
-        record(worktree, await removeMerged(worktree, flags.dryRun, opts));
+        results.push(await removeMerged(worktree, flags.dryRun, opts));
         continue;
       }
 
       // どれでもない = 未マージの独自コミットあり（committed）
-      record(
-        worktree,
-        await removeCommitted(worktree, flags.committed.includes(scope), flags.dryRun, opts),
-      );
+      results.push(await removeCommitted(worktree, flags.committed.includes(scope), flags.dryRun, opts));
     } catch (error) {
       // 1 件の throw（壊れた ref で rev-parse 失敗 等）で全体を止めない
-      record(worktree, { action: "failed", error: String(error), name: worktree.path });
+      results.push({ action: "failed", branch: worktree.branch, message: String(error), path: worktree.path });
     }
   }
 
@@ -105,16 +90,9 @@ export async function cleanupWorktrees(
     await git(["worktree", "prune"], opts);
   }
   const failures = results.filter((r) => r.action === "failed").length;
-  // branch 掃除へは「生存 worktree が checkout 中の branch 名」だけを引き継ぐ
-  const survivingBranches = new Set<string>();
 
-  for (const rec of survivors) {
-    if (rec.branch !== undefined) {
-      survivingBranches.add(rec.branch);
-    }
-  }
-
-  return { failures, results, survivingBranches };
+  // main worktree は常に生存。その checkout branch を branch 掃除へ引き継ぐ（使用中の branch を誤って消さない）
+  return { failures, mainBranch: mainWorktree?.branch, results };
 }
 
 // 「未コミットの作業があるか」を git status --porcelain 1 回で調べる。
@@ -144,16 +122,16 @@ export async function removeCommitted(
   isTarget: boolean,
   dryRun: boolean,
   opts: Opts,
-): Promise<ActionResult> {
+): Promise<WorktreeActionResult> {
   if (!isTarget) {
-    return { action: "kept", name: worktree.path, reason: "committed" };
+    return { action: "kept", branch: worktree.branch, message: "committed", path: worktree.path };
   }
 
   if (dryRun) {
-    return { action: "would-remove", name: worktree.path };
+    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
 
-  return removeWorktree(worktree.path, opts, false);
+  return removeWorktree(worktree, opts, false);
 }
 
 // detached（branch 無し）の worktree。--detached があれば消す、無ければ理由付きで残す。
@@ -163,17 +141,17 @@ export async function removeDetached(
   detached: boolean,
   dryRun: boolean,
   opts: Opts = {},
-): Promise<ActionResult> {
+): Promise<WorktreeActionResult> {
   if (!detached) {
-    return { action: "kept", name: worktree.path, reason: "detached" };
+    return { action: "kept", branch: worktree.branch, message: "detached", path: worktree.path };
   }
 
   if (dryRun) {
-    return { action: "would-remove", name: worktree.path };
+    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
   const dirty = await hasUncommittedChanges(worktree.path);
 
-  return removeWorktree(worktree.path, opts, dirty);
+  return removeWorktree(worktree, opts, dirty);
 }
 
 // files-changed の worktree。scope が --files-changed の対象なら消す（未コミットごと force）、無ければ残す
@@ -182,16 +160,16 @@ export async function removeFilesChanged(
   isTarget: boolean,
   dryRun: boolean,
   opts: Opts,
-): Promise<ActionResult> {
+): Promise<WorktreeActionResult> {
   if (!isTarget) {
-    return { action: "kept", name: worktree.path, reason: "files-changed" };
+    return { action: "kept", branch: worktree.branch, message: "files-changed", path: worktree.path };
   }
 
   if (dryRun) {
-    return { action: "would-remove", name: worktree.path };
+    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
 
-  return removeWorktree(worktree.path, opts, true);
+  return removeWorktree(worktree, opts, true);
 }
 
 // merged の worktree は安全（base 取り込み済み）なので、どの scope でも常に消す（force 不要）
@@ -199,12 +177,12 @@ export async function removeMerged(
   worktree: WtRecord,
   dryRun: boolean,
   opts: Opts,
-): Promise<ActionResult> {
+): Promise<WorktreeActionResult> {
   if (dryRun) {
-    return { action: "would-remove", name: worktree.path };
+    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
 
-  return removeWorktree(worktree.path, opts, false);
+  return removeWorktree(worktree, opts, false);
 }
 
 // untouched（独自コミット無し）の worktree。--untouched があれば消す、無ければ理由付きで残す。
@@ -214,16 +192,16 @@ export async function removeUntouched(
   untouched: boolean,
   dryRun: boolean,
   opts: Opts = {},
-): Promise<ActionResult> {
+): Promise<WorktreeActionResult> {
   if (!untouched) {
-    return { action: "kept", name: worktree.path, reason: "untouched" };
+    return { action: "kept", branch: worktree.branch, message: "untouched", path: worktree.path };
   }
 
   if (dryRun) {
-    return { action: "would-remove", name: worktree.path };
+    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
 
-  return removeWorktree(worktree.path, opts, false);
+  return removeWorktree(worktree, opts, false);
 }
 
 // 守る理由ごとの述語。どれか true ならその worktree はどのフラグでも消さない。
@@ -261,14 +239,25 @@ function parseWorktreeBlock(block: string): WtRecord {
 
 // 競合 rescue とエラー整形だけを持つ実行関数。
 // git worktree remove は未コミット変更がある worktree を拒否する。--force はその安全確認を飛ばす
-async function removeWorktree(path: string, opts: Opts, force: boolean): Promise<ActionResult> {
-  const args = force ? ["worktree", "remove", "--force", path] : ["worktree", "remove", path];
+async function removeWorktree(
+  worktree: WtRecord,
+  opts: Opts,
+  force: boolean,
+): Promise<WorktreeActionResult> {
+  const args = force
+    ? ["worktree", "remove", "--force", worktree.path]
+    : ["worktree", "remove", worktree.path];
   const { code, stderr } = await git(args, opts);
 
   // "is not a working tree" は別プロセスが先に消した競合なので removed 扱い（エラーは stderr に出る）
   if (code === 0 || stderr.includes("is not a working tree")) {
-    return { action: "removed", name: path };
+    return { action: "removed", branch: worktree.branch, path: worktree.path };
   }
 
-  return { action: "failed", error: `exit ${String(code)}: ${stderr.trim()}`, name: path };
+  return {
+    action: "failed",
+    branch: worktree.branch,
+    message: `exit ${String(code)}: ${stderr.trim()}`,
+    path: worktree.path,
+  };
 }

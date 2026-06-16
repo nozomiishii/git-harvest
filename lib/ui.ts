@@ -1,6 +1,6 @@
 // 画面に出す担当（旧 format + brand + logo を統合）
 import { homedir } from "node:os";
-import type { ActionResult } from "./types";
+import type { BranchActionResult, WorktreeActionResult } from "./types";
 
 const ESC = String.fromCodePoint(27); // エスケープ文字(0x1b)。cat -v での ^[ の正体
 const BRAND = "192;255;57";
@@ -54,16 +54,20 @@ export function relpath(p: string): string {
   return p;
 }
 
-export function statusLine(result: ActionResult, color = useColor()): string {
-  const name = relpath(result.name);
+export function statusLine(
+  result: BranchActionResult | WorktreeActionResult,
+  color = useColor(),
+): string {
+  // worktree は path、branch は branch 名。どちらの識別子かは型で分かれる
+  const name = relpath("path" in result ? result.path : result.name);
 
   switch (result.action) {
     case "failed": {
-      return `  ${hi("✗", color)}  ${name}  ${result.error}`;
+      return `  ${hi("✗", color)}  ${name}  ${result.message}`;
     }
     case "kept": {
       const pad = Math.max(2, 38 - name.length);
-      const line = `  ·  ${name}${" ".repeat(pad)}${result.reason}`;
+      const line = `  ·  ${name}${" ".repeat(pad)}${result.message}`;
 
       return dim(line, color);
     }

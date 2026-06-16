@@ -1,12 +1,17 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
-import type { Flags } from "./types";
+import type { Flags, WorktreeCleanupResult } from "./types";
 import { cleanupBranches } from "./branch";
 import { defaultFlags } from "./flags";
 import { makeRepo } from "./test-helpers";
 import { cleanupWorktrees } from "./worktree";
 
-// current HEAD の branch は merged でも消さず、reason="current HEAD" で守る
+// worktree 掃除で何も生き残らなかった状態（保護対象の branch なし）
+function noWorktrees(): WorktreeCleanupResult {
+  return { failures: 0, mainBranch: undefined, results: [] };
+}
+
+// current HEAD の branch は merged でも消さず、message="current HEAD" で守る
 test("cleanupBranches keeps the current HEAD branch", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "-c", "feature");
@@ -16,11 +21,11 @@ test("cleanupBranches keeps the current HEAD branch", async () => {
   await repo.git("switch", "feature");
   const flags: Flags = { ...defaultFlags(), committed: ["branch"] };
 
-  const result = await cleanupBranches("main", flags, new Set<string>(), { cwd: repo.dir });
+  const result = await cleanupBranches("main", flags, noWorktrees(), { cwd: repo.dir });
 
   expect(
     result.results.some(
-      (r) => r.action === "kept" && r.name === "feature" && r.reason === "current HEAD",
+      (r) => r.action === "kept" && r.name === "feature" && r.message === "current HEAD",
     ),
   ).toBe(true);
 });
@@ -31,7 +36,7 @@ test("cleanupBranches removes an untouched branch by default", async () => {
   await repo.git("switch", "-c", "fresh");
   await repo.git("switch", "main");
 
-  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), { cwd: repo.dir });
+  const result = await cleanupBranches("main", defaultFlags(), noWorktrees(), { cwd: repo.dir });
 
   expect(result.results.some((r) => r.action === "removed" && r.name === "fresh")).toBe(true);
 });
@@ -43,12 +48,12 @@ test("cleanupBranches keeps a committed branch by default", async () => {
   await repo.commit("wip work");
   await repo.git("switch", "main");
 
-  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), {
+  const result = await cleanupBranches("main", defaultFlags(), noWorktrees(), {
     cwd: repo.dir,
   });
 
   expect(
-    result.results.some((r) => r.action === "kept" && r.name === "wip" && r.reason === "committed"),
+    result.results.some((r) => r.action === "kept" && r.name === "wip" && r.message === "committed"),
   ).toBe(true);
 });
 
@@ -60,7 +65,7 @@ test("cleanupBranches removes a committed branch under --committed", async () =>
   await repo.git("switch", "main");
   const flags: Flags = { ...defaultFlags(), committed: ["branch"] };
 
-  const result = await cleanupBranches("main", flags, new Set<string>(), { cwd: repo.dir });
+  const result = await cleanupBranches("main", flags, noWorktrees(), { cwd: repo.dir });
 
   expect(result.results.some((r) => r.action === "removed" && r.name === "wip")).toBe(true);
 });
@@ -73,7 +78,7 @@ test("cleanupBranches removes an in-base branch by default", async () => {
   await repo.git("switch", "main");
   await repo.git("merge", "--no-ff", "done", "-m", "merge done");
 
-  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), {
+  const result = await cleanupBranches("main", defaultFlags(), noWorktrees(), {
     cwd: repo.dir,
   });
 
@@ -89,7 +94,7 @@ test("cleanupBranches handles a branch shadowed by a same-named tag", async () =
   await repo.git("merge", "--no-ff", "feature", "-m", "merge feature");
   await repo.git("tag", "feature");
 
-  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), {
+  const result = await cleanupBranches("main", defaultFlags(), noWorktrees(), {
     cwd: repo.dir,
   });
 
@@ -102,7 +107,7 @@ test("cleanupBranches ignores the detached HEAD placeholder line", async () => {
   await using repo = await makeRepo();
   await repo.git("switch", "--detach");
 
-  const result = await cleanupBranches("main", defaultFlags(), new Set<string>(), {
+  const result = await cleanupBranches("main", defaultFlags(), noWorktrees(), {
     cwd: repo.dir,
   });
 
@@ -123,13 +128,13 @@ test("cleanupBranches keeps a branch checked out in the main worktree", async ()
   try {
     const wt = await cleanupWorktrees("main", defaultFlags(), { cwd: wtPath });
 
-    const result = await cleanupBranches("main", defaultFlags(), wt.survivingBranches, {
+    const result = await cleanupBranches("main", defaultFlags(), wt, {
       cwd: wtPath,
     });
 
     expect(
       result.results.some(
-        (r) => r.action === "kept" && r.name === "done" && r.reason === "checked out",
+        (r) => r.action === "kept" && r.name === "done" && r.message === "checked out",
       ),
     ).toBe(true);
   } finally {
@@ -142,7 +147,7 @@ test("cleanupBranches prunes stale remote-tracking branches", async () => {
   await using repo = await makeRepo();
   await repo.git("update-ref", "refs/remotes/origin/gone", "HEAD");
 
-  await cleanupBranches("main", defaultFlags(), new Set<string>(), { cwd: repo.dir });
+  await cleanupBranches("main", defaultFlags(), noWorktrees(), { cwd: repo.dir });
 
   await expect(repo.git("rev-parse", "--verify", "refs/remotes/origin/gone")).rejects.toThrow(
     /fatal/,
@@ -160,7 +165,7 @@ test("cleanupBranches keeps a branch checked out in a surviving worktree", async
   const wt = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
   const flags: Flags = { ...defaultFlags(), committed: ["branch"] };
 
-  const result = await cleanupBranches("main", flags, wt.survivingBranches, { cwd: repo.dir });
+  const result = await cleanupBranches("main", flags, wt, { cwd: repo.dir });
 
   expect(result.results.some((r) => r.action === "kept" && r.name === "wip")).toBe(true);
 });
