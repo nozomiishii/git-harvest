@@ -55,7 +55,7 @@ export async function cleanupWorktrees(
 
       // detached = branch を持たない worktree。off-ladder なので --detached でだけ消す
       if (worktree.branch === undefined) {
-        results.push(await removeDetached(worktree, flags.detached, flags.dryRun, opts));
+        results.push(await removeDetached(worktree, { dryRun: flags.dryRun, enabled: flags.detached }, opts));
         continue;
       }
       // 状態を上から1つずつ判定し、対応する削除関数を即実行する。
@@ -65,13 +65,21 @@ export async function cleanupWorktrees(
 
       // 未コミットの変更が最優先（消すと復元できない）
       if (await hasUncommittedChanges(worktree.path)) {
-        results.push(await removeFilesChanged(worktree, flags.filesChanged.includes(scope), flags.dryRun, opts));
+        results.push(
+          await removeFilesChanged(
+            worktree,
+            { dryRun: flags.dryRun, enabled: flags.filesChanged.includes(scope) },
+            opts,
+          ),
+        );
         continue;
       }
 
       // 独自コミット無し（off-ladder）。--untouched でだけ消す
       if (await isUntouched(refs, opts)) {
-        results.push(await removeUntouched(worktree, flags.untouched, flags.dryRun, opts));
+        results.push(
+          await removeUntouched(worktree, { dryRun: flags.dryRun, enabled: flags.untouched }, opts),
+        );
         continue;
       }
 
@@ -81,7 +89,13 @@ export async function cleanupWorktrees(
       }
 
       // どれでもない = 未マージの独自コミットあり（committed）
-      results.push(await removeCommitted(worktree, committedScopes.has(scope), flags.dryRun, opts));
+      results.push(
+        await removeCommitted(
+          worktree,
+          { dryRun: flags.dryRun, enabled: committedScopes.has(scope) },
+          opts,
+        ),
+      );
     } catch (error) {
       // 1 件の throw（壊れた ref で rev-parse 失敗 等）で全体を止めない
       results.push({ action: "failed", branch: worktree.branch, message: String(error), path: worktree.path });
@@ -121,15 +135,14 @@ export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
 // committed の worktree。scope が --committed の対象なら消す（force 不要）、無ければ理由付きで残す
 export async function removeCommitted(
   worktree: WtRecord,
-  isTarget: boolean,
-  dryRun: boolean,
+  args: { dryRun: boolean; enabled: boolean },
   opts: Opts,
 ): Promise<WorktreeActionResult> {
-  if (!isTarget) {
+  if (!args.enabled) {
     return { action: "kept", branch: worktree.branch, message: "committed", path: worktree.path };
   }
 
-  if (dryRun) {
+  if (args.dryRun) {
     return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
 
@@ -140,15 +153,14 @@ export async function removeCommitted(
 // detached は未コミット変更を持ちうるので、その場合は force（commit を指す参照ごと失われる前提）
 export async function removeDetached(
   worktree: WtRecord,
-  detached: boolean,
-  dryRun: boolean,
+  args: { dryRun: boolean; enabled: boolean },
   opts: Opts = {},
 ): Promise<WorktreeActionResult> {
-  if (!detached) {
+  if (!args.enabled) {
     return { action: "kept", branch: worktree.branch, message: "detached", path: worktree.path };
   }
 
-  if (dryRun) {
+  if (args.dryRun) {
     return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
   const dirty = await hasUncommittedChanges(worktree.path);
@@ -159,15 +171,14 @@ export async function removeDetached(
 // files-changed の worktree。scope が --files-changed の対象なら消す（未コミットごと force）、無ければ残す
 export async function removeFilesChanged(
   worktree: WtRecord,
-  isTarget: boolean,
-  dryRun: boolean,
+  args: { dryRun: boolean; enabled: boolean },
   opts: Opts,
 ): Promise<WorktreeActionResult> {
-  if (!isTarget) {
+  if (!args.enabled) {
     return { action: "kept", branch: worktree.branch, message: "files-changed", path: worktree.path };
   }
 
-  if (dryRun) {
+  if (args.dryRun) {
     return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
 
@@ -191,15 +202,14 @@ export async function removeMerged(
 // 呼び出し側が hasUncommittedChanges を先に見て clean を確定済みなので force は不要
 export async function removeUntouched(
   worktree: WtRecord,
-  untouched: boolean,
-  dryRun: boolean,
+  args: { dryRun: boolean; enabled: boolean },
   opts: Opts = {},
 ): Promise<WorktreeActionResult> {
-  if (!untouched) {
+  if (!args.enabled) {
     return { action: "kept", branch: worktree.branch, message: "untouched", path: worktree.path };
   }
 
-  if (dryRun) {
+  if (args.dryRun) {
     return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
 

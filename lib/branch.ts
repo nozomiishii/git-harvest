@@ -53,7 +53,11 @@ export async function cleanupBranches(
       }
 
       results.push(
-        await removeCommittedBranch(name, flags.committed.includes("branch"), flags.dryRun, opts),
+        await removeCommittedBranch(
+          name,
+          { dryRun: flags.dryRun, enabled: flags.committed.includes("branch") },
+          opts,
+        ),
       );
     } catch (error) {
       // 1 件の throw（壊れた ref 等）で全体を止めない
@@ -115,15 +119,14 @@ async function removeBranch(name: string, opts: Opts): Promise<BranchActionResul
 // committed の branch は committed の対象に branch が入っていれば消す、なければ理由付きで残す
 async function removeCommittedBranch(
   name: string,
-  isTarget: boolean,
-  dryRun: boolean,
+  args: { dryRun: boolean; enabled: boolean },
   opts: Opts,
 ): Promise<BranchActionResult> {
-  if (!isTarget) {
+  if (!args.enabled) {
     return { action: "kept", message: "committed", name };
   }
 
-  if (dryRun) {
+  if (args.dryRun) {
     return { action: "would-remove", name };
   }
 

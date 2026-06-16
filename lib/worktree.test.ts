@@ -54,7 +54,7 @@ test("removeMerged marks a merged worktree for removal", async () => {
 test("removeCommitted keeps a committed worktree without the committed flag", async () => {
   const worktree = wtRecord();
 
-  const result = await removeCommitted(worktree, false, true, {});
+  const result = await removeCommitted(worktree, { dryRun: true, enabled: false }, {});
 
   expect(result).toStrictEqual({
     action: "kept",
@@ -68,7 +68,7 @@ test("removeCommitted keeps a committed worktree without the committed flag", as
 test("removeCommitted marks a committed worktree for removal with the committed flag", async () => {
   const worktree = wtRecord();
 
-  const result = await removeCommitted(worktree, true, true, {});
+  const result = await removeCommitted(worktree, { dryRun: true, enabled: true }, {});
 
   expect(result).toStrictEqual({ action: "would-remove", branch: "feature", path: worktree.path });
 });
@@ -77,7 +77,7 @@ test("removeCommitted marks a committed worktree for removal with the committed 
 test("removeFilesChanged keeps a files-changed worktree without the files-changed flag", async () => {
   const worktree = wtRecord();
 
-  const result = await removeFilesChanged(worktree, false, true, {});
+  const result = await removeFilesChanged(worktree, { dryRun: true, enabled: false }, {});
 
   expect(result).toStrictEqual({
     action: "kept",
@@ -91,7 +91,7 @@ test("removeFilesChanged keeps a files-changed worktree without the files-change
 test("removeUntouched keeps an untouched worktree without the flag", async () => {
   const worktree = wtRecord();
 
-  const result = await removeUntouched(worktree, false, true, {});
+  const result = await removeUntouched(worktree, { dryRun: true, enabled: false }, {});
 
   expect(result).toStrictEqual({
     action: "kept",
@@ -105,7 +105,7 @@ test("removeUntouched keeps an untouched worktree without the flag", async () =>
 test("removeUntouched marks an untouched worktree for removal with the flag", async () => {
   const worktree = wtRecord();
 
-  const result = await removeUntouched(worktree, true, true, {});
+  const result = await removeUntouched(worktree, { dryRun: true, enabled: true }, {});
 
   expect(result).toStrictEqual({ action: "would-remove", branch: "feature", path: worktree.path });
 });
@@ -114,7 +114,7 @@ test("removeUntouched marks an untouched worktree for removal with the flag", as
 test("removeDetached keeps a detached worktree without the flag", async () => {
   const worktree = wtRecord({ branch: undefined });
 
-  const result = await removeDetached(worktree, false, true, {});
+  const result = await removeDetached(worktree, { dryRun: true, enabled: false }, {});
 
   expect(result).toStrictEqual({
     action: "kept",
@@ -128,7 +128,7 @@ test("removeDetached keeps a detached worktree without the flag", async () => {
 test("removeDetached marks a detached worktree for removal with the flag", async () => {
   const worktree = wtRecord({ branch: undefined });
 
-  const result = await removeDetached(worktree, true, true, {});
+  const result = await removeDetached(worktree, { dryRun: true, enabled: true }, {});
 
   expect(result).toStrictEqual({ action: "would-remove", branch: undefined, path: worktree.path });
 });
