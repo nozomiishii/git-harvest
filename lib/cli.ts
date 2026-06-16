@@ -3,14 +3,14 @@ import { fileURLToPath } from "node:url";
 import type { Flags } from "./types";
 import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch";
-import { helpText, parseFlags, subcommandOf, UsageError } from "./flags";
+import { helpText, parseFlags, parseSubcommand, UsageError } from "./flags";
 import { resolveBase } from "./resolve-base";
 import { bold, dim, logo, statusLine, summaryLine } from "./ui";
 import { cleanupWorktrees } from "./worktree";
 
 // 実行の流れ: subcommand 判定 → フラグ解釈 → base branch 解決 → worktree 掃除 → branch 掃除 → 集計表示
 export async function main(argv: string[]): Promise<void> {
-  const sub = subcommandOf(argv);
+  const sub = parseSubcommand(argv);
 
   if (sub === "help") {
     process.stdout.write(helpText());

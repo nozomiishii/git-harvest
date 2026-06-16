@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { defaultFlags, parseFlags, subcommandOf } from "./flags";
+import { defaultFlags, parseFlags, parseSubcommand } from "./flags";
 
 // default は committed / files-changed の対象 scope が空で、off-ladder toggle も無効
 test("defaultFlags targets no scope and leaves toggles off", () => {
@@ -93,9 +93,9 @@ test("an unknown flag throws", () => {
 });
 
 // 脱出口 (help / version / logo) は argv のどこにあっても他の引数より優先される
-test("subcommandOf detects escape hatches anywhere in argv", () => {
-  expect(subcommandOf(["--nope", "--help"])).toBe("help");
-  expect(subcommandOf(["-v"])).toBe("version");
-  expect(subcommandOf(["logo"])).toBe("logo");
-  expect(subcommandOf(["--committed"])).toBeUndefined();
+test("parseSubcommand detects escape hatches anywhere in argv", () => {
+  expect(parseSubcommand(["--nope", "--help"])).toBe("help");
+  expect(parseSubcommand(["-v"])).toBe("version");
+  expect(parseSubcommand(["logo"])).toBe("logo");
+  expect(parseSubcommand(["--committed"])).toBeUndefined();
 });

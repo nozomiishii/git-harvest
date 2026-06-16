@@ -81,7 +81,7 @@ export function parseFlags(argv: string[]): Flags {
   };
 }
 
-export function subcommandOf(argv: string[]): Subcommand | undefined {
+export function parseSubcommand(argv: string[]): Subcommand | undefined {
   for (const arg of argv) {
     if (arg === "logo") {
       return "logo";
