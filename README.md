@@ -14,7 +14,7 @@ English | [日本語](./README.ja.md)
 
 Clean up branches and worktrees automatically, by their commit lifecycle stage.
 
-## Try it (`--dry-run`)
+## Try it
 
 Shows what would be deleted without deleting anything:
 
@@ -22,46 +22,58 @@ Shows what would be deleted without deleting anything:
 npx -y git-harvest@latest --dry-run
 ```
 
-## Run directly without installing (recommended)
+## Setup
 
-Always runs the latest version, so there is nothing to update.
-
-```sh
-# npm
-npx -y git-harvest@latest
-
-# pnpm
-pnpx git-harvest@latest
-
-# bun
-bunx git-harvest@latest
-```
-
-### (Optional) Set up aliases
+Register `git harvest` as a Git alias so you can call it like a built-in subcommand. The alias runs the latest version on every call, so there is nothing to update.
 
 ```sh
-# normal (default = delete merged only)
-echo "alias ghv='npx -y git-harvest@latest'" >> ~/.zshrc
-# sweep (--yolo = delete uncommitted and detached too)
-echo "alias 'ghv!'='npx -y git-harvest@latest --yolo'" >> ~/.zshrc
-```
-
-`git harvest`
-
-```sh
-# git subcommand — run as `git harvest` (no install)
 git config --global alias.harvest '!npx -y git-harvest@latest'
 # or: git config --global alias.harvest '!pnpx git-harvest@latest'
 # or: git config --global alias.harvest '!bunx git-harvest@latest'
 ```
 
-## Recommended usage
+## Usage
 
-Pair it with a Git post-merge hook to harvest automatically on every merge or pull.
+```sh
+git harvest
+# Removes merged branches (safe default -- safe even in a post-merge hook)
+
+git harvest --dry-run
+git harvest -n
+# Shows what would be deleted without deleting
+
+git harvest --committed
+# Removes committed work too (still keeps uncommitted)
+
+git harvest --files-changed
+# Removes uncommitted worktrees too (worktree scopes only)
+
+git harvest --untouched
+# Also removes untouched worktrees (no work, identical to base)
+
+git harvest --detached
+# Also removes detached worktrees (no branch)
+# WARNING: commits in a detached worktree are unrecoverable
+```
+
+Of course, you can combine these. For example, `git harvest --committed --untouched` removes committed branches plus untouched worktrees.
+
+There is also a preset:
+
+```sh
+git harvest --yolo
+# Equivalent to --files-changed --committed --untouched --detached
+```
+
+The `--committed` and `--files-changed` flags accept an optional scope: `=worktree`, `=claude-worktree`, or `=branch`. Without a scope they apply to all applicable scopes. Combine with commas (`--committed=worktree,branch`) or by repeating the flag.
+
+## Automate (optional)
+
+Pair `git harvest` with a Git post-merge hook to harvest automatically on every merge or pull.
 
 ### With [lefthook](https://github.com/evilmartians/lefthook)
 
-There are many Git Hooks tools (husky, pre-commit, simple-git-hooks), but Lefthook is language-agnostic and easy to drop into a monorepo. With `lefthook-local.yaml` you can run it only for yourself without affecting teammates.
+There are many Git hooks tools (husky, pre-commit, simple-git-hooks), but Lefthook is language-agnostic and easy to drop into a monorepo. With `lefthook-local.yaml` you can run it only for yourself without affecting teammates.
 
 ```yaml
 # lefthook-local.yaml
@@ -72,31 +84,6 @@ post-merge:
       # or: pnpx git-harvest@latest
       # or: bunx git-harvest@latest
 ```
-
-## Usage
-
-```sh
-npx -y git-harvest@latest
-```
-
-### Options
-
-```
--h, --help                   Show help
--v, --version                Show version
--n, --dry-run                Show what would be deleted without deleting
-
---committed[=<scope>]        Lower the threshold to committed (delete committed + merged; keep uncommitted)
---files-changed[=<scope>]    Lower the threshold to files-changed (delete uncommitted too; worktree scopes only)
---untouched                  Also delete untouched worktrees (no work, identical to base)
---detached                   Also delete detached worktrees (no branch)
-                             WARNING: a detached worktree's commits are unreachable -- removal can lose them permanently (no reflog recovery)
---yolo                       Preset: --files-changed --committed --untouched --detached (all scopes)
-
-logo                         Show the logo
-```
-
-`<scope>` is `worktree` / `claude-worktree` / `branch`. When omitted it applies to all applicable scopes. List multiple scopes comma-separated (`--committed=worktree,branch`) or by repeating the flag. `--files-changed` has no branch stage, so it applies to worktree scopes only.
 
 ## How it works
 
