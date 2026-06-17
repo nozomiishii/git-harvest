@@ -26,9 +26,9 @@ Branches
   →  feature/done
 ```
 
-## セットアップ
+## セットアップ (任意)
 
-`git harvest` を Git のサブコマンドとして使えるように、alias を登録します。常に最新版が走るので、アップデート不要です。
+`npx -y git-harvest@latest` だけでも動きますが、alias を登録すると短く呼べます。常に最新版が走るので、アップデート不要です。
 
 ```sh
 git config --global alias.harvest '!npx -y git-harvest@latest'
