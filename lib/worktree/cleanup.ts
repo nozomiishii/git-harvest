@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { scopeOfPath } from "../agent/scope";
 import { git } from "../git/exec";
 import { isMerged, isUntouched } from "../merged/index";
-import { canonical } from "../path";
+import { realpath } from "../path";
 import type { Flags, WorktreeActionResult, WorktreeCleanupResult } from "../types";
 import { isCwd, isLocked, isOnBaseBranch, isSessionRunning } from "./guards";
 import { listWorktrees } from "./list";
@@ -27,7 +27,7 @@ export async function cleanupWorktrees(
   const all = await listWorktrees(opts);
   // porcelain の先頭は main worktree。常に生存し、その checkout branch は mainBranch として branch 掃除へ渡す
   const [mainWorktree, ...linkedWorktrees] = all;
-  const current = canonical(opts.cwd ?? process.cwd());
+  const current = realpath(opts.cwd ?? process.cwd());
   const results: WorktreeActionResult[] = [];
   // files-changed は committed より危険な段なので、その scope は committed にも降りる（ladder cascade）
   const committedScopes = new Set([...flags.committed, ...flags.filesChanged]);

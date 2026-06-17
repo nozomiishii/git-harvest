@@ -61,7 +61,7 @@ test("cleanupWorktrees removes a merged linked worktree by default", async () =>
   await repo.git("merge", "--no-ff", "done", "-m", "merge done");
   const wtPath = `${repo.dir}-done`;
   await repo.git("worktree", "add", wtPath, "done");
-  // git は porcelain で realpath を返すため canonical 同士で比較する（macOS の /private symlink 対策）
+  // git は porcelain で realpath を返すため realpath 同士で比較する（macOS の /private symlink 対策）
   const canonWt = realpathSync(wtPath);
 
   const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });

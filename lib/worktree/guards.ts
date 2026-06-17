@@ -7,7 +7,7 @@ import type { WtRecord } from "./list";
 
 // cwd が worktree 直下でもサブディレクトリでも current 扱い
 export function isCwd(worktree: WtRecord, current: string): boolean {
-  return isInside({ child: current, parent: worktree.canon });
+  return isInside({ child: current, parent: worktree.realpath });
 }
 
 export function isLocked(worktree: WtRecord): boolean {

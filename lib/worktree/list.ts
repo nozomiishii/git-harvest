@@ -1,7 +1,7 @@
 import { gitText } from "../git/exec";
-import { canonical } from "../path";
+import { realpath } from "../path";
 
-export type WtRecord = { branch: string | undefined; canon: string; locked: boolean; path: string };
+export type WtRecord = { branch: string | undefined; locked: boolean; path: string; realpath: string };
 
 type Opts = { cwd?: string };
 
@@ -22,9 +22,9 @@ function parseWorktreeBlock(block: string): WtRecord {
 
   return {
     branch: lines.find((l) => l.startsWith("branch "))?.slice("branch refs/heads/".length),
-    // canon はパース時に 1 回だけ付与（macOS の /private symlink 対策。以後の path 比較は canon で行う）
-    canon: canonical(path),
     locked: lines.some((l) => l.startsWith("locked")),
     path,
+    // realpath はパース時に 1 回だけ付与（macOS の /private symlink 対策。以後の path 比較は realpath で行う）
+    realpath: realpath(path),
   };
 }

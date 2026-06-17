@@ -9,7 +9,7 @@ import {
 } from "./remove";
 
 function wtRecord(over: Partial<WtRecord> = {}): WtRecord {
-  return { branch: "feature", canon: "/repo/wt", locked: false, path: "/repo/wt", ...over };
+  return { branch: "feature", locked: false, path: "/repo/wt", realpath: "/repo/wt", ...over };
 }
 
 // merged worktree はどの scope でも常に削除対象（dry-run で would-remove）

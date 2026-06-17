@@ -1,12 +1,12 @@
 import { globSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { canonical, isInside } from "../path";
+import { isInside, realpath } from "../path";
 
 // Claude Code は実行中 session の情報を ~/.claude/sessions/*.json に置く。
 // その cwd がこの worktree 配下で、かつ process が生きていれば「session 実行中」と判定する
 export function hasRunningClaudeSession(worktree: string): boolean {
-  const target = canonical(worktree);
+  const target = realpath(worktree);
 
   return sessionFiles(sessionsDir()).some((file) => isLiveSessionIn({ file, target }));
 }
@@ -21,7 +21,7 @@ function isLiveSessionIn({ file, target }: { file: string; target: string }): bo
   }
 
   // session が worktree のサブディレクトリで起動されていても検出する
-  if (!isInside({ child: canonical(session.cwd), parent: target })) {
+  if (!isInside({ child: realpath(session.cwd), parent: target })) {
     return false;
   }
   // pid は JSON 本文を正とし、無ければ <pid>.json 形式のファイル名から取る（命名規則は非公開・無保証）

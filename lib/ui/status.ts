@@ -1,13 +1,13 @@
 import type { BranchActionResult, WorktreeActionResult } from "../types";
 import { bold, dim, hi, useColor } from "./color";
-import { relpath } from "./relpath";
+import { tildify } from "./tildify";
 
 export function statusLine(
   result: BranchActionResult | WorktreeActionResult,
   color = useColor(),
 ): string {
   // worktree は path、branch は branch 名。どちらの識別子かは型で分かれる
-  const name = relpath("path" in result ? result.path : result.name);
+  const name = tildify("path" in result ? result.path : result.name);
 
   switch (result.action) {
     case "failed": {
