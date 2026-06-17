@@ -30,10 +30,18 @@ Branches
 
 `npx -y git-harvest@latest` だけでも動きますが、alias を登録すると短く呼べます。常に最新版が走るので、アップデート不要です。
 
+Git alias — `git harvest` として呼ぶ:
+
 ```sh
 git config --global alias.harvest '!npx -y git-harvest@latest'
 # または: git config --global alias.harvest '!pnpx git-harvest@latest'
 # または: git config --global alias.harvest '!bunx git-harvest@latest'
+```
+
+Shell alias — `.bashrc` / `.zshrc` に追加:
+
+```sh
+alias ghv='npx -y git-harvest@latest'
 ```
 
 ## 使い方
