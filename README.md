@@ -26,9 +26,9 @@ Branches
   →  feature/done
 ```
 
-## Setup
+## Setup (optional)
 
-Register `git harvest` as a Git alias. It always runs the latest version — nothing to update.
+`npx -y git-harvest@latest` works on its own, but registering a Git alias makes it shorter. It always runs the latest version — nothing to update.
 
 ```sh
 git config --global alias.harvest '!npx -y git-harvest@latest'
