@@ -1,4 +1,5 @@
-const ESC = String.fromCodePoint(27); // エスケープ文字(0x1b)。cat -v での ^[ の正体
+// ANSI エスケープシーケンスの先頭につく制御文字（0x1b）
+const ESC = String.fromCodePoint(27);
 const BRAND = "192;255;57";
 
 export function bold(s: string, color = useColor()): string {

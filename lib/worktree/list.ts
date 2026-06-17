@@ -8,8 +8,10 @@ type Opts = { cwd?: string };
 export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
   const out = await gitText(["worktree", "list", "--porcelain"], opts);
 
-  // --porcelain はスクリプト向けの固定書式。エントリごとに空行区切りで、
-  // 各エントリは worktree 行（パス）+ 任意の branch / locked 行。先頭は main worktree
+  // --porcelain は機械可読の固定書式で出力させるオプション。
+  // worktree ごとに 1 ブロックで、ブロック同士は空行で区切られる。
+  // 各ブロックは worktree 行（パス）と、任意で branch / locked 行を含む。
+  // 一覧の先頭は必ず main worktree
   return out
     .split("\n\n")
     .map((block) => parseWorktreeBlock(block))

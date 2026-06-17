@@ -9,8 +9,9 @@ export class UsageError extends Error {}
 // 既知のフラグ名（= の前の部分）。これ以外は unknown として弾く
 const FLAG_NAMES = new Set(["--committed", "--detached", "--dry-run", "--files-changed", "--untouched", "-n"]);
 
-// preset を増やすときはここに 1 entry 足す。各フラグは対象 scope を足すだけ（単調）なので、
-// preset と単体フラグはどの順で並んでも同じ結果になる
+// preset を増やすときはここに 1 行足す。
+// 個別フラグはどれも「対象 scope を集合に追加する」だけで、引いたり打ち消したりしない。
+// だから --yolo と単体フラグをどんな順番で並べても、最終結果は変わらない
 const PRESETS: Record<string, readonly string[]> = {
   "--yolo": ["--files-changed", "--committed", "--untouched", "--detached"],
 };

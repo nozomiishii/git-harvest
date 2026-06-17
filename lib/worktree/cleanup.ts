@@ -25,16 +25,21 @@ export async function cleanupWorktrees(
   opts: Opts = {},
 ): Promise<WorktreeCleanupResult> {
   const all = await listWorktrees(opts);
-  // porcelain の先頭は main worktree。常に生存し、その checkout branch は mainBranch として branch 掃除へ渡す
+  // 一覧の先頭は main worktree（git worktree list の仕様）。
+  // main は常に守るため切り離し、checkout 中の branch だけ branch 掃除に渡す
   const [mainWorktree, ...linkedWorktrees] = all;
   const current = realpath(opts.cwd ?? process.cwd());
   const results: WorktreeActionResult[] = [];
-  // files-changed は committed より危険な段なので、その scope は committed にも降りる（ladder cascade）
+  // files-changed の scope は committed にも自動で含める。
+  // files-changed は committed より危険な段（消すと復元できない）なので、
+  // それを消す指定をしているなら、より安全な committed も同じ scope で消して良い
   const committedScopes = new Set([...flags.committed, ...flags.filesChanged]);
 
-  // 並列化しない: git の index.lock 競合と results の順序を守るため直列 await
+  // 直列に処理する。並列化すると git の .git/index.lock を取り合って失敗し得るし、
+  // 結果の順序も保てなくなる
   for (const worktree of linkedWorktrees) {
-    // ディレクトリごと消された prunable worktree は prune に任せ、結果に含めない
+    // ディレクトリ自体が削除されている worktree は git worktree prune が片付けるので、
+    // 結果には載せない
     if (!existsSync(worktree.path)) {
       continue;
     }
@@ -91,7 +96,8 @@ export async function cleanupWorktrees(
       // どれでもない = 未マージの独自コミットあり（committed）
       results.push(await removeCommitted(worktree, committedScopes.has(scope), flags.dryRun, opts));
     } catch (error) {
-      // 1 件の throw（壊れた ref で rev-parse 失敗 等）で全体を止めない
+      // 1 件の失敗で全体を止めない。たとえば壊れた ref に当たって git が throw しても、
+      // その worktree を failed として記録し、残りの掃除は続ける
       results.push({ action: "failed", branch: worktree.branch, message: String(error), path: worktree.path });
     }
   }
@@ -101,6 +107,7 @@ export async function cleanupWorktrees(
   }
   const failures = results.filter((r) => r.action === "failed").length;
 
-  // main worktree は常に生存。その checkout branch を branch 掃除へ引き継ぐ（使用中の branch を誤って消さない）
+  // main worktree が checkout 中の branch も branch 掃除で守る必要があるので、
+  // その branch 名を mainBranch として引き継ぐ
   return { failures, mainBranch: mainWorktree?.branch, results };
 }

@@ -23,8 +23,9 @@ export async function removeCommitted(
   return removeWorktree(worktree, opts, false);
 }
 
-// detached（branch 無し）の worktree。--detached があれば消す、無ければ理由付きで残す。
-// detached は未コミット変更を持ちうるので、その場合は force（commit を指す参照ごと失われる前提）
+// detached（branch を持たない）worktree。--detached があれば消す、無ければ理由付きで残す。
+// detached は未コミット変更を含むこともあり、その場合は force で消す
+// （branch という参照が無い以上、未コミット分は復元できない前提の動作）
 export async function removeDetached(
   worktree: WtRecord,
   detached: boolean,
@@ -93,8 +94,10 @@ export async function removeUntouched(
   return removeWorktree(worktree, opts, false);
 }
 
-// 競合 rescue とエラー整形だけを持つ実行関数。
-// git worktree remove は未コミット変更がある worktree を拒否する。--force はその安全確認を飛ばす
+// 実際に worktree を消すだけの関数。並走している別プロセスとの競合を救済し、
+// 残ったエラーを呼び出し側が読める形に整える。
+// git worktree remove は未コミット変更が残っている worktree を既定では拒否する。
+// --force はその安全確認を飛ばすので、上の remove* が「force して良いか」を判断してから渡す
 async function removeWorktree(
   worktree: WtRecord,
   opts: Opts,
@@ -105,7 +108,7 @@ async function removeWorktree(
     : ["worktree", "remove", worktree.path];
   const { code, stderr } = await git(args, opts);
 
-  // "is not a working tree" は別プロセスが先に消した競合なので removed 扱い（エラーは stderr に出る）
+  // "is not a working tree" は別プロセスが先に消した後で、本来の目的（消える）は達成済みなので removed 扱い
   if (code === 0 || stderr.includes("is not a working tree")) {
     return { action: "removed", branch: worktree.branch, path: worktree.path };
   }

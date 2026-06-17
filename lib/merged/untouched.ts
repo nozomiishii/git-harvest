@@ -3,11 +3,13 @@ import { git, gitText } from "../git/exec";
 type Opts = { cwd?: string };
 type Refs = { base: string; branch: string };
 
-// first-parent = マージで合流してきた側の枝を無視した、base の本流だけの commit 一覧。
-// branch の先頭 commit が本流上にある = このブランチではまだ独自の作業をしていない
+// branch の先頭 commit が base の本流に並んでいれば untouched（このブランチで作業していない）。
+// 「本流」= マージで合流してきた側を辿らず、base 自身が積み重ねてきた commit 列。
+// git rev-list --first-parent がそれを上から並べた一覧を返す
 export async function isUntouched({ base, branch }: Refs, opts: Opts = {}): Promise<boolean> {
-  // rev-parse はブランチ名を commit ID に解決する。
-  // 壊れた ref は gitText がここで throw → 呼び出し側の fail-soft で failed になる（git() に変えない）
+  // ブランチ名から commit ID へ変換。
+  // 壊れた ref のときは gitText が throw して、cleanup 側で failed として記録される。
+  // ここで git()（throw しない版）に変えると壊れた ref が黙って untouched=false 扱いになる
   const head = await gitText(["rev-parse", branch], opts);
   const firstParentResult = await git(["rev-list", "--first-parent", base], opts);
   const firstParent = firstParentResult.stdout;

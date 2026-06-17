@@ -5,16 +5,14 @@ import { isSquashMerged } from "./squash";
 type Opts = { cwd?: string };
 type Refs = { base: string; branch: string };
 
-// このモジュールは「ブランチが base にどう取り込まれているか」を boolean 2つで答える。
-//   isUntouched: 作業なし（base の本流上、独自コミット無し）       … 旧 first-parent
+// 「branch が base にどう取り込まれているか」を 2 つの判定で答えるモジュール。
+//   isUntouched: 作業そのものが無い（base 本流に並んでいるだけ）
 //   isMerged:    通常マージ / squash / rebase のいずれかで取り込み済み
-//     - isAncestorMerged: 通常マージ / fast-forward
-//     - isSquashMerged:   squash マージ（GitHub のデフォルト）
-//     - isRebaseMerged:   rebase / cherry-pick
-// 「merged でも untouched でもない」状態に名前は付けない（呼び出し側で committed と判断する）。
+// どちらでもなければ committed（base に未取り込みの独自コミットあり）と呼び出し側が判断する。
 
-// 3 段を順に試し、どれかが true なら取り込み済み。段ごとに「git 失敗 = この段では判定不能」
-// として false で次段へ落ちる（段を増やす時はこの性質を守ること）
+// マージ済みかを 3 つの方式で順に試し、1 つでも当たれば取り込み済み。
+// それぞれの方式は「git コマンドが失敗 = この方式では判定できない」として false を返し、
+// 次の方式に委ねる。新しい方式を足すときも、このフォールバック規約を守ること
 export async function isMerged(refs: Refs, opts: Opts = {}): Promise<boolean> {
   if (await isAncestorMerged(refs, opts)) {
     return true;

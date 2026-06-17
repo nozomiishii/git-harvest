@@ -2,8 +2,9 @@ import { hasRunningClaudeSession } from "../agent/session";
 import { isInside } from "../path";
 import type { WtRecord } from "./list";
 
-// 守る理由ごとの述語。どれか true ならその worktree はどのフラグでも消さない。
-// main は listWorktrees が先頭分離するためここに来ず、判定不要。
+// 守る理由ごとの判定関数。どれか 1 つでも true なら、その worktree は
+// どんなフラグを指定されても消さない。
+// main worktree は listWorktrees が先頭で切り離すのでここには来ない
 
 // cwd が worktree 直下でもサブディレクトリでも current 扱い
 export function isCwd(worktree: WtRecord, current: string): boolean {

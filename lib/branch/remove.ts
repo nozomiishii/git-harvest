@@ -34,13 +34,14 @@ export async function removeMergedBranch(
   return removeBranch(name, opts);
 }
 
-// 競合 rescue とエラー整形だけを持つ実行関数。
-// branch -D は「base に取り込み済みか」を git 側で確認しない強制削除（-d は未マージを拒否する）。
-// 取り込み済み確認は呼び出し側の isUntouched / isMerged 判定で済んでいるため -D で良い
+// 実際に branch を消すだけの関数。並走している別プロセスとの競合を救済し、
+// 残ったエラーを呼び出し側が読める形に整える。
+// branch -D は git 側のマージ済みチェックを飛ばして強制削除する（-d は未マージを拒否）。
+// マージ済みかは呼び出し前に isUntouched / isMerged で確認済みなので -D で問題ない
 async function removeBranch(name: string, opts: Opts): Promise<BranchActionResult> {
   const { code, stderr } = await git(["branch", "-D", name], opts);
 
-  // "not found" は別プロセスが先に消した競合なので removed 扱い（エラーは stderr に出る）
+  // "not found" は別プロセスが先に消した後で、本来の目的（消える）は達成済みなので removed 扱い
   if (code === 0 || stderr.includes("not found")) {
     return { action: "removed", name };
   }

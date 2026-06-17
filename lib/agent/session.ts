@@ -30,14 +30,15 @@ function isLiveSessionIn({ file, target }: { file: string; target: string }): bo
   return isProcessAlive(pid);
 }
 
-// NaN / pid 0 は dead 扱い
+// 数値で無い pid（NaN）や 0 は「生きていない」と扱う
 function isProcessAlive(pid: number): boolean {
   if (!pid) {
     return false;
   }
 
   try {
-    // signal 0 は送信せず生存確認のみ（kill しない）。成功 = process 生存 = session 走行中
+    // process.kill に signal 0 を渡すと、プロセスを実際には殺さず存在確認だけ行う
+    // （POSIX の慣習）。例外が出なければ生きている = session 走行中
     process.kill(pid, 0);
 
     return true;

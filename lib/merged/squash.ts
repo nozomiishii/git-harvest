@@ -3,11 +3,13 @@ import { git } from "../git/exec";
 type Opts = { cwd?: string };
 type Refs = { base: string; branch: string };
 
-// squash マージ = ブランチの全 commit を 1 つに潰して base に積む方式。元の commit は base の
-// 履歴に現れないため、同じ「潰した 1 commit」を手元で仮に作り（commit-tree）、その内容が base に
-// 入っているかを cherry で照合する。判定不能（merge-base 無し等）は false = 次の段へ
+// squash マージ = branch の全 commit を 1 つに潰して base に積む方式（GitHub のデフォルト）。
+// 元の commit は base の履歴に直接は現れないので、ID では見つからない。
+// 代わりに、「branch を 1 つに潰したら何になるか」を手元で仮に作り、
+// それが base に取り込まれているかを変更内容で照合する。
+// どこかで作れなかった / 比較できなかった場合は false を返し、次の検出方式に任せる
 export async function isSquashMerged({ base, branch }: Refs, opts: Opts = {}): Promise<boolean> {
-  // merge-base = base と branch が分岐した地点の commit
+  // base と branch が分岐した地点の commit を取る
   const mergeBaseResult = await git(["merge-base", base, branch], opts);
   const mergeBase = mergeBaseResult.stdout.trim();
 
@@ -15,7 +17,8 @@ export async function isSquashMerged({ base, branch }: Refs, opts: Opts = {}): P
     return false;
   }
 
-  // commit-tree は dangling object を作るだけなので dry-run でも安全
+  // 「分岐点を親に持ち、branch の最新 tree を中身に持つ」仮の commit を作る。
+  // どのブランチからも参照されない孤立した commit なので、リポジトリに副作用は無い
   const squashResult = await git(
     ["commit-tree", `${branch}^{tree}`, "-p", mergeBase, "-m", "_"],
     opts,
@@ -25,7 +28,8 @@ export async function isSquashMerged({ base, branch }: Refs, opts: Opts = {}): P
   if (!squash) {
     return false;
   }
-  // git cherry = 各 commit の変更内容が base に取り込み済みなら "-"、未取り込みなら "+" を付けて列挙
+  // git cherry は、左 (base) と右 (squash) の commit を変更内容で照合し、
+  // 右にしかない変更を + 、すでに左に入っている変更を - で列挙する
   const cherryResult = await git(["cherry", base, squash], opts);
   const cherry = cherryResult.stdout;
 
@@ -34,6 +38,6 @@ export async function isSquashMerged({ base, branch }: Refs, opts: Opts = {}): P
   }
   const added = cherry.split("\n").filter((line) => line.startsWith("+"));
 
-  // + 行（base に未取り込みの commit）がゼロなら squash マージ済み
+  // + 行が無い = base に未取り込みの変更が無い = squash 済み
   return added.length === 0;
 }
