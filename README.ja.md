@@ -2,15 +2,9 @@
 
 [English](./README.md) | 日本語
 
-<br>
-<div align="center">
-  <img src="demo/logo.gif" alt="logo" width="480" />
-</div>
-
-<p align="center">
+<p>
   <a href="https://www.npmjs.com/package/git-harvest"><img src="https://img.shields.io/npm/v/git-harvest.svg" alt="npm version" /></a>
 </p>
-<br>
 
 branch と worktree を、コミットのライフサイクル段階に応じて自動で整理するツール
 

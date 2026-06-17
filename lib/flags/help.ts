@@ -10,7 +10,6 @@ Stages (risky -> safe):
   kept by default, removed by --untouched / --detached (or --yolo).
 
 Usage: git-harvest [options]
-       git-harvest logo
 
 Options:
   -h, --help                  Show this help
@@ -29,9 +28,6 @@ Options:
 
   --yolo                      Preset: --files-changed --committed --untouched --detached (all scopes).
                               WARNING: removes uncommitted changes and detached commits (see --detached).
-
-Subcommands:
-  logo                        Show the git-harvest logo
 
 Invariants are always protected (no flag or --yolo can override):
   main/default worktree, worktree on the base branch, current cwd worktree, locked worktree,

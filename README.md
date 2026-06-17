@@ -2,15 +2,9 @@
 
 English | [日本語](./README.ja.md)
 
-<br>
-<div align="center">
-  <img src="demo/logo.gif" alt="logo" width="480" />
-</div>
-
-<p align="center">
+<p>
   <a href="https://www.npmjs.com/package/git-harvest"><img src="https://img.shields.io/npm/v/git-harvest.svg" alt="npm version" /></a>
 </p>
-<br>
 
 Clean up branches and worktrees automatically, by their commit lifecycle stage.
 
