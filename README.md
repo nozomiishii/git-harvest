@@ -6,7 +6,7 @@ English | [日本語](./README.ja.md)
   <a href="https://www.npmjs.com/package/git-harvest"><img src="https://img.shields.io/npm/v/git-harvest.svg" alt="npm version" /></a>
 </p>
 
-Auto-clean branches and worktrees by commit lifecycle stage.
+Branch and worktree cleanup tool.
 
 ## Try it
 
@@ -93,7 +93,7 @@ post-merge:
 
 ### Stages (risky → safe)
 
-The commit lifecycle as states:
+A branch goes through these states:
 
 ```
 untouched

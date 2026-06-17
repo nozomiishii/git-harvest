@@ -6,7 +6,7 @@
   <a href="https://www.npmjs.com/package/git-harvest"><img src="https://img.shields.io/npm/v/git-harvest.svg" alt="npm version" /></a>
 </p>
 
-branch と worktree を、commit のライフサイクルで自動整理するツール
+branch と worktree の片付けツール
 
 ## お試し
 
@@ -93,7 +93,7 @@ post-merge:
 
 ### ステージ (危険 → 安全)
 
-commit ライフサイクルの状態遷移:
+branch はこの順に状態が進む:
 
 ```
 未着手 (untouched)
