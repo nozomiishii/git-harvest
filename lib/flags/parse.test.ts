@@ -16,11 +16,17 @@ test("--committed=claude-worktree targets only the claude scope", () => {
   expect(parseFlags(["--committed=claude-worktree"]).committed).toStrictEqual(["claude-worktree"]);
 });
 
+// codex scope 指定は対象 scope だけ committed に入れる
+test("--committed=codex-worktree targets only the codex scope", () => {
+  expect(parseFlags(["--committed=codex-worktree"]).committed).toStrictEqual(["codex-worktree"]);
+});
+
 // 値無し --committed は branch を含む全 scope を対象にする
 test("a bare --committed targets every scope including branch", () => {
   expect(parseFlags(["--committed"]).committed).toStrictEqual([
     "worktree",
     "claude-worktree",
+    "codex-worktree",
     "branch",
   ]);
 });
@@ -29,7 +35,7 @@ test("a bare --committed targets every scope including branch", () => {
 test("a bare --files-changed targets worktree scopes but not branch", () => {
   const flags = parseFlags(["--files-changed"]);
 
-  expect(flags.filesChanged).toStrictEqual(["worktree", "claude-worktree"]);
+  expect(flags.filesChanged).toStrictEqual(["worktree", "claude-worktree", "codex-worktree"]);
   expect(flags.committed).toStrictEqual([]);
 });
 
@@ -50,9 +56,9 @@ test("an empty scope value like --committed= is rejected", () => {
 
 // カンマ区切りで列挙した各 scope を対象にする
 test("comma-separated scopes apply to each listed scope", () => {
-  expect(parseFlags(["--files-changed=worktree,claude-worktree"]).filesChanged).toStrictEqual([
+  expect(parseFlags(["--files-changed=worktree,codex-worktree"]).filesChanged).toStrictEqual([
     "worktree",
-    "claude-worktree",
+    "codex-worktree",
   ]);
 });
 
@@ -68,8 +74,13 @@ test("--untouched and --detached set the off-ladder toggles", () => {
 test("--yolo targets every scope and enables both toggles", () => {
   const flags = parseFlags(["--yolo"]);
 
-  expect(flags.committed).toStrictEqual(["worktree", "claude-worktree", "branch"]);
-  expect(flags.filesChanged).toStrictEqual(["worktree", "claude-worktree"]);
+  expect(flags.committed).toStrictEqual([
+    "worktree",
+    "claude-worktree",
+    "codex-worktree",
+    "branch",
+  ]);
+  expect(flags.filesChanged).toStrictEqual(["worktree", "claude-worktree", "codex-worktree"]);
   expect(flags.untouched).toBe(true);
   expect(flags.detached).toBe(true);
 });

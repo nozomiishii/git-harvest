@@ -17,9 +17,9 @@ Options:
   -n, --dry-run               Show what would be deleted without deleting
 
   --committed[=<scope>]       Delete from committed (committed + merged). scope: worktree,
-                              claude-worktree, branch (default: all).
+                              claude-worktree, codex-worktree, branch (default: all).
   --files-changed[=<scope>]   Delete from files-changed (uncommitted included). scope: worktree,
-                              claude-worktree (default: all worktree scopes).
+                              claude-worktree, codex-worktree (default: all worktree scopes).
                               Multiple scopes: comma-separated or repeat the flag.
   --untouched                 Delete untouched worktrees (no work, identical to base; off-ladder).
   --detached                  Delete detached worktrees (no branch; off-ladder).
