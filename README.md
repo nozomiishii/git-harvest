@@ -6,19 +6,29 @@ English | [日本語](./README.ja.md)
   <a href="https://www.npmjs.com/package/git-harvest"><img src="https://img.shields.io/npm/v/git-harvest.svg" alt="npm version" /></a>
 </p>
 
-Clean up branches and worktrees automatically, by their commit lifecycle stage.
+Branch and worktree cleanup tool.
 
 ## Try it
 
-Shows what would be deleted without deleting anything:
+Preview the cleanup:
 
 ```sh
 npx -y git-harvest@latest --dry-run
 ```
 
+```
+Worktrees
+  ·  ~/.claude/worktrees/foo   untouched   identical to base, no work
+  →  ~/.claude/worktrees/done
+
+Branches
+  ·  feature/wip               committed   below the threshold, kept
+  →  feature/done
+```
+
 ## Setup
 
-Register `git harvest` as a Git alias so you can call it like a built-in subcommand. The alias runs the latest version on every call, so there is nothing to update.
+Register `git harvest` as a Git alias. It always runs the latest version — nothing to update.
 
 ```sh
 git config --global alias.harvest '!npx -y git-harvest@latest'
@@ -30,7 +40,7 @@ git config --global alias.harvest '!npx -y git-harvest@latest'
 
 ```sh
 git harvest
-# Removes merged branches (safe default -- safe even in a post-merge hook)
+# Removes merged branches (the safe default -- works in a post-merge hook too)
 
 git harvest --dry-run
 git harvest -n
@@ -50,24 +60,24 @@ git harvest --detached
 # WARNING: commits in a detached worktree are unrecoverable
 ```
 
-Of course, you can combine these. For example, `git harvest --committed --untouched` removes committed branches plus untouched worktrees.
+Flags combine freely. `git harvest --committed --untouched` removes committed branches plus untouched worktrees.
 
-There is also a preset:
+Or skip the nuance:
 
 ```sh
 git harvest --yolo
 # Equivalent to --files-changed --committed --untouched --detached
 ```
 
-The `--committed` and `--files-changed` flags accept an optional scope: `=worktree`, `=claude-worktree`, or `=branch`. Without a scope they apply to all applicable scopes. Combine with commas (`--committed=worktree,branch`) or by repeating the flag.
+Both `--committed` and `--files-changed` accept an optional scope (`=worktree`, `=claude-worktree`, `=branch`). See [Scopes](#scopes-narrowing-the-target) for details.
 
 ## Automate (optional)
 
-Pair `git harvest` with a Git post-merge hook to harvest automatically on every merge or pull.
+Add `git harvest` to a post-merge hook and it runs on every merge or pull.
 
 ### With [lefthook](https://github.com/evilmartians/lefthook)
 
-There are many Git hooks tools (husky, pre-commit, simple-git-hooks), but Lefthook is language-agnostic and easy to drop into a monorepo. With `lefthook-local.yaml` you can run it only for yourself without affecting teammates.
+Lefthook is language-agnostic and easy to drop into a monorepo. With `lefthook-local.yaml` you can run it only for yourself without affecting teammates.
 
 ```yaml
 # lefthook-local.yaml
@@ -83,7 +93,7 @@ post-merge:
 
 ### Stages (risky → safe)
 
-The git commit lifecycle, organized as states:
+A branch goes through these states:
 
 ```
 untouched
@@ -93,11 +103,11 @@ files-changed  →  committed  →  merged
   └─ editing brings it back to files-changed (from any state)
 ```
 
-git-harvest classifies each worktree / branch by its most at-risk stage. A flag lowers the threshold and deletes that stage and everything safer (✓ = deleted):
+git-harvest classifies each worktree / branch by its riskiest stage. A flag lowers the threshold and deletes that stage and everything safer (✓ = deleted):
 
 | stage | risk when deleted | no flag | `--committed` | `--files-changed` |
 | --- | --- | --- | --- | --- |
-| files-changed | unrecoverable once lost | · | · | ✓ |
+| files-changed | unrecoverable | · | · | ✓ |
 | committed | reflog recovery (tedious) | · | ✓ | ✓ |
 | merged | fully safe | ✓ | ✓ | ✓ |
 
@@ -113,7 +123,7 @@ For example, `--committed` deletes committed and merged while keeping uncommitte
 | `claude-worktree` | worktrees under `.claude/worktrees/` |
 | `branch` | branches |
 
-Thresholds are kept per scope. `--committed` affects every scope; `--committed=claude-worktree` affects only that scope.
+Thresholds are kept per scope. `--committed` affects every scope; `--committed=claude-worktree` affects only that scope. Combine with commas (`--committed=worktree,branch`) or by repeating the flag.
 
 ### Off-ladder (outside the stages, protected by default)
 
@@ -122,7 +132,7 @@ Thresholds are kept per scope. `--committed` affects every scope; `--committed=c
 | `untouched` | clean and no unique commits (identical to base) | kept | `--untouched` / `--yolo` |
 | `detached` | a worktree with no branch (detached HEAD) | kept | `--detached` / `--yolo` |
 
-An untouched branch is just a ref identical to base, so it is deleted by default — asymmetric with worktrees on purpose (a worktree signals intent to use it; a branch is residue to sweep).
+An untouched branch is just a ref identical to base, so it is deleted by default — asymmetric with worktrees on purpose (a worktree signals intent; a branch is just leftover).
 
 > WARNING: a detached worktree's commits have no branch ref, and removing the worktree deletes its reflog with it — they can be lost permanently (no reflog recovery). Only `--detached` / `--yolo` target them.
 
@@ -161,7 +171,7 @@ The keep reason is a state label (files-changed / committed / untouched / detach
 
 ### Worktree decision flow
 
-The decision tree with no flags (default = every scope thresholded at merged). Flags lower the threshold and flip keep → delete, so each keep node notes which flag would delete it. Invariants are absolute — no flag moves them.
+Decision tree at the default threshold (merged). Each keep node shows which flag would override it; invariants cannot be overridden.
 
 ```mermaid
 flowchart TD
@@ -200,9 +210,9 @@ git-harvest detects running [Claude Code](https://claude.ai/code) sessions and p
 |---|---|
 | `~/.claude/sessions/<pid>.json` | detect a running session (match the worktree by `cwd` + confirm the process with `kill -0 pid`) |
 
-Worktrees under `.claude/worktrees/` are treated as the `claude-worktree` scope and judged by the same stage thresholds as normal worktrees (always protected while a session is running). Use a scope, e.g. `--committed=claude-worktree`, to lower the threshold for claude worktrees only.
+Worktrees under `.claude/worktrees/` belong to the `claude-worktree` scope and follow the same stage thresholds as normal worktrees (always protected while a session is running). Use a scope, e.g. `--committed=claude-worktree`, to lower the threshold for claude worktrees only.
 
-A "running session" is decided solely by whether a local process is active (a matching `~/.claude/sessions/<pid>.json`). It ignores Remote Control's iPhone status (Connected / Disconnected / Archived). The conversation history (`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`) survives even when the worktree is removed, so `claude --resume <session-id>` resumes where you left off.
+A session counts as running when a matching local process is alive (`~/.claude/sessions/<pid>.json` exists and `kill -0 pid` succeeds). It ignores Remote Control's iPhone status (Connected / Disconnected / Archived). The conversation history (`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`) survives even when the worktree is removed, so `claude --resume <session-id>` resumes where you left off.
 
 Environment variable to override the path (for tests or non-standard installs):
 
