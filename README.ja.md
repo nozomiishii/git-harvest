@@ -14,7 +14,7 @@
 
 branch と worktree を、コミットのライフサイクル段階に応じて自動で整理するツール
 
-## お試し (`--dry-run`)
+## お試し
 
 削除対象を表示するだけで、実際には何も削除しません:
 
@@ -22,42 +22,54 @@ branch と worktree を、コミットのライフサイクル段階に応じて
 npx -y git-harvest@latest --dry-run
 ```
 
-## インストールせずに直接実行 (推奨)
+## セットアップ
 
-常に最新版が走るので、アップデート作業は不要です。
-
-```sh
-# npm
-npx -y git-harvest@latest
-
-# pnpm
-pnpx git-harvest@latest
-
-# bun
-bunx git-harvest@latest
-```
-
-### (任意) エイリアスを設定
+`git harvest` を Git のサブコマンドとして使えるように、alias を登録します。常に最新版が走るので、アップデート作業は不要です。
 
 ```sh
-# 通常 (デフォルト = merged のみ削除)
-echo "alias ghv='npx -y git-harvest@latest'" >> ~/.zshrc
-# 一掃 (--yolo = 未コミット・detached 含めて削除)
-echo "alias 'ghv!'='npx -y git-harvest@latest --yolo'" >> ~/.zshrc
-```
-
-`git harvest`
-
-```sh
-# git サブコマンド — `git harvest` として実行 (インストール不要)
 git config --global alias.harvest '!npx -y git-harvest@latest'
 # または: git config --global alias.harvest '!pnpx git-harvest@latest'
 # または: git config --global alias.harvest '!bunx git-harvest@latest'
 ```
 
-## おすすめの運用法
+## 使い方
 
-Git hooks の post-merge コマンドと合わせると、merge や pull のたびに自動で収穫できます。
+```sh
+git harvest
+# merged な branch を削除 (デフォルト・最も安全。post-merge hook でも安全)
+
+git harvest --dry-run
+git harvest -n
+# 削除せず、削除対象だけ表示
+
+git harvest --committed
+# committed な作業も削除 (未コミットは守る)
+
+git harvest --files-changed
+# 未コミットの worktree も削除 (worktree 系のみ)
+
+git harvest --untouched
+# untouched な worktree も削除 (作業なし・base と同一)
+
+git harvest --detached
+# detached な worktree も削除 (branch 無し)
+# ⚠ detached worktree の commit は復旧不可
+```
+
+組み合わせも可能です。例: `git harvest --committed --untouched` は committed な branch と untouched な worktree をまとめて削除します。
+
+プリセットもあります:
+
+```sh
+git harvest --yolo
+# --files-changed --committed --untouched --detached と等価
+```
+
+`--committed` と `--files-changed` には scope を指定できます: `=worktree` / `=claude-worktree` / `=branch`。省略時は対象の全 scope に効きます。複数指定は comma 区切り (`--committed=worktree,branch`) か、フラグの繰り返しです。
+
+## 自動化 (任意)
+
+`git harvest` を Git の post-merge hook と組み合わせると、merge や pull のたびに自動で収穫できます。
 
 ### [lefthook](https://github.com/evilmartians/lefthook) との連携
 
@@ -72,31 +84,6 @@ post-merge:
       # or: pnpx git-harvest@latest
       # or: bunx git-harvest@latest
 ```
-
-## 使い方
-
-```sh
-npx -y git-harvest@latest
-```
-
-### オプション
-
-```
--h, --help                   ヘルプを表示
--v, --version                バージョンを表示
--n, --dry-run                削除せず、削除対象だけ表示
-
---committed[=<scope>]        閾値を committed へ (committed + merged を削除。未コミットは守る)
---files-changed[=<scope>]    閾値を files-changed へ (未コミット込みで削除。worktree 系のみ)
---untouched                  untouched な worktree も削除 (base と同一・作業なし)
---detached                   detached な worktree も削除 (branch 無し)
-                             ⚠ detached worktree の commit は到達不能で、削除すると恒久的に失われる (reflog でも復旧不可)
---yolo                       プリセット: --files-changed --committed --untouched --detached (全 scope)
-
-logo                         ロゴを表示
-```
-
-`<scope>` は `worktree` / `claude-worktree` / `branch`。省略時は対象の全 scope に効きます。複数指定は comma 区切り (`--committed=worktree,branch`) か、フラグの繰り返しです。`--files-changed` は branch 段を持たないため worktree 系のみです。
 
 ## 動作内容
 
