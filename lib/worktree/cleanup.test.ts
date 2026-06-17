@@ -1,9 +1,9 @@
-import { mkdirSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
+import type { Flags } from "../types";
 import { defaultFlags } from "../flags/parse";
 import { makeRepo } from "../testing/repo";
-import type { Flags } from "../types";
 import { cleanupWorktrees } from "./cleanup";
 
 // locked worktree はどのフラグでも守る（merged でも message=locked で kept）
@@ -25,6 +25,40 @@ test("cleanupWorktrees keeps a locked worktree even under aggressive flags", asy
   } finally {
     await repo.git("worktree", "unlock", wtPath).catch(() => "");
     rmSync(wtPath, { force: true, recursive: true });
+  }
+});
+
+// 実行中 Codex process を持つ worktree は、削除対象の状態でも session running で守る
+test("cleanupWorktrees keeps a worktree with a running codex process", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+  const processesDir = `${repo.dir}-codex-processes`;
+  const processes = path.join(processesDir, "chat_processes.json");
+  mkdirSync(processesDir);
+  writeFileSync(
+    processes,
+    JSON.stringify([{ cwd: wtPath, processId: "codex-turn", updatedAtMs: Date.now() }]),
+  );
+  vi.stubEnv("GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE", processes);
+
+  try {
+    const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+
+    expect(result.results).toContainEqual({
+      action: "kept",
+      branch: "done",
+      message: "session running",
+      path: realpathSync(wtPath),
+    });
+  } finally {
+    vi.unstubAllEnvs();
+    rmSync(wtPath, { force: true, recursive: true });
+    rmSync(processesDir, { force: true, recursive: true });
   }
 });
 

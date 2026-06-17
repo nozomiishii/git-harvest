@@ -1,16 +1,73 @@
-import { globSync, readFileSync } from "node:fs";
+import { globSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { env } from "node:process";
 import { isInside, realpath } from "../path";
 
-// Claude Code は実行中 session の情報を ~/.claude/sessions/*.json に置く。
-// その cwd がこの worktree 配下で、かつ process が生きていれば「session 実行中」と判定する
+const MAX_CODEX_PROCESS_MANAGER_BYTES = 1024 * 1024;
+const CODEX_PROCESS_MANAGER_ACTIVE_MS = 24 * 60 * 60 * 1000;
+const CODEX_PROCESS_MANAGER_CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+type CodexProcess = {
+  cwd?: string;
+  osPid?: null | number | string;
+  processId?: null | number | string;
+  updatedAtMs?: null | number | string;
+};
+
+// 実行中 agent の cwd がこの worktree 配下なら「session 実行中」と判定する
+export function hasRunningAgentSession(worktree: string): boolean {
+  return hasRunningClaudeSession(worktree) || hasRunningCodexProcess(worktree);
+}
+
 export function hasRunningClaudeSession(worktree: string): boolean {
   const target = realpath(worktree);
 
   return sessionFiles(sessionsDir()).some((file) => isLiveSessionIn({ file, target }));
 }
 
+export function hasRunningCodexProcess(worktree: string): boolean {
+  const target = realpath(worktree);
+
+  return codexProcesses(processManagerFile()).some((process) =>
+    isLiveCodexProcessIn({ process, target }),
+  );
+}
+
+// Codex app の process manager は公開 API ではないため、単一ファイルの最小 metadata だけを best-effort で読む
+function codexProcesses(file: string): CodexProcess[] {
+  try {
+    if (statSync(file).size > MAX_CODEX_PROCESS_MANAGER_BYTES) {
+      return [];
+    }
+    const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
+
+    return Array.isArray(parsed) ? (parsed as CodexProcess[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function isLiveCodexProcessIn({
+  process,
+  target,
+}: {
+  process: CodexProcess;
+  target: string;
+}): boolean {
+  if (!process.cwd) {
+    return false;
+  }
+
+  if (!isInside({ child: realpath(process.cwd), parent: target })) {
+    return false;
+  }
+
+  // Codex processId は OS pid ではないため、osPid と更新時刻を別の signal として扱う
+  return isProcessAlive(Number(process.osPid)) || isRecentlyUpdatedCodexProcess(process);
+}
+
+// Claude Code は実行中 session の情報を ~/.claude/sessions/*.json に置く
 // 1 つの session ファイルが「target worktree（サブディレクトリ含む）で生きている session」か
 function isLiveSessionIn({ file, target }: { file: string; target: string }): boolean {
   const session = readSession(file);
@@ -47,6 +104,29 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
+function isRecentlyUpdatedCodexProcess(process: CodexProcess): boolean {
+  const updatedAtMs = Number(process.updatedAtMs);
+
+  if (!Number.isFinite(updatedAtMs)) {
+    return false;
+  }
+
+  const ageMs = Date.now() - updatedAtMs;
+
+  return ageMs >= -CODEX_PROCESS_MANAGER_CLOCK_SKEW_MS && ageMs <= CODEX_PROCESS_MANAGER_ACTIVE_MS;
+}
+
+function processManagerFile(): string {
+  return (
+    env.GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE ??
+    path.join(
+      env.CODEX_HOME ?? path.join(homedir(), ".codex"),
+      "process_manager",
+      "chat_processes.json",
+    )
+  );
+}
+
 // 壊れた JSON はセッション扱いしない
 function readSession(file: string): undefined | { cwd?: string; pid?: number } {
   try {
@@ -66,5 +146,5 @@ function sessionFiles(dir: string): string[] {
 }
 
 function sessionsDir(): string {
-  return process.env.GIT_HARVEST_CLAUDE_SESSIONS_DIR ?? path.join(homedir(), ".claude", "sessions");
+  return env.GIT_HARVEST_CLAUDE_SESSIONS_DIR ?? path.join(homedir(), ".claude", "sessions");
 }
