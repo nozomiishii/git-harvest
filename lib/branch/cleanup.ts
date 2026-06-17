@@ -49,7 +49,11 @@ export async function cleanupBranches(
       }
 
       results.push(
-        await removeCommittedBranch(name, flags.committed.includes("branch"), flags.dryRun, opts),
+        await removeCommittedBranch(
+          name,
+          { dryRun: flags.dryRun, enabled: flags.committed.includes("branch") },
+          opts,
+        ),
       );
     } catch (error) {
       // 1 件の失敗で全体を止めない（worktree 掃除と同じ方針）

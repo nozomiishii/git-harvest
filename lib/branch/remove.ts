@@ -3,18 +3,18 @@ import type { BranchActionResult } from "../types";
 
 type Opts = { cwd?: string };
 
-// committed の branch は committed の対象に branch が入っていれば消す、なければ理由付きで残す
+// committed の branch は committed の対象に branch が入っていれば消す、なければ理由付きで残す。
+// boolean が並ぶと取り違えやすいので worktree 側と同じ { dryRun, enabled } で受ける
 export async function removeCommittedBranch(
   name: string,
-  isTarget: boolean,
-  dryRun: boolean,
+  args: { dryRun: boolean; enabled: boolean },
   opts: Opts,
 ): Promise<BranchActionResult> {
-  if (!isTarget) {
+  if (!args.enabled) {
     return { action: "kept", message: "committed", name };
   }
 
-  if (dryRun) {
+  if (args.dryRun) {
     return { action: "would-remove", name };
   }
 

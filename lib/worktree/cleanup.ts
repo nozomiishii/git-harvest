@@ -68,7 +68,9 @@ export async function cleanupWorktrees(
 
       // detached = branch を持たない worktree。off-ladder なので --detached でだけ消す
       if (worktree.branch === undefined) {
-        results.push(await removeDetached(worktree, flags.detached, flags.dryRun, opts));
+        results.push(
+          await removeDetached(worktree, { dryRun: flags.dryRun, enabled: flags.detached }, opts),
+        );
         continue;
       }
       // 状態を上から1つずつ判定し、対応する削除関数を即実行する。
@@ -78,13 +80,21 @@ export async function cleanupWorktrees(
 
       // 未コミットの変更が最優先（消すと復元できない）
       if (await hasUncommittedChanges(worktree.path)) {
-        results.push(await removeFilesChanged(worktree, flags.filesChanged.includes(scope), flags.dryRun, opts));
+        results.push(
+          await removeFilesChanged(
+            worktree,
+            { dryRun: flags.dryRun, enabled: flags.filesChanged.includes(scope) },
+            opts,
+          ),
+        );
         continue;
       }
 
       // 独自コミット無し（off-ladder）。--untouched でだけ消す
       if (await isUntouched(refs, opts)) {
-        results.push(await removeUntouched(worktree, flags.untouched, flags.dryRun, opts));
+        results.push(
+          await removeUntouched(worktree, { dryRun: flags.dryRun, enabled: flags.untouched }, opts),
+        );
         continue;
       }
 
@@ -94,7 +104,13 @@ export async function cleanupWorktrees(
       }
 
       // どれでもない = 未マージの独自コミットあり（committed）
-      results.push(await removeCommitted(worktree, committedScopes.has(scope), flags.dryRun, opts));
+      results.push(
+        await removeCommitted(
+          worktree,
+          { dryRun: flags.dryRun, enabled: committedScopes.has(scope) },
+          opts,
+        ),
+      );
     } catch (error) {
       // 1 件の失敗で全体を止めない。たとえば壊れた ref に当たって git が throw しても、
       // その worktree を failed として記録し、残りの掃除は続ける
