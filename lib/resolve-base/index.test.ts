@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { resolveBase } from "./resolve-base";
-import { makeRepo } from "./test-helpers";
+import { makeRepo } from "../testing/repo";
+import { resolveBase } from "./index";
 
 // origin/HEAD から default branch を解決
 test("resolveBase resolves the default branch from origin/HEAD", async () => {

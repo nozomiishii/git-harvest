@@ -1,10 +1,10 @@
 import { realpathSync } from "node:fs";
 import nodePath from "node:path";
 
-// current worktree 保護（worktree.ts）と session 検出（agent.ts）は同じパス比較の規約に乗る必要がある。
+// current worktree 保護（worktree/cleanup.ts）と session 検出（agent/session.ts）は同じパス比較の規約に乗る必要がある。
 // 片方だけ正規化を変えると保護が乖離するため、ここに 1 つだけ置く
 
-export function canonical(target: string): string {
+export function realpath(target: string): string {
   try {
     return realpathSync(target);
   } catch {
