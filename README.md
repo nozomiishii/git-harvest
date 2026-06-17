@@ -28,12 +28,20 @@ Branches
 
 ## Setup (optional)
 
-`npx -y git-harvest@latest` works on its own, but registering a Git alias makes it shorter. It always runs the latest version — nothing to update.
+`npx -y git-harvest@latest` works on its own, but an alias makes it shorter. It always runs the latest version — nothing to update.
+
+Git alias — call it as `git harvest`:
 
 ```sh
 git config --global alias.harvest '!npx -y git-harvest@latest'
 # or: git config --global alias.harvest '!pnpx git-harvest@latest'
 # or: git config --global alias.harvest '!bunx git-harvest@latest'
+```
+
+Shell alias — add to `.bashrc` / `.zshrc`:
+
+```sh
+alias ghv='npx -y git-harvest@latest'
 ```
 
 ## Usage
