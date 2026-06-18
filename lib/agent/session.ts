@@ -66,7 +66,7 @@ function codexStateDb(): string {
   }
 }
 
-// Claude Code は実行中 session の情報を ~/.claude/sessions/*.json に置く
+// Claude Code は実行中 session の情報を ~/.claude/sessions/*.JSON に置く
 // 1 つの session ファイルが「target worktree（サブディレクトリ含む）で生きている session」か
 function isLiveSessionIn({ file, target }: { file: string; target: string }): boolean {
   const session = readSession(file);
@@ -80,7 +80,7 @@ function isLiveSessionIn({ file, target }: { file: string; target: string }): bo
   if (!isInside({ child: realpath(session.cwd), parent: target })) {
     return false;
   }
-  // pid は JSON 本文を正とし、無ければ <pid>.json 形式のファイル名から取る（命名規則は非公開・無保証）
+  // pid は JSON 本文を正とし、無ければ <pid>.JSON 形式のファイル名から取る（命名規則は非公開・無保証）
   const pid = session.pid ?? Number(path.basename(file, ".json"));
 
   return isProcessAlive(pid);

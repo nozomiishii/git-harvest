@@ -15,8 +15,6 @@ export default defineConfig([
         "error",
         { allowedVariables: ["NO_COLOR", "GIT_HARVEST_CLAUDE_SESSIONS_DIR"] },
       ],
-      // node:sqlite は Node 24 で experimental だが、Codex の state DB 読み取りに使う
-      "n/no-unsupported-features/node-builtins": ["error", { ignores: ["sqlite"] }],
     },
   },
 ]);

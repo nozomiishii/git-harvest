@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { expect, test, vi } from "vitest";
+import { createCodexStateDb } from "../testing/codex-db";
 import { hasActiveCodexThread, hasRunningAgentSession, hasRunningClaudeSession } from "./session";
 
 // session が worktree のサブディレクトリで起動されていても検出する（保護の偽陰性防止）
@@ -41,24 +41,6 @@ test("hasRunningClaudeSession reads the pid from the session JSON body", () => {
     rmSync(wt, { force: true, recursive: true });
   }
 });
-
-function createCodexStateDb(
-  dbPath: string,
-  rows: { archived: number; cwd: string; id: string; threadSource: string }[],
-): void {
-  const db = new DatabaseSync(dbPath);
-
-  db.exec("CREATE TABLE threads (id TEXT, cwd TEXT, archived INTEGER, thread_source TEXT)");
-
-  const stmt = db.prepare(
-    "INSERT INTO threads (id, cwd, archived, thread_source) VALUES (?, ?, ?, ?)",
-  );
-
-  for (const row of rows) {
-    stmt.run(row.id, row.cwd, row.archived, row.threadSource);
-  }
-  db.close();
-}
 
 // active（未アーカイブ）な Codex thread の cwd がこの worktree 配下なら保護する
 test("hasActiveCodexThread detects an active thread in a subdirectory", () => {
