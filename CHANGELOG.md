@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.2](https://github.com/nozomiishii/git-harvest/compare/v0.3.1...v0.3.2) (2026-06-18)
+
+
+### Features
+
+* add codex worktree scope ([#229](https://github.com/nozomiishii/git-harvest/issues/229)) ([5f55492](https://github.com/nozomiishii/git-harvest/commit/5f554921debe937a6a5453e678d2ec8af0bf9db6))
+
+
+### Miscellaneous
+
+* add shell alias example to Setup section ([#228](https://github.com/nozomiishii/git-harvest/issues/228)) ([2ee09d7](https://github.com/nozomiishii/git-harvest/commit/2ee09d78e9032a9b2d205647bc9823998a59d886))
+* mark Setup section as optional in READMEs ([#227](https://github.com/nozomiishii/git-harvest/issues/227)) ([0e98cd8](https://github.com/nozomiishii/git-harvest/commit/0e98cd8f9a167c2e17622a31bd754cde2fba072d))
+* polish README prose for readability and natural tone ([#226](https://github.com/nozomiishii/git-harvest/issues/226)) ([4551601](https://github.com/nozomiishii/git-harvest/commit/4551601318501588e4f845ba805ee5847af331d8))
+* remove logo from README and help text ([#225](https://github.com/nozomiishii/git-harvest/issues/225)) ([ff3f586](https://github.com/nozomiishii/git-harvest/commit/ff3f58667b631399573b72e3f376401f74776712))
+* reorganize lib into concern-based subdirectories ([#222](https://github.com/nozomiishii/git-harvest/issues/222)) ([e6af070](https://github.com/nozomiishii/git-harvest/commit/e6af070ff63e3952a301fdf7369d3d09763be23f))
+* revamp README in a git-trim style ([#224](https://github.com/nozomiishii/git-harvest/issues/224)) ([177d468](https://github.com/nozomiishii/git-harvest/commit/177d4684d80af3bb36945fd0d32778992a42008e))
+* update vitest monorepo to v4.1.9 ([#230](https://github.com/nozomiishii/git-harvest/issues/230)) ([0e892c7](https://github.com/nozomiishii/git-harvest/commit/0e892c76f3cf13304b844a70af8d3c970790ca6f))
+
 ## [0.3.1](https://github.com/nozomiishii/git-harvest/compare/v0.3.0...v0.3.1) (2026-06-16)
 
 
