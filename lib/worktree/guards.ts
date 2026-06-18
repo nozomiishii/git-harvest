@@ -1,6 +1,6 @@
-import { hasRunningClaudeSession } from "../agent/session";
-import { isInside } from "../path";
 import type { WtRecord } from "./list";
+import { hasRunningAgentSession } from "../agent/session";
+import { isInside } from "../path";
 
 // 守る理由ごとの判定関数。どれか 1 つでも true なら、その worktree は
 // どんなフラグを指定されても消さない。
@@ -20,5 +20,5 @@ export function isOnBaseBranch(worktree: WtRecord, base: string): boolean {
 }
 
 export function isSessionRunning(worktree: WtRecord): boolean {
-  return hasRunningClaudeSession(worktree.path);
+  return hasRunningAgentSession(worktree.path);
 }

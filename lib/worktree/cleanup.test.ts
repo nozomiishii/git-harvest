@@ -1,9 +1,11 @@
-import { mkdirSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
-import { expect, test } from "vitest";
-import { defaultFlags } from "../flags/parse";
-import { makeRepo } from "../testing/repo";
+import { expect, test, vi } from "vitest";
 import type { Flags } from "../types";
+import { defaultFlags } from "../flags/parse";
+import { createCodexStateDb } from "../testing/codex-db";
+import { makeRepo } from "../testing/repo";
 import { cleanupWorktrees } from "./cleanup";
 
 // locked worktree はどのフラグでも守る（merged でも message=locked で kept）
@@ -23,8 +25,42 @@ test("cleanupWorktrees keeps a locked worktree even under aggressive flags", asy
 
     expect(result.results.some((r) => r.action === "kept" && r.message === "locked")).toBe(true);
   } finally {
-    await repo.git("worktree", "unlock", wtPath).catch(() => "");
+    try {
+      await repo.git("worktree", "unlock", wtPath);
+    } catch {
+      // unlock 失敗は cleanup のテストに影響しない
+    }
     rmSync(wtPath, { force: true, recursive: true });
+  }
+});
+
+// active な Codex thread を持つ worktree は、削除対象の状態でも session running で守る
+test("cleanupWorktrees keeps a worktree with an active codex thread", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+  const dbDir = mkdtempSync(path.join(tmpdir(), "gh-codex-db-"));
+  const dbFile = path.join(dbDir, "state_5.sqlite");
+  createCodexStateDb(dbFile, [{ archived: 0, cwd: wtPath, id: "t1", threadSource: "user" }]);
+  vi.stubEnv("GIT_HARVEST_CODEX_STATE_DB", dbFile);
+
+  try {
+    const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+
+    expect(result.results).toContainEqual({
+      action: "kept",
+      branch: "done",
+      message: "session running",
+      path: realpathSync(wtPath),
+    });
+  } finally {
+    vi.unstubAllEnvs();
+    rmSync(wtPath, { force: true, recursive: true });
+    rmSync(dbDir, { force: true, recursive: true });
   }
 });
 
@@ -61,7 +97,7 @@ test("cleanupWorktrees removes a merged linked worktree by default", async () =>
   await repo.git("merge", "--no-ff", "done", "-m", "merge done");
   const wtPath = `${repo.dir}-done`;
   await repo.git("worktree", "add", wtPath, "done");
-  // git は porcelain で realpath を返すため realpath 同士で比較する（macOS の /private symlink 対策）
+  // Git は porcelain で realpath を返すため realpath 同士で比較する（macOS の /private symlink 対策）
   const canonWt = realpathSync(wtPath);
 
   const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
@@ -85,7 +121,7 @@ test("cleanupWorktrees skips a worktree whose directory was deleted", async () =
   expect(result.results).toStrictEqual([]);
 });
 
-// clean でも submodule を含む worktree は git の最終検証（非 force）が拒否し、failed で残る（誤削除防止）
+// clean でも submodule を含む worktree は Git の最終検証（非 force）が拒否し、failed で残る（誤削除防止）
 test("cleanupWorktrees refuses to remove a clean worktree containing a submodule", async () => {
   await using repo = await makeRepo();
   const subPath = `${repo.dir}-sub`;

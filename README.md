@@ -77,7 +77,7 @@ git harvest --yolo
 # Equivalent to --files-changed --committed --untouched --detached
 ```
 
-Both `--committed` and `--files-changed` accept an optional scope (`=worktree`, `=claude-worktree`, `=branch`). See [Scopes](#scopes-narrowing-the-target) for details.
+Both `--committed` and `--files-changed` accept an optional scope (`=worktree`, `=claude-worktree`, `=codex-worktree`, `=branch`). See [Scopes](#scopes-narrowing-the-target) for details.
 
 ## Automate (optional)
 
@@ -129,6 +129,7 @@ For example, `--committed` deletes committed and merged while keeping uncommitte
 |---|---|
 | `worktree` | worktrees on a normal path (human-made checkouts) |
 | `claude-worktree` | worktrees under `.claude/worktrees/` |
+| `codex-worktree` | worktrees under `$CODEX_HOME/worktrees` (usually `~/.codex/worktrees`) |
 | `branch` | branches |
 
 Thresholds are kept per scope. `--committed` affects every scope; `--committed=claude-worktree` affects only that scope. Combine with commas (`--committed=worktree,branch`) or by repeating the flag.
@@ -222,8 +223,15 @@ Worktrees under `.claude/worktrees/` belong to the `claude-worktree` scope and f
 
 A session counts as running when a matching local process is alive (`~/.claude/sessions/<pid>.json` exists and `kill -0 pid` succeeds). It ignores Remote Control's iPhone status (Connected / Disconnected / Archived). The conversation history (`~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`) survives even when the worktree is removed, so `claude --resume <session-id>` resumes where you left off.
 
-Environment variable to override the path (for tests or non-standard installs):
+### Codex app worktrees
+
+Codex creates app-managed worktrees under `$CODEX_HOME/worktrees` (usually `~/.codex/worktrees`). Those worktrees are treated as the `codex-worktree` scope and judged by the same stage thresholds as normal worktrees. Use a scope, e.g. `--committed=codex-worktree`, to lower the threshold for Codex worktrees only.
+
+When the Codex thread database (`$CODEX_HOME/state_*.sqlite`) has an active (non-archived) user thread whose cwd falls inside a worktree, git-harvest keeps that worktree as `session running`. When the database is missing or unreadable, the check is skipped and normal stage classification applies.
+
+Environment variables to override the paths (for tests or non-standard installs):
 
 | variable | default |
 |---|---|
 | `GIT_HARVEST_CLAUDE_SESSIONS_DIR` | `~/.claude/sessions` |
+| `GIT_HARVEST_CODEX_STATE_DB` | `$CODEX_HOME/state_*.sqlite` (latest version) |

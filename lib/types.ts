@@ -2,7 +2,7 @@
 // committed（コミット済み・base 未取り込み）は履歴から復元可能、merged（base 取り込み済み）は安全
 export type Stage = "committed" | "files-changed" | "merged";
 
-export const WORKTREE_SCOPES = ["worktree", "claude-worktree"] as const;
+export const WORKTREE_SCOPES = ["worktree", "claude-worktree", "codex-worktree"] as const;
 
 // scope の一覧は 1 箇所だけにする（worktree 系 + branch から導出）
 export const SCOPES = [...WORKTREE_SCOPES, "branch"] as const;
@@ -17,7 +17,7 @@ export type BranchActionResult =
 export type BranchCleanupResult = { failures: number; results: BranchActionResult[] };
 
 export type Flags = {
-  committed: Scope[]; // committed を消す対象 scope（worktree / claude-worktree / branch）
+  committed: Scope[]; // committed を消す対象 scope（worktree 系 / branch）
   detached: boolean;
   dryRun: boolean;
   filesChanged: Scope[]; // files-changed を消す対象 scope（worktree 系のみ）
