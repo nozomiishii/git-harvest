@@ -227,11 +227,11 @@ A session counts as running when a matching local process is alive (`~/.claude/s
 
 Codex creates app-managed worktrees under `$CODEX_HOME/worktrees` (usually `~/.codex/worktrees`). Those worktrees are treated as the `codex-worktree` scope and judged by the same stage thresholds as normal worktrees. Use a scope, e.g. `--committed=codex-worktree`, to lower the threshold for Codex worktrees only.
 
-When Codex records active local process metadata for a worktree in `$CODEX_HOME/process_manager/chat_processes.json`, git-harvest also keeps that worktree as `session running`. This Codex process check is best-effort: it reads only the process manager metadata, treats `osPid` as a live pid when present, treats recently updated entries as active signals, ignores stale entries, and falls back to normal stage classification when the metadata is missing or unreadable.
+When the Codex thread database (`$CODEX_HOME/state_*.sqlite`) has an active (non-archived) user thread whose cwd falls inside a worktree, git-harvest keeps that worktree as `session running`. When the database is missing or unreadable, the check is skipped and normal stage classification applies.
 
 Environment variables to override the paths (for tests or non-standard installs):
 
 | variable | default |
 |---|---|
 | `GIT_HARVEST_CLAUDE_SESSIONS_DIR` | `~/.claude/sessions` |
-| `GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE` | `$CODEX_HOME/process_manager/chat_processes.json` |
+| `GIT_HARVEST_CODEX_STATE_DB` | `$CODEX_HOME/state_*.sqlite` (latest version) |

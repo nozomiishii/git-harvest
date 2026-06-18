@@ -1,8 +1,9 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { expect, test, vi } from "vitest";
-import { hasRunningAgentSession, hasRunningClaudeSession, hasRunningCodexProcess } from "./session";
+import { hasActiveCodexThread, hasRunningAgentSession, hasRunningClaudeSession } from "./session";
 
 // session が worktree のサブディレクトリで起動されていても検出する（保護の偽陰性防止）
 test("hasRunningClaudeSession detects a session started in a subdirectory", () => {
@@ -41,129 +42,98 @@ test("hasRunningClaudeSession reads the pid from the session JSON body", () => {
   }
 });
 
-// Codex app の process manager が worktree 配下の生きた OS pid を持つ場合は保護する
-test("hasRunningCodexProcess detects a live osPid started in a subdirectory", () => {
-  const processes = path.join(
-    mkdtempSync(path.join(tmpdir(), "gh-codex-processes-")),
-    "chat_processes.json",
+function createCodexStateDb(
+  dbPath: string,
+  rows: { archived: number; cwd: string; id: string; threadSource: string }[],
+): void {
+  const db = new DatabaseSync(dbPath);
+
+  db.exec("CREATE TABLE threads (id TEXT, cwd TEXT, archived INTEGER, thread_source TEXT)");
+
+  const stmt = db.prepare(
+    "INSERT INTO threads (id, cwd, archived, thread_source) VALUES (?, ?, ?, ?)",
   );
+
+  for (const row of rows) {
+    stmt.run(row.id, row.cwd, row.archived, row.threadSource);
+  }
+  db.close();
+}
+
+// active（未アーカイブ）な Codex thread の cwd がこの worktree 配下なら保護する
+test("hasActiveCodexThread detects an active thread in a subdirectory", () => {
+  const dbDir = mkdtempSync(path.join(tmpdir(), "gh-codex-db-"));
+  const dbFile = path.join(dbDir, "state_5.sqlite");
   const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
   const sub = path.join(wt, "sub");
   mkdirSync(sub);
-  writeFileSync(processes, JSON.stringify([{ cwd: sub, osPid: String(process.pid) }]));
-  vi.stubEnv("GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE", processes);
+  createCodexStateDb(dbFile, [{ archived: 0, cwd: sub, id: "t1", threadSource: "user" }]);
+  vi.stubEnv("GIT_HARVEST_CODEX_STATE_DB", dbFile);
 
   try {
-    expect(hasRunningCodexProcess(wt)).toBe(true);
+    expect(hasActiveCodexThread(wt)).toBe(true);
   } finally {
     vi.unstubAllEnvs();
-    rmSync(path.dirname(processes), { force: true, recursive: true });
+    rmSync(dbDir, { force: true, recursive: true });
     rmSync(wt, { force: true, recursive: true });
   }
 });
 
-// processId は Codex app 内部 ID なので、OS pid としては扱わない
-test("hasRunningCodexProcess ignores processId without a live osPid or fresh timestamp", () => {
-  const processes = path.join(
-    mkdtempSync(path.join(tmpdir(), "gh-codex-processes-")),
-    "chat_processes.json",
-  );
+// アーカイブ済みスレッドは保護しない
+test("hasActiveCodexThread ignores an archived thread", () => {
+  const dbDir = mkdtempSync(path.join(tmpdir(), "gh-codex-db-"));
+  const dbFile = path.join(dbDir, "state_5.sqlite");
   const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
-  writeFileSync(processes, JSON.stringify([{ cwd: wt, processId: String(process.pid) }]));
-  vi.stubEnv("GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE", processes);
+  createCodexStateDb(dbFile, [{ archived: 1, cwd: wt, id: "t1", threadSource: "user" }]);
+  vi.stubEnv("GIT_HARVEST_CODEX_STATE_DB", dbFile);
 
   try {
-    expect(hasRunningCodexProcess(wt)).toBe(false);
+    expect(hasActiveCodexThread(wt)).toBe(false);
   } finally {
     vi.unstubAllEnvs();
-    rmSync(path.dirname(processes), { force: true, recursive: true });
+    rmSync(dbDir, { force: true, recursive: true });
     rmSync(wt, { force: true, recursive: true });
   }
 });
 
-// 最近更新された Codex process entry は active signal として保護する
-test("hasRunningCodexProcess detects a recently updated codex process entry", () => {
-  const processes = path.join(
-    mkdtempSync(path.join(tmpdir(), "gh-codex-processes-")),
-    "chat_processes.json",
-  );
+// subagent スレッドは保護判定に使わない（user thread だけが有効な signal）
+test("hasActiveCodexThread ignores subagent threads", () => {
+  const dbDir = mkdtempSync(path.join(tmpdir(), "gh-codex-db-"));
+  const dbFile = path.join(dbDir, "state_5.sqlite");
   const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
-  writeFileSync(
-    processes,
-    JSON.stringify([{ cwd: wt, processId: "codex-turn", updatedAtMs: Date.now() }]),
-  );
-  vi.stubEnv("GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE", processes);
+  createCodexStateDb(dbFile, [{ archived: 0, cwd: wt, id: "t1", threadSource: "subagent" }]);
+  vi.stubEnv("GIT_HARVEST_CODEX_STATE_DB", dbFile);
 
   try {
-    expect(hasRunningCodexProcess(wt)).toBe(true);
+    expect(hasActiveCodexThread(wt)).toBe(false);
   } finally {
     vi.unstubAllEnvs();
-    rmSync(path.dirname(processes), { force: true, recursive: true });
+    rmSync(dbDir, { force: true, recursive: true });
     rmSync(wt, { force: true, recursive: true });
   }
 });
 
-// Codex app の fresh entry は processId が null でも active signal として保護する
-test("hasRunningCodexProcess detects a recently updated codex entry without processId", () => {
-  const processes = path.join(
-    mkdtempSync(path.join(tmpdir(), "gh-codex-processes-")),
-    "chat_processes.json",
-  );
-  const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
-  writeFileSync(
-    processes,
-    JSON.stringify([
-      { cwd: wt, id: "codex-process", processId: null, turnId: "turn", updatedAtMs: Date.now() },
-    ]),
-  );
-  vi.stubEnv("GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE", processes);
+// DB が無い・壊れている場合は保護しない（graceful fallback）
+test("hasActiveCodexThread returns false when the state db is missing", () => {
+  vi.stubEnv("GIT_HARVEST_CODEX_STATE_DB", "/nonexistent/state_5.sqlite");
 
   try {
-    expect(hasRunningCodexProcess(wt)).toBe(true);
+    expect(hasActiveCodexThread("/some/worktree")).toBe(false);
   } finally {
     vi.unstubAllEnvs();
-    rmSync(path.dirname(processes), { force: true, recursive: true });
-    rmSync(wt, { force: true, recursive: true });
   }
 });
 
-// 更新時刻が古い Codex process entry は stale として保護扱いしない
-test("hasRunningCodexProcess ignores stale codex process entries", () => {
-  const processes = path.join(
-    mkdtempSync(path.join(tmpdir(), "gh-codex-processes-")),
-    "chat_processes.json",
-  );
-  const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
-  const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
-  writeFileSync(
-    processes,
-    JSON.stringify([{ cwd: wt, processId: "codex-turn", updatedAtMs: twoDaysAgo }]),
-  );
-  vi.stubEnv("GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE", processes);
-
-  try {
-    expect(hasRunningCodexProcess(wt)).toBe(false);
-  } finally {
-    vi.unstubAllEnvs();
-    rmSync(path.dirname(processes), { force: true, recursive: true });
-    rmSync(wt, { force: true, recursive: true });
-  }
-});
-
-// CODEX_HOME を変えた環境では、その配下の process manager を見る
-test("hasRunningCodexProcess respects CODEX_HOME", () => {
+// CODEX_HOME を変えた環境では、その配下の state DB を見る
+test("hasActiveCodexThread respects CODEX_HOME", () => {
   const codexHome = mkdtempSync(path.join(tmpdir(), "gh-codex-home-"));
-  const processManager = path.join(codexHome, "process_manager");
+  const dbFile = path.join(codexHome, "state_5.sqlite");
   const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
-  mkdirSync(processManager);
-  writeFileSync(
-    path.join(processManager, "chat_processes.json"),
-    JSON.stringify([{ cwd: wt, osPid: String(process.pid) }]),
-  );
+  createCodexStateDb(dbFile, [{ archived: 0, cwd: wt, id: "t1", threadSource: "user" }]);
   vi.stubEnv("CODEX_HOME", codexHome);
 
   try {
-    expect(hasRunningCodexProcess(wt)).toBe(true);
+    expect(hasActiveCodexThread(wt)).toBe(true);
   } finally {
     vi.unstubAllEnvs();
     rmSync(codexHome, { force: true, recursive: true });
@@ -171,46 +141,41 @@ test("hasRunningCodexProcess respects CODEX_HOME", () => {
   }
 });
 
-// 想定外に大きい Codex state は読まず、内部情報の広い読み取りを避ける
-test("hasRunningCodexProcess ignores an oversized process manager file", () => {
-  const processes = path.join(
-    mkdtempSync(path.join(tmpdir(), "gh-codex-processes-")),
-    "chat_processes.json",
-  );
+// 複数バージョンの state DB がある場合、最新版を使う
+test("hasActiveCodexThread picks the highest-versioned state db", () => {
+  const codexHome = mkdtempSync(path.join(tmpdir(), "gh-codex-home-"));
   const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
-  writeFileSync(
-    processes,
-    JSON.stringify([{ cwd: wt, padding: "x".repeat(1_100_000), processId: "codex-turn" }]),
-  );
-  vi.stubEnv("GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE", processes);
+  createCodexStateDb(path.join(codexHome, "state_3.sqlite"), [
+    { archived: 0, cwd: wt, id: "old", threadSource: "user" },
+  ]);
+  createCodexStateDb(path.join(codexHome, "state_5.sqlite"), [
+    { archived: 1, cwd: wt, id: "new", threadSource: "user" },
+  ]);
+  vi.stubEnv("CODEX_HOME", codexHome);
 
   try {
-    expect(hasRunningCodexProcess(wt)).toBe(false);
+    // state_5 ではアーカイブ済みなので保護しない（state_3 の古いデータは無視される）
+    expect(hasActiveCodexThread(wt)).toBe(false);
   } finally {
     vi.unstubAllEnvs();
-    rmSync(path.dirname(processes), { force: true, recursive: true });
+    rmSync(codexHome, { force: true, recursive: true });
     rmSync(wt, { force: true, recursive: true });
   }
 });
 
-// agent session 保護は Claude と Codex のどちらの実行中 signal でも成立する
-test("hasRunningAgentSession protects a worktree with a live codex process", () => {
-  const processes = path.join(
-    mkdtempSync(path.join(tmpdir(), "gh-codex-processes-")),
-    "chat_processes.json",
-  );
+// agent session 保護は Claude と Codex のどちらの signal でも成立する
+test("hasRunningAgentSession protects a worktree with an active codex thread", () => {
+  const dbDir = mkdtempSync(path.join(tmpdir(), "gh-codex-db-"));
+  const dbFile = path.join(dbDir, "state_5.sqlite");
   const wt = mkdtempSync(path.join(tmpdir(), "gh-wt-"));
-  writeFileSync(
-    processes,
-    JSON.stringify([{ cwd: wt, processId: "codex-turn", updatedAtMs: Date.now() }]),
-  );
-  vi.stubEnv("GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE", processes);
+  createCodexStateDb(dbFile, [{ archived: 0, cwd: wt, id: "t1", threadSource: "user" }]);
+  vi.stubEnv("GIT_HARVEST_CODEX_STATE_DB", dbFile);
 
   try {
     expect(hasRunningAgentSession(wt)).toBe(true);
   } finally {
     vi.unstubAllEnvs();
-    rmSync(path.dirname(processes), { force: true, recursive: true });
+    rmSync(dbDir, { force: true, recursive: true });
     rmSync(wt, { force: true, recursive: true });
   }
 });

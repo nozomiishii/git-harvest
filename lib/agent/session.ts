@@ -1,23 +1,22 @@
-import { globSync, readFileSync, statSync } from "node:fs";
+import { globSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { env } from "node:process";
+import { DatabaseSync } from "node:sqlite";
 import { isInside, realpath } from "../path";
 
-const MAX_CODEX_PROCESS_MANAGER_BYTES = 1024 * 1024;
-const CODEX_PROCESS_MANAGER_ACTIVE_MS = 24 * 60 * 60 * 1000;
-const CODEX_PROCESS_MANAGER_CLOCK_SKEW_MS = 5 * 60 * 1000;
+// Codex のスレッド DB で active（未アーカイブ）な user thread の cwd がこの worktree 配下なら保護する
+export function hasActiveCodexThread(worktree: string): boolean {
+  const target = realpath(worktree);
 
-type CodexProcess = {
-  cwd?: string;
-  osPid?: null | number | string;
-  processId?: null | number | string;
-  updatedAtMs?: null | number | string;
-};
+  return activeCodexThreadCwds(codexStateDb()).some((cwd) =>
+    isInside({ child: realpath(cwd), parent: target }),
+  );
+}
 
 // 実行中 agent の cwd がこの worktree 配下なら「session 実行中」と判定する
 export function hasRunningAgentSession(worktree: string): boolean {
-  return hasRunningClaudeSession(worktree) || hasRunningCodexProcess(worktree);
+  return hasRunningClaudeSession(worktree) || hasActiveCodexThread(worktree);
 }
 
 export function hasRunningClaudeSession(worktree: string): boolean {
@@ -26,45 +25,45 @@ export function hasRunningClaudeSession(worktree: string): boolean {
   return sessionFiles(sessionsDir()).some((file) => isLiveSessionIn({ file, target }));
 }
 
-export function hasRunningCodexProcess(worktree: string): boolean {
-  const target = realpath(worktree);
+// Codex のスレッド DB から active な user thread の cwd を取得する（best-effort: DB が無い・壊れている場合は空）
+function activeCodexThreadCwds(dbPath: string): string[] {
+  if (!dbPath) {
+    return [];
+  }
 
-  return codexProcesses(processManagerFile()).some((process) =>
-    isLiveCodexProcessIn({ process, target }),
-  );
-}
-
-// Codex app の process manager は公開 API ではないため、単一ファイルの最小 metadata だけを best-effort で読む
-function codexProcesses(file: string): CodexProcess[] {
   try {
-    if (statSync(file).size > MAX_CODEX_PROCESS_MANAGER_BYTES) {
-      return [];
-    }
-    const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
+    const db = new DatabaseSync(dbPath, { readOnly: true });
 
-    return Array.isArray(parsed) ? (parsed as CodexProcess[]) : [];
+    try {
+      return db
+        .prepare(
+          "SELECT cwd FROM threads WHERE archived = 0 AND thread_source = 'user' AND cwd IS NOT NULL",
+        )
+        .all()
+        .map((row) => (row as { cwd: string }).cwd);
+    } finally {
+      db.close();
+    }
   } catch {
     return [];
   }
 }
 
-function isLiveCodexProcessIn({
-  process,
-  target,
-}: {
-  process: CodexProcess;
-  target: string;
-}): boolean {
-  if (!process.cwd) {
-    return false;
+function codexStateDb(): string {
+  if (env.GIT_HARVEST_CODEX_STATE_DB) {
+    return env.GIT_HARVEST_CODEX_STATE_DB;
   }
 
-  if (!isInside({ child: realpath(process.cwd), parent: target })) {
-    return false;
-  }
+  const codexHome = env.CODEX_HOME ?? path.join(homedir(), ".codex");
 
-  // Codex processId は OS pid ではないため、osPid と更新時刻を別の signal として扱う
-  return isProcessAlive(Number(process.osPid)) || isRecentlyUpdatedCodexProcess(process);
+  try {
+    const files = globSync(path.join(codexHome, "state_*.sqlite"));
+    files.sort((a, b) => stateDbVersion(a) - stateDbVersion(b));
+
+    return files.at(-1) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 // Claude Code は実行中 session の情報を ~/.claude/sessions/*.json に置く
@@ -104,29 +103,6 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-function isRecentlyUpdatedCodexProcess(process: CodexProcess): boolean {
-  const updatedAtMs = Number(process.updatedAtMs);
-
-  if (!Number.isFinite(updatedAtMs)) {
-    return false;
-  }
-
-  const ageMs = Date.now() - updatedAtMs;
-
-  return ageMs >= -CODEX_PROCESS_MANAGER_CLOCK_SKEW_MS && ageMs <= CODEX_PROCESS_MANAGER_ACTIVE_MS;
-}
-
-function processManagerFile(): string {
-  return (
-    env.GIT_HARVEST_CODEX_PROCESS_MANAGER_FILE ??
-    path.join(
-      env.CODEX_HOME ?? path.join(homedir(), ".codex"),
-      "process_manager",
-      "chat_processes.json",
-    )
-  );
-}
-
 // 壊れた JSON はセッション扱いしない
 function readSession(file: string): undefined | { cwd?: string; pid?: number } {
   try {
@@ -147,4 +123,8 @@ function sessionFiles(dir: string): string[] {
 
 function sessionsDir(): string {
   return env.GIT_HARVEST_CLAUDE_SESSIONS_DIR ?? path.join(homedir(), ".claude", "sessions");
+}
+
+function stateDbVersion(file: string): number {
+  return Number(path.basename(file, ".sqlite").split("_").pop()) || 0;
 }
