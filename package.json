@@ -57,12 +57,12 @@
   },
   "packageManager": "pnpm@11.7.0",
   "engines": {
-    "node": ">=24"
+    "node": "v26.3.1"
   },
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "24.16.0",
+      "version": "24.17.0",
       "onFail": "download"
     }
   },
