@@ -16,7 +16,7 @@ defaults:
 
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     permissions:
       contents: read # required by actions/checkout to fetch repository code and dorny/paths-filter to diff against the base ref
@@ -77,7 +77,7 @@ jobs:
   required:
     needs: [changes, test]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     timeout-minutes: 1
     steps:
       - name: Fail if any required job failed or was cancelled
