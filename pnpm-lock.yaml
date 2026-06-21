@@ -9,20 +9,20 @@ importers:
   .:
     devDependencies:
       '@nozomiishii/commitlint-config':
-        specifier: 1.7.0
-        version: 1.7.0(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
+        specifier: 1.9.0
+        version: 1.9.0(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
       '@nozomiishii/eslint-config':
         specifier: 1.9.0
         version: 1.9.0(@swc/core@1.15.41)(@swc/types@0.1.26)(@types/estree@1.0.9)(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.61.0(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(storybook@10.4.4(@testing-library/dom@10.4.1)(prettier@3.8.4)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)(vitest@4.1.9(@types/node@24.13.2)(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))
       '@nozomiishii/lefthook-config':
-        specifier: 1.7.0
-        version: 1.7.0(lefthook@2.1.9)
+        specifier: 1.9.0
+        version: 1.9.0(lefthook@2.1.9)
       '@nozomiishii/prettier-config':
-        specifier: 1.7.0
-        version: 1.7.0(prettier@3.8.4)
+        specifier: 1.9.0
+        version: 1.9.0(prettier@3.8.4)
       '@nozomiishii/tsconfig':
-        specifier: 1.7.0
-        version: 1.7.0
+        specifier: 1.9.0
+        version: 1.9.0
       '@types/node':
         specifier: 24.13.2
         version: 24.13.2
@@ -784,8 +784,8 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@nozomiishii/commitlint-config@1.7.0':
-    resolution: {integrity: sha512-Vf1AB+tht0hiy3WFVYCbGX/aF0QVA7rGN6Erubi+GiQT+D2ZPhK6FRgLISsYIcIbSEXbFpmeuP7IDulLvo82ig==}
+  '@nozomiishii/commitlint-config@1.9.0':
+    resolution: {integrity: sha512-ikJnZD1LkM59k32RHyG4MKZcNp7IfuNFi0GNYKlQLmp0PEvRuOl+zMJdFrTuCnsbHnKZzRy4Z/lKtfAaPanC/A==}
     hasBin: true
 
   '@nozomiishii/eslint-config@1.9.0':
@@ -796,20 +796,20 @@ packages:
       eslint: 10.5.0
       typescript: 6.0.3
 
-  '@nozomiishii/lefthook-config@1.7.0':
-    resolution: {integrity: sha512-Tst8XVcn3bWdiG4PCl3UH2eHDapPnZ1jSzxC0eF85MNSvEgwEzzt/xCWUz82csinLjvbz2d5JTN9G5r53qoxfg==}
+  '@nozomiishii/lefthook-config@1.9.0':
+    resolution: {integrity: sha512-/YNo3xMTK5BAFBfFE02nAT+2LCInSUzrMiUVMytjG1AjGTGI5yYqeNyxcJXpbXCNEEm+oCgV8/TiCpTUJ48w4w==}
     hasBin: true
     peerDependencies:
       lefthook: 2.1.9
 
-  '@nozomiishii/prettier-config@1.7.0':
-    resolution: {integrity: sha512-S7yLAusl7HOlELjP+ED5yUeX6oNmNrcZRFhDbZKWL9KmsWjhRhU1PTxflAE8yWJRrZXy7Q2dJz5+PXEHXbS2DQ==}
+  '@nozomiishii/prettier-config@1.9.0':
+    resolution: {integrity: sha512-BHI7RMYcF1lQDG1p779ne1Z5Lzit7d8VOHHI5VjlYiqIfvldXThL6p0M76J1MoTge7ET6TIRCqVk06FBuPpqQQ==}
     hasBin: true
     peerDependencies:
-      prettier: 3.8.3
+      prettier: 3.8.4
 
-  '@nozomiishii/tsconfig@1.7.0':
-    resolution: {integrity: sha512-oM85UYmeECkE0JUm4k1b+bb2IlpWTVKBgP6PLSwzNCZngFj3aZYLHZvsYaqPwdmXylifH21GjFSOC6KW4+6Lsg==}
+  '@nozomiishii/tsconfig@1.9.0':
+    resolution: {integrity: sha512-vCvyv5kx1B+lSjH+1+t58rQDmqd03Sp4+8uWkzuz3enIlsg9DpVVz8Pv4+tCEZuiJ32t9wqCd119ksCeKxdnqw==}
 
   '@octokit/auth-token@4.0.0':
     resolution: {integrity: sha512-tY/msAuJo6ARbK6SPIxZrPBms3xPbfwBrulZe0Wtr/DIY9lje2HeV1uoebShn6mx7SjCHif6EjMvoREj+gZ+SA==}
@@ -2746,8 +2746,9 @@ packages:
     resolution: {integrity: sha512-/6gFNr0N04nob252sTQxyFLi3eKFRqIg1I87YcqAMT1i6SQrSF6KujUEQrtrjMV0H/eejTCltLdDSTEMzHbnsQ==}
     engines: {node: '>=20.20.0'}
 
-  git-harvest@0.2.3:
-    resolution: {integrity: sha512-kksOQircQJK0lzVKvIH2vfQnYEQB+4wfc1+C2qk1EGcIUJhvsFPdsttIWyxjsdDopYUk1J/yabJnZ0h/fgQA8A==}
+  git-harvest@0.3.1:
+    resolution: {integrity: sha512-3p9idllpQm6oTl2mgTagZNyK3vjKn8x4OVZGsXz4Cn2to12VRsTLWJ0qlavq5Daj1JcJdOFQ2nLvarmh3MWxeg==}
+    engines: {node: '>=24'}
     hasBin: true
 
   git-hooks-list@4.2.1:
@@ -4943,7 +4944,7 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@nozomiishii/commitlint-config@1.7.0(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)':
+  '@nozomiishii/commitlint-config@1.9.0(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)':
     dependencies:
       '@commitlint/cli': 21.0.2(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
       '@commitlint/config-conventional': 21.0.2
@@ -5011,17 +5012,17 @@ snapshots:
       - utf-8-validate
       - vitest
 
-  '@nozomiishii/lefthook-config@1.7.0(lefthook@2.1.9)':
+  '@nozomiishii/lefthook-config@1.9.0(lefthook@2.1.9)':
     dependencies:
-      git-harvest: 0.2.3
+      git-harvest: 0.3.1
       lefthook: 2.1.9
 
-  '@nozomiishii/prettier-config@1.7.0(prettier@3.8.4)':
+  '@nozomiishii/prettier-config@1.9.0(prettier@3.8.4)':
     dependencies:
       prettier: 3.8.4
       prettier-plugin-packagejson: 3.0.2(prettier@3.8.4)
 
-  '@nozomiishii/tsconfig@1.7.0': {}
+  '@nozomiishii/tsconfig@1.9.0': {}
 
   '@octokit/auth-token@4.0.0': {}
 
@@ -6805,7 +6806,7 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  git-harvest@0.2.3: {}
+  git-harvest@0.3.1: {}
 
   git-hooks-list@4.2.1: {}
 
