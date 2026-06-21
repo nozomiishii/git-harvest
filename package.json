@@ -63,7 +63,7 @@
     "runtime": {
       "name": "node",
       "version": "24.16.0",
-      "onFail": "error"
+      "onFail": "download"
     }
   },
   "publishConfig": {
