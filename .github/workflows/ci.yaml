@@ -74,7 +74,7 @@ jobs:
           node dist/cli.mjs --version
 
   required:
-    # name 変更時は infra 側も更新する
+    # name 変更時は infra 側の required_status_checks も更新する
     name: CI / required
     needs: [changes, test]
     if: always()
