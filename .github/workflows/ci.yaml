@@ -1,4 +1,4 @@
-name: Test
+name: CI
 
 on:
   pull_request:
@@ -74,6 +74,8 @@ jobs:
           node dist/cli.mjs --version
 
   required:
+    # name 変更時は infra 側の required_status_checks も更新する
+    name: CI / required
     needs: [changes, test]
     if: always()
     runs-on: ubuntu-slim
