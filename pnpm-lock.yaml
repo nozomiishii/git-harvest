@@ -39,8 +39,8 @@ importers:
         specifier: 3.8.4
         version: 3.8.4
       release-please:
-        specifier: 17.9.0
-        version: 17.9.0
+        specifier: 17.10.0
+        version: 17.10.0
       tsdown:
         specifier: 0.22.3
         version: 0.22.3(oxc-resolver@11.21.3)(tsx@4.22.4)(typescript@6.0.3)
@@ -2599,6 +2599,7 @@ packages:
   git-raw-commits@5.0.1:
     resolution: {integrity: sha512-Y+csSm2GD/PCSh6Isd/WiMjNAydu0VBiG9J7EdQsNA5P9uXvLayqjmTsNlK5Gs9IhblFZqOU0yid5Il5JPoLiQ==}
     engines: {node: '>=18'}
+    deprecated: Deprecated and no longer maintained. Use @conventional-changelog/git-client instead.
     hasBin: true
 
   glob-parent@5.1.2:
@@ -3446,9 +3447,9 @@ packages:
     resolution: {integrity: sha512-NgRBy2Nx/bE+9F27nVHnqcN5HjyLmecqsqx2PJHu3/IEtADD4WuxuXIVExD5PoSDFVrl78dOonfcOe5O+5nbzQ==}
     hasBin: true
 
-  release-please@17.9.0:
-    resolution: {integrity: sha512-3/dVnZpsR2qfZMcYXKsiE8MiZPNYntff2csLFR0m2Hil0QN74cuF+nllubqD2qxdhtg81SmK+zzriQUZuI5wpw==}
-    engines: {node: '>=20.0.0'}
+  release-please@17.10.0:
+    resolution: {integrity: sha512-HbnyE5ypBuTghK4Bu6TZKUhVjFFX9wNhtXOFXWiIKecnC6Bj8KQw3gCygrJYe3uQJJCWwYFHp1qkP1bJA2+6ig==}
+    engines: {node: '>=22.0.0'}
     hasBin: true
 
   require-directory@2.1.1:
@@ -7241,7 +7242,7 @@ snapshots:
     dependencies:
       jsesc: 3.1.0
 
-  release-please@17.9.0:
+  release-please@17.10.0:
     dependencies:
       '@conventional-commits/parser': 0.4.1
       '@google-automations/git-file-utils': 3.0.1
