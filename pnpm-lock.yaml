@@ -9,20 +9,20 @@ importers:
   .:
     devDependencies:
       '@nozomiishii/commitlint-config':
-        specifier: 1.9.1
-        version: 1.9.1(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
+        specifier: 1.9.2
+        version: 1.9.2(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
       '@nozomiishii/eslint-config':
-        specifier: 1.9.1
-        version: 1.9.1(@swc/core@1.15.41)(@swc/types@0.1.27)(@types/estree@1.0.9)(@typescript-eslint/eslint-plugin@8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(storybook@10.4.6(@testing-library/dom@10.4.1)(prettier@3.8.4)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)(vitest@4.1.9(@types/node@24.13.2)(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))
+        specifier: 1.9.2
+        version: 1.9.2(@swc/core@1.15.41)(@swc/types@0.1.27)(@types/estree@1.0.9)(@typescript-eslint/eslint-plugin@8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(storybook@10.4.6(@testing-library/dom@10.4.1)(prettier@3.8.4)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)(vitest@4.1.9(@types/node@24.13.2)(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))
       '@nozomiishii/lefthook-config':
-        specifier: 1.9.1
-        version: 1.9.1(lefthook@2.1.9)
+        specifier: 1.9.2
+        version: 1.9.2(lefthook@2.1.9)
       '@nozomiishii/prettier-config':
-        specifier: 1.9.1
-        version: 1.9.1(prettier@3.8.4)
+        specifier: 1.9.2
+        version: 1.9.2(prettier@3.8.4)
       '@nozomiishii/tsconfig':
-        specifier: 1.9.1
-        version: 1.9.1
+        specifier: 1.9.2
+        version: 1.9.2
       '@types/node':
         specifier: 24.13.2
         version: 24.13.2
@@ -634,32 +634,32 @@ packages:
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
 
-  '@nozomiishii/commitlint-config@1.9.1':
-    resolution: {integrity: sha512-5FSTJ+wjune8+IMp6AlHs9hc3gnUNFptYKT1R5b4+Oa9Fgk7EmEOImNJwMSE3xlzjJvw/DdxNL5vXX7OIlbzoA==}
+  '@nozomiishii/commitlint-config@1.9.2':
+    resolution: {integrity: sha512-7nX5s1PFKE3AWPQTweUd4/gMeh2WZm/nJm7oBICe4qzfB6lq08VKtBpU8PCLPMdKpgpOb5pjixjJgw+rKEEE8A==}
     hasBin: true
 
-  '@nozomiishii/eslint-config@1.9.1':
-    resolution: {integrity: sha512-tFAupMf7/PFjiB2ARk4OjarlzQm3zsgxyCg917d4hR7cpmUupp2e6XaCxVts3MGRmiFOw+9VkG2fg2Zqcm8dUQ==}
+  '@nozomiishii/eslint-config@1.9.2':
+    resolution: {integrity: sha512-sLVuqdOOZelASxMy7sx/S0WZzwVf98jq6EhMpdMUjJ+0wb0R4cZA9mA+5ofz7EJAJFNu3G3N281nTWeecMEe1Q==}
     engines: {node: '>=24.0.0'}
     hasBin: true
     peerDependencies:
       eslint: 10.5.0
       typescript: 6.0.3
 
-  '@nozomiishii/lefthook-config@1.9.1':
-    resolution: {integrity: sha512-PoM+eCtCoB2pBJiIxVl+eRuBEHgHVq2W+MrqdSwb4WM8oXrJC5Ipq+9H2PqWNsVi2R+2wsWXw2Xqq9BFMTbaZw==}
+  '@nozomiishii/lefthook-config@1.9.2':
+    resolution: {integrity: sha512-deQ/JEs3Rj2o+X6phdpy8rewIMGl8VKuzz8oFU3I40p4jj3n/bIlXhWDCW1g6Ke+KQHQ4c70dmmKKlrRq/CS/Q==}
     hasBin: true
     peerDependencies:
       lefthook: 2.1.9
 
-  '@nozomiishii/prettier-config@1.9.1':
-    resolution: {integrity: sha512-mKDX6rCy0E65v7nNmhWtMWIiFx8dn1818Mogo7+Yu+o5OAqEfKpLArvBEV4FzHOaBgiV+gHrhXZnvErIlhK6FA==}
+  '@nozomiishii/prettier-config@1.9.2':
+    resolution: {integrity: sha512-5dkzUNc6BXZ8ZRFDxfqX1PZeqyg95cSl0Ja7oTJ8UrCWAhj4IZAxtR7Bd1bdZ8RsVOLbqaW+Oi4jLWfBNVLeyg==}
     hasBin: true
     peerDependencies:
       prettier: 3.8.4
 
-  '@nozomiishii/tsconfig@1.9.1':
-    resolution: {integrity: sha512-0EVR4g5G5OasLzf7b3JMYQrhQP+e58uEGHc5Y7XJ7hFxueMiBjjW61WrOJ9tFVOaogBwA55I7JC9esUT12m3Sw==}
+  '@nozomiishii/tsconfig@1.9.2':
+    resolution: {integrity: sha512-mpedy8mHTLNQdXqQuW8WAwq9jjFmVRX5/1HtkzNNjHZctHmg4sCDyZF+kiLygBECfSh3yxPPONyAOa+aNEcxQw==}
 
   '@octokit/auth-token@4.0.0':
     resolution: {integrity: sha512-tY/msAuJo6ARbK6SPIxZrPBms3xPbfwBrulZe0Wtr/DIY9lje2HeV1uoebShn6mx7SjCHif6EjMvoREj+gZ+SA==}
@@ -2339,8 +2339,8 @@ packages:
       typescript:
         optional: true
 
-  eslint-plugin-package-json@1.4.0:
-    resolution: {integrity: sha512-eqDrb8U/0WYAwZ9tOmg3XTGZEC5TAfDSP21zBeQSNfeUj6pf+S3UKGlQxZ1yoJGbv1KyMF53GIloG/pxMvbK2g==}
+  eslint-plugin-package-json@1.5.0:
+    resolution: {integrity: sha512-KQkAdn+7I4vn1W4Va+V8M94RhcgZBvgrxMglDqgEhJgQDRUJ9RdtrEiHoe/84oVTIlp0jiPttLYwkExdvHYhZQ==}
     engines: {node: ^22.22.2 || >=24.15.0}
     peerDependencies:
       '@eslint/json': '>=1.0.0'
@@ -4728,7 +4728,7 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@nozomiishii/commitlint-config@1.9.1(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)':
+  '@nozomiishii/commitlint-config@1.9.2(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)':
     dependencies:
       '@commitlint/cli': 21.0.2(@types/node@24.13.2)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
       '@commitlint/config-conventional': 21.0.2
@@ -4739,7 +4739,7 @@ snapshots:
       - conventional-commits-parser
       - typescript
 
-  '@nozomiishii/eslint-config@1.9.1(@swc/core@1.15.41)(@swc/types@0.1.27)(@types/estree@1.0.9)(@typescript-eslint/eslint-plugin@8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(storybook@10.4.6(@testing-library/dom@10.4.1)(prettier@3.8.4)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)(vitest@4.1.9(@types/node@24.13.2)(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))':
+  '@nozomiishii/eslint-config@1.9.2(@swc/core@1.15.41)(@swc/types@0.1.27)(@types/estree@1.0.9)(@typescript-eslint/eslint-plugin@8.61.1(@typescript-eslint/parser@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/utils@8.61.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.5.0(jiti@2.7.0))(storybook@10.4.6(@testing-library/dom@10.4.1)(prettier@3.8.4)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@6.0.3)(vitest@4.1.9(@types/node@24.13.2)(vite@8.0.16(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0)))':
     dependencies:
       '@eslint-community/eslint-plugin-eslint-comments': 4.7.2(eslint@10.5.0(jiti@2.7.0))
       '@eslint-react/eslint-plugin': 5.9.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
@@ -4761,7 +4761,7 @@ snapshots:
       eslint-plugin-jsonc: 3.2.0(eslint@10.5.0(jiti@2.7.0))
       eslint-plugin-jsx-a11y-x: 0.2.0(eslint@10.5.0(jiti@2.7.0))
       eslint-plugin-n: 18.1.0(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
-      eslint-plugin-package-json: 1.4.0(@types/estree@1.0.9)(eslint@10.5.0(jiti@2.7.0))
+      eslint-plugin-package-json: 1.5.0(@types/estree@1.0.9)(eslint@10.5.0(jiti@2.7.0))
       eslint-plugin-perfectionist: 5.9.1(eslint@10.5.0(jiti@2.7.0))(typescript@6.0.3)
       eslint-plugin-playwright: 2.10.4(eslint@10.5.0(jiti@2.7.0))
       eslint-plugin-react-hooks: 7.1.1(eslint@10.5.0(jiti@2.7.0))
@@ -4796,17 +4796,17 @@ snapshots:
       - utf-8-validate
       - vitest
 
-  '@nozomiishii/lefthook-config@1.9.1(lefthook@2.1.9)':
+  '@nozomiishii/lefthook-config@1.9.2(lefthook@2.1.9)':
     dependencies:
       git-harvest: 0.3.2
       lefthook: 2.1.9
 
-  '@nozomiishii/prettier-config@1.9.1(prettier@3.8.4)':
+  '@nozomiishii/prettier-config@1.9.2(prettier@3.8.4)':
     dependencies:
       prettier: 3.8.4
       prettier-plugin-packagejson: 3.0.2(prettier@3.8.4)
 
-  '@nozomiishii/tsconfig@1.9.1': {}
+  '@nozomiishii/tsconfig@1.9.2': {}
 
   '@octokit/auth-token@4.0.0': {}
 
@@ -6205,7 +6205,7 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  eslint-plugin-package-json@1.4.0(@types/estree@1.0.9)(eslint@10.5.0(jiti@2.7.0)):
+  eslint-plugin-package-json@1.5.0(@types/estree@1.0.9)(eslint@10.5.0(jiti@2.7.0)):
     dependencies:
       '@altano/repository-tools': 2.0.3
       change-case: 5.4.4
