@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.4](https://github.com/nozomiishii/git-harvest/compare/v0.3.3...v0.3.4) (2026-07-02)
+
+
+### Miscellaneous
+
+* lock file maintenance ([#252](https://github.com/nozomiishii/git-harvest/issues/252)) ([bd32354](https://github.com/nozomiishii/git-harvest/commit/bd32354ae5df8e82dc017a6719a6b3fc79596a46))
+* move pull-request permission to job level for revert support ([#257](https://github.com/nozomiishii/git-harvest/issues/257)) ([4a1672c](https://github.com/nozomiishii/git-harvest/commit/4a1672ced200a3b355bdcea6679d2adeb1cdc9eb))
+* update dependency eslint to v10.6.0 ([#255](https://github.com/nozomiishii/git-harvest/issues/255)) ([f33e6e0](https://github.com/nozomiishii/git-harvest/commit/f33e6e0b2af7720df745ad86246003ed756ed99e))
+* update dependency prettier to v3.8.5 ([#254](https://github.com/nozomiishii/git-harvest/issues/254)) ([b61b065](https://github.com/nozomiishii/git-harvest/commit/b61b0659c426e78d4fa2792d7f29aa916990bc74))
+* update dependency prettier to v3.9.0 ([#258](https://github.com/nozomiishii/git-harvest/issues/258)) ([e1e2e66](https://github.com/nozomiishii/git-harvest/commit/e1e2e6606e75d91c13ed68c4912e6247d9d821fc))
+* update dependency prettier to v3.9.1 ([#259](https://github.com/nozomiishii/git-harvest/issues/259)) ([52c2e31](https://github.com/nozomiishii/git-harvest/commit/52c2e31bf527a5d55cb33e2178d26b299aa7e4b9))
+* update dependency prettier to v3.9.3 ([#261](https://github.com/nozomiishii/git-harvest/issues/261)) ([72e294d](https://github.com/nozomiishii/git-harvest/commit/72e294d16ccf918d6b87fe81c874c2c02f71b61c))
+* update nozomiishii ([#260](https://github.com/nozomiishii/git-harvest/issues/260)) ([7ec2581](https://github.com/nozomiishii/git-harvest/commit/7ec2581bf1ca90ccec70230b6c1d4e30b424e00e))
+* update nozomiishii to v1.11.0 ([#262](https://github.com/nozomiishii/git-harvest/issues/262)) ([b067297](https://github.com/nozomiishii/git-harvest/commit/b0672972cb2c43181645d297b3220c7aaa49b647))
+* update nozomiishii/workflows action to v3.3.0 ([#256](https://github.com/nozomiishii/git-harvest/issues/256)) ([18e094b](https://github.com/nozomiishii/git-harvest/commit/18e094b69ae98970ab4b04c8b42007440c21cc71))
+* update pnpm to v11.9.0 ([#250](https://github.com/nozomiishii/git-harvest/issues/250)) ([8d7ee4f](https://github.com/nozomiishii/git-harvest/commit/8d7ee4fb9cc960e2bf08a1944c0fd7c876cefbd1))
+
 ## [0.3.3](https://github.com/nozomiishii/git-harvest/compare/v0.3.2...v0.3.3) (2026-06-26)
 
 
