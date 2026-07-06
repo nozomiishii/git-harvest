@@ -51,7 +51,7 @@
     "prettier": "3.9.4",
     "release-please": "17.10.1",
     "tsdown": "0.22.3",
-    "tsx": "4.22.5",
+    "tsx": "4.23.0",
     "typescript": "6.0.3",
     "vitest": "4.1.9"
   },
