@@ -49,7 +49,7 @@
     "eslint": "10.6.0",
     "lefthook": "2.1.9",
     "prettier": "3.9.4",
-    "release-please": "17.10.1",
+    "release-please": "17.10.2",
     "tsdown": "0.22.3",
     "tsx": "4.23.0",
     "typescript": "6.0.3",
