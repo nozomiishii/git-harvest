@@ -47,7 +47,7 @@
     "@nozomiishii/tsconfig": "1.11.0",
     "@types/node": "24.13.3",
     "eslint": "10.6.0",
-    "lefthook": "2.1.9",
+    "lefthook": "2.1.10",
     "prettier": "3.9.4",
     "release-please": "17.10.2",
     "tsdown": "0.22.4",
