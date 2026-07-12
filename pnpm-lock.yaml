@@ -39,8 +39,8 @@ importers:
         specifier: 3.9.5
         version: 3.9.5
       release-please:
-        specifier: 17.10.2
-        version: 17.10.2
+        specifier: 17.10.3
+        version: 17.10.3
       tsdown:
         specifier: 0.22.4
         version: 0.22.4(oxc-resolver@11.23.0)(tsx@4.23.0)(typescript@6.0.3)
@@ -3502,8 +3502,8 @@ packages:
     resolution: {integrity: sha512-NgRBy2Nx/bE+9F27nVHnqcN5HjyLmecqsqx2PJHu3/IEtADD4WuxuXIVExD5PoSDFVrl78dOonfcOe5O+5nbzQ==}
     hasBin: true
 
-  release-please@17.10.2:
-    resolution: {integrity: sha512-ucvCojdsq8wcc4LmQkIzVziuNSPLfP3WGO6+H5pET8LRECJms+dOe/FVMSi5QUybamGcaiCNguMYy9K3J/nPng==}
+  release-please@17.10.3:
+    resolution: {integrity: sha512-uJJYlJFnzV3poxw1eTpv2+dNM0Im2tdfU/FoM/Brfyjz+Xo7TUcNKAaF1mKWCgQ/OJx9tSokimG1BB78XjWJxA==}
     engines: {node: '>=22.0.0'}
     hasBin: true
 
@@ -7411,7 +7411,7 @@ snapshots:
     dependencies:
       jsesc: 3.1.0
 
-  release-please@17.10.2:
+  release-please@17.10.3:
     dependencies:
       '@conventional-commits/parser': 0.4.1
       '@google-automations/git-file-utils': 3.0.1
