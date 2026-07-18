@@ -50,7 +50,7 @@
     "lefthook": "2.1.10",
     "prettier": "3.9.5",
     "release-please": "17.10.3",
-    "tsdown": "0.22.7",
+    "tsdown": "0.22.8",
     "tsx": "4.23.1",
     "typescript": "6.0.3",
     "vitest": "4.1.10"
