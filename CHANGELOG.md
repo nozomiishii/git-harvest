@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.5](https://github.com/nozomiishii/git-harvest/compare/v0.3.4...v0.3.5) (2026-07-24)
+
+
+### Miscellaneous
+
+* update actions/checkout action to v7.0.1 ([#300](https://github.com/nozomiishii/git-harvest/issues/300)) ([b9889a1](https://github.com/nozomiishii/git-harvest/commit/b9889a117ff411c8218dadbcc839e49025d7e23e))
+* update dependency prettier to v3.9.6 ([#301](https://github.com/nozomiishii/git-harvest/issues/301)) ([62c0a0e](https://github.com/nozomiishii/git-harvest/commit/62c0a0e589329689bb435039afcba22902008115))
+* update dependency tsdown to v0.22.12 ([#296](https://github.com/nozomiishii/git-harvest/issues/296)) ([6285104](https://github.com/nozomiishii/git-harvest/commit/62851047f19870c4f4826e10eafdb6083939c891))
+* update nozomiishii/workflows action to v3.3.2 ([#297](https://github.com/nozomiishii/git-harvest/issues/297)) ([8ea80ae](https://github.com/nozomiishii/git-harvest/commit/8ea80ae89beee84ffdd1ad357559d2f59fb784be))
+* update pnpm to v11.15.1 ([#298](https://github.com/nozomiishii/git-harvest/issues/298)) ([1f60f24](https://github.com/nozomiishii/git-harvest/commit/1f60f24d04aa270dc52a0ff89a924698a258ee67))
+
 ## [0.3.4](https://github.com/nozomiishii/git-harvest/compare/v0.3.3...v0.3.4) (2026-07-22)
 
 
