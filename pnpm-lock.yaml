@@ -21,8 +21,8 @@ importers:
         specifier: 1.13.0
         version: 1.13.0(prettier@3.9.6)
       '@nozomiishii/tsconfig':
-        specifier: 1.13.0
-        version: 1.13.0
+        specifier: 2.1.0
+        version: 2.1.0
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
@@ -748,8 +748,8 @@ packages:
     peerDependencies:
       prettier: 3.9.6
 
-  '@nozomiishii/tsconfig@1.13.0':
-    resolution: {integrity: sha512-ONGAsxPZYNdLLv84cLoqH3jo1otuu8XIIA3BMcfX0eLysBh4mbP6DxCHvrJd1crYUlEcUcqvXfUXNDa0lRHKUQ==}
+  '@nozomiishii/tsconfig@2.1.0':
+    resolution: {integrity: sha512-PE5ga1gM/MOdfG2II9Fijt03XhU714HOPXV2q/SD9HqFDZugpIo5j5HkEPYPXGT+QN9RoZPDeNuga1rE2+pFKQ==}
 
   '@octokit/auth-token@4.0.0':
     resolution: {integrity: sha512-tY/msAuJo6ARbK6SPIxZrPBms3xPbfwBrulZe0Wtr/DIY9lje2HeV1uoebShn6mx7SjCHif6EjMvoREj+gZ+SA==}
@@ -4916,7 +4916,7 @@ snapshots:
       prettier: 3.9.6
       prettier-plugin-packagejson: 3.0.2(prettier@3.9.6)
 
-  '@nozomiishii/tsconfig@1.13.0': {}
+  '@nozomiishii/tsconfig@2.1.0': {}
 
   '@octokit/auth-token@4.0.0': {}
 
