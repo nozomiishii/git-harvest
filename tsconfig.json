@@ -1,8 +1,6 @@
 {
   "extends": "@nozomiishii/tsconfig/tsconfig.json",
   "compilerOptions": {
-    "types": ["node"],
-    // await using / Symbol.asyncDispose の型は ES2025 lib に無いため ESNext.Disposable を足す
-    "lib": ["ES2025", "ESNext.Disposable"]
+    "types": ["node"]
   }
 }
