@@ -71,7 +71,7 @@ jobs:
           cache: ${{ runner.environment == 'github-hosted' }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Run release-please github-release
         env:
@@ -143,7 +143,7 @@ jobs:
           cache: ${{ runner.environment == 'github-hosted' }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Publish to npm
         run: pnpm publish --no-git-checks
@@ -190,7 +190,7 @@ jobs:
           cache: ${{ runner.environment == 'github-hosted' }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
 
       - name: Run release-please release-pr
         env:
