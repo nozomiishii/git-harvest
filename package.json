@@ -1,6 +1,6 @@
 {
   "name": "git-harvest",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Clean up branches and worktrees",
   "keywords": [
     "git",
