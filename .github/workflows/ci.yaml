@@ -34,6 +34,8 @@ jobs:
           filters: |
             src:
               - 'lib/**'
+              - 'mise.lock'
+              - 'mise.toml'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'tsconfig.json'
@@ -53,14 +55,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - name: Setup mise
+        uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
         with:
-          node-version-file: package.json
-          cache: pnpm
+          cache: ${{ runner.environment == 'github-hosted' }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
