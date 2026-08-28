@@ -238,8 +238,8 @@ importers:
         specifier: 3.9.6
         version: 3.9.6
       release-please:
-        specifier: 17.11.1
-        version: 17.11.1(supports-color@7.2.0)
+        specifier: 17.11.2
+        version: 17.11.2(supports-color@7.2.0)
       tsdown:
         specifier: 0.22.14
         version: 0.22.14(oxc-resolver@11.24.2)(tsx@4.23.12)(typescript@6.0.3)
@@ -721,8 +721,8 @@ packages:
     resolution: {integrity: sha512-+CNAzxglkrpNf/kKywqQfk74QjtceuOE7Qm+AF8miRvPF/wmmK5+OJOgVh3AVTT3RP2mH3+FOaxlE5v72owk0A==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@google-automations/git-file-utils@3.1.0':
-    resolution: {integrity: sha512-WITzh+nsH7ugjTIXnx8H9pqCh58ulYippEpa6+ioN8q8F1iUaoQfINMzWci1aYLsZU78yeO90S8zB4QTqCBYbw==}
+  '@google-automations/git-file-utils@3.2.0':
+    resolution: {integrity: sha512-EtQD1DX17kGpckDNCdI0jvMdF98EWR/TM9uogQtnhK0ODv8z5tPSPMICv2lk54c/9ucUgbfdLDrRdDyx56Sznw==}
     engines: {node: '>= 22'}
 
   '@humanfs/core@0.19.2':
@@ -3376,8 +3376,8 @@ packages:
     resolution: {integrity: sha512-NgRBy2Nx/bE+9F27nVHnqcN5HjyLmecqsqx2PJHu3/IEtADD4WuxuXIVExD5PoSDFVrl78dOonfcOe5O+5nbzQ==}
     hasBin: true
 
-  release-please@17.11.1:
-    resolution: {integrity: sha512-bYlJozfVjsiDjZHHMPec62ZNjamaNaILNPLwJImfvR/AuRhvUM0ZaQegc2BzjQPSFEn/UzWGPL0m1T83AUct9g==}
+  release-please@17.11.2:
+    resolution: {integrity: sha512-we0+NgyHjvczxrilD6aujnRNuASd65Jem0dY5evevxSZvz8BnKnB/QRN3UzGA229fcV09lKCYbqeE9HgkXzGmA==}
     engines: {node: '>=22.0.0'}
     hasBin: true
 
@@ -4480,7 +4480,7 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@google-automations/git-file-utils@3.1.0':
+  '@google-automations/git-file-utils@3.2.0':
     dependencies:
       '@octokit/rest': 20.1.2
       minimatch: 10.2.6
@@ -6868,10 +6868,10 @@ snapshots:
     dependencies:
       jsesc: 3.1.0
 
-  release-please@17.11.1(supports-color@7.2.0):
+  release-please@17.11.2(supports-color@7.2.0):
     dependencies:
       '@conventional-commits/parser': 0.4.1
-      '@google-automations/git-file-utils': 3.1.0
+      '@google-automations/git-file-utils': 3.2.0
       '@iarna/toml': 3.0.0
       '@octokit/graphql': 7.1.1
       '@octokit/request': 8.4.1
