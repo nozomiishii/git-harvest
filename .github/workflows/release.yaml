@@ -33,12 +33,18 @@ jobs:
       tag_name: ${{ steps.detect.outputs.tag_name }}
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+
       - name: Load secrets from 1Password
         id: secrets
         uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
-        with:
-          # renovate: datasource=docker depName=1password/op versioning=semver
-          version: "2.39.0"
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           APP_ID: op://nozomiishii-release/github-app/username
@@ -58,15 +64,6 @@ jobs:
           # non-head) release commit, so without this the create-release call returns
           # 403 "Resource not accessible by integration".
           permission-workflows: write
-
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup mise
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
 
       - name: Install dependencies
         run: pnpm install
@@ -154,12 +151,18 @@ jobs:
       pull-requests: write # required by release-please to open and update the release PR
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+
       - name: Load secrets from 1Password
         id: secrets
         uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
-        with:
-          # renovate: datasource=docker depName=1password/op versioning=semver
-          version: "2.39.0"
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           APP_ID: op://nozomiishii-release/github-app/username
@@ -173,15 +176,6 @@ jobs:
           private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
-
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Setup mise
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
 
       - name: Install dependencies
         run: pnpm install
