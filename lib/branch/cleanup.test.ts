@@ -1,8 +1,8 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "vitest";
+import type { Flags, WorktreeCleanupResult } from "../types";
 import { defaultFlags } from "../flags/parse";
 import { makeRepo } from "../testing/repo";
-import type { Flags, WorktreeCleanupResult } from "../types";
 import { cleanupWorktrees } from "../worktree/cleanup";
 import { cleanupBranches } from "./cleanup";
 
@@ -53,7 +53,9 @@ test("cleanupBranches keeps a committed branch by default", async () => {
   });
 
   expect(
-    result.results.some((r) => r.action === "kept" && r.name === "wip" && r.message === "committed"),
+    result.results.some(
+      (r) => r.action === "kept" && r.name === "wip" && r.message === "committed",
+    ),
   ).toBe(true);
 });
 

@@ -7,13 +7,13 @@ import { promisify } from "node:util";
 
 const exec = promisify(execFile);
 
-export type Repo = {
+export interface Repo {
   [Symbol.asyncDispose]: () => Promise<void>;
   commit: (message: string) => Promise<void>;
   commitFile: (name: string, content: string, message: string) => Promise<void>;
   dir: string;
   git: (...args: string[]) => Promise<string>;
-};
+}
 
 // `await using repo = await makeRepo()` でスコープ離脱時に自動削除
 export async function makeRepo(): Promise<Repo> {

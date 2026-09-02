@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { hi, useColor } from "./color";
 
-export const logoArt = readFileSync(new URL("logo.ascii", import.meta.url), "utf8");
+export const logoArt = readFileSync(new URL("logo.ascii", import.meta.url), "utf-8");
 
 export function logo(color = useColor()): string {
   const body = logoArt

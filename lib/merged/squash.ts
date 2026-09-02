@@ -1,7 +1,12 @@
 import { git } from "../git/exec";
 
-type Opts = { cwd?: string };
-type Refs = { base: string; branch: string };
+interface Opts {
+  cwd?: string;
+}
+interface Refs {
+  base: string;
+  branch: string;
+}
 
 // squash マージ = branch の全 commit を 1 つに潰して base に積む方式（GitHub のデフォルト）。
 // 元の commit は base の履歴に直接は現れないので、ID では見つからない。

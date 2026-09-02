@@ -1,7 +1,12 @@
 import { git } from "../git/exec";
 
-type Opts = { cwd?: string };
-type Refs = { base: string; branch: string };
+interface Opts {
+  cwd?: string;
+}
+interface Refs {
+  base: string;
+  branch: string;
+}
 
 // rebase / cherry-pick で base に取り込まれた branch を検出する。
 // この 2 つは元の commit ID を捨てて新しい ID で base に積み直すので、ID 比較では検出できない。

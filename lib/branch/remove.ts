@@ -1,7 +1,9 @@
-import { git } from "../git/exec";
 import type { BranchActionResult } from "../types";
+import { git } from "../git/exec";
 
-type Opts = { cwd?: string };
+interface Opts {
+  cwd?: string;
+}
 
 // committed の branch は committed の対象に branch が入っていれば消す、なければ理由付きで残す。
 // boolean が並ぶと取り違えやすいので worktree 側と同じ { dryRun, enabled } で受ける

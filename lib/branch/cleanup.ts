@@ -1,11 +1,18 @@
+import type {
+  BranchActionResult,
+  BranchCleanupResult,
+  Flags,
+  WorktreeCleanupResult,
+} from "../types";
 import { git, gitText, NETWORK_TIMEOUT_MS } from "../git/exec";
-import { isMerged, isUntouched } from "../merged/index";
-import type { BranchActionResult, BranchCleanupResult, Flags, WorktreeCleanupResult } from "../types";
+import { isMerged, isUntouched } from "../merged";
 import { checkedOutBranches, isCurrentHead } from "./guards";
 import { listLocalBranches } from "./list";
 import { removeCommittedBranch, removeMergedBranch } from "./remove";
 
-type Opts = { cwd?: string };
+interface Opts {
+  cwd?: string;
+}
 
 // ローカルブランチの一覧を取り、1 つずつ「守る → 状態を判定 → 削除」する
 export async function cleanupBranches(

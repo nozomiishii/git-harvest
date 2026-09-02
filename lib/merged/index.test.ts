@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
+import { isMerged } from ".";
 import { makeRepo } from "../testing/repo";
-import { isMerged } from "./index";
 
 // 通常マージ（--no-ff）で取り込まれた branch は isMerged
 test("isMerged is true for an ancestor-merged branch", async () => {

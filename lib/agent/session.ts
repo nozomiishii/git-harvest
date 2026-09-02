@@ -106,7 +106,7 @@ function isProcessAlive(pid: number): boolean {
 // 壊れた JSON はセッション扱いしない
 function readSession(file: string): undefined | { cwd?: string; pid?: number } {
   try {
-    return JSON.parse(readFileSync(file, "utf8")) as { cwd?: string; pid?: number };
+    return JSON.parse(readFileSync(file, "utf-8")) as { cwd?: string; pid?: number };
   } catch {
     return undefined;
   }

@@ -7,7 +7,14 @@ export type Subcommand = "help" | "logo" | "version";
 export class UsageError extends Error {}
 
 // 既知のフラグ名（= の前の部分）。これ以外は unknown として弾く
-const FLAG_NAMES = new Set(["--committed", "--detached", "--dry-run", "--files-changed", "--untouched", "-n"]);
+const FLAG_NAMES = new Set([
+  "--committed",
+  "--detached",
+  "--dry-run",
+  "--files-changed",
+  "--untouched",
+  "-n",
+]);
 
 // preset を増やすときはここに 1 行足す。
 // 個別フラグはどれも「対象 scope を集合に追加する」だけで、引いたり打ち消したりしない。

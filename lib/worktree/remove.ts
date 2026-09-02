@@ -1,14 +1,19 @@
-import { git } from "../git/exec";
 import type { WorktreeActionResult } from "../types";
 import type { WtRecord } from "./list";
+import { git } from "../git/exec";
 import { hasUncommittedChanges } from "./uncommitted";
 
-type Opts = { cwd?: string };
+interface Opts {
+  cwd?: string;
+}
 
 // remove* に共通する引数。boolean が並ぶと取り違えやすいのでオブジェクト化している。
 // enabled: 対応するフラグがこの worktree を消す対象に含めているか
 // dryRun:  実際に削除せず would-remove を返すか
-type RemoveArgs = { dryRun: boolean; enabled: boolean };
+interface RemoveArgs {
+  dryRun: boolean;
+  enabled: boolean;
+}
 
 // committed の worktree。enabled なら消す（force 不要）、外せば理由付きで残す
 export async function removeCommitted(
@@ -42,9 +47,9 @@ export async function removeDetached(
   if (args.dryRun) {
     return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
-  const dirty = await hasUncommittedChanges(worktree.path);
+  const isDirty = await hasUncommittedChanges(worktree.path);
 
-  return removeWorktree(worktree, opts, dirty);
+  return removeWorktree(worktree, opts, isDirty);
 }
 
 // files-changed の worktree。enabled なら消す（未コミットごと force）、外せば残す
@@ -54,7 +59,12 @@ export async function removeFilesChanged(
   opts: Opts,
 ): Promise<WorktreeActionResult> {
   if (!args.enabled) {
-    return { action: "kept", branch: worktree.branch, message: "files-changed", path: worktree.path };
+    return {
+      action: "kept",
+      branch: worktree.branch,
+      message: "files-changed",
+      path: worktree.path,
+    };
   }
 
   if (args.dryRun) {

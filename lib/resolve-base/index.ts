@@ -1,6 +1,9 @@
 import { gitText, NETWORK_TIMEOUT_MS } from "../git/exec";
 
-type ResolveOpts = { cwd?: string; offline?: boolean };
+interface ResolveOpts {
+  cwd?: string;
+  offline?: boolean;
+}
 
 // base = 掃除の基準になるデフォルトブランチ（main 等）。
 // origin/HEAD という「リモートのデフォルトブランチを指すポインタ」から解決する

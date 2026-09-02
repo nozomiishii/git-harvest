@@ -14,15 +14,18 @@ export type BranchActionResult =
   | { action: "removed"; name: string }
   | { action: "would-remove"; name: string };
 
-export type BranchCleanupResult = { failures: number; results: BranchActionResult[] };
+export interface BranchCleanupResult {
+  failures: number;
+  results: BranchActionResult[];
+}
 
-export type Flags = {
+export interface Flags {
   committed: Scope[]; // committed を消す対象 scope（worktree 系 / branch）
   detached: boolean;
   dryRun: boolean;
   filesChanged: Scope[]; // files-changed を消す対象 scope（worktree 系のみ）
   untouched: boolean;
-};
+}
 
 export type Scope = (typeof SCOPES)[number];
 
@@ -36,8 +39,8 @@ export type WorktreeActionResult =
 
 // worktree 掃除 → branch 掃除へ引き継ぐ。mainBranch=常に生存する main worktree の checkout branch、
 // results の kept/failed が生き残った linked worktree。branch 側がここから保護リストを組む
-export type WorktreeCleanupResult = {
+export interface WorktreeCleanupResult {
   failures: number;
   mainBranch: string | undefined;
   results: WorktreeActionResult[];
-};
+}
