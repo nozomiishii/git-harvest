@@ -13,7 +13,10 @@ const exec = promisify(execFile);
 // ネットワークを伴う git コマンド（set-head / remote prune）の上限時間。hook をブロックさせないための値
 export const NETWORK_TIMEOUT_MS = 5000;
 
-export type GitOpts = { cwd?: string; timeoutMs?: number };
+export interface GitOpts {
+  cwd?: string;
+  timeoutMs?: number;
+}
 
 export async function git(
   args: string[],

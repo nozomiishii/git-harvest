@@ -1,7 +1,12 @@
 import { git, gitText } from "../git/exec";
 
-type Opts = { cwd?: string };
-type Refs = { base: string; branch: string };
+interface Opts {
+  cwd?: string;
+}
+interface Refs {
+  base: string;
+  branch: string;
+}
 
 // branch の先頭 commit が base の本流に並んでいれば untouched（このブランチで作業していない）。
 // 「本流」= マージで合流してきた側を辿らず、base 自身が積み重ねてきた commit 列。

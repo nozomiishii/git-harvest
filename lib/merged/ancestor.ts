@@ -1,7 +1,12 @@
 import { gitExitOk } from "../git/exec";
 
-type Opts = { cwd?: string };
-type Refs = { base: string; branch: string };
+interface Opts {
+  cwd?: string;
+}
+interface Refs {
+  base: string;
+  branch: string;
+}
 
 // 通常マージ / fast-forward を検出する。
 // branch の先頭が base の歴史を辿ると現れる位置にあれば、branch の commit は

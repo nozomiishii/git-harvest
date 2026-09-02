@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
+import type { Flags, WorktreeActionResult, WorktreeCleanupResult } from "../types";
 import { scopeOfPath } from "../agent/scope";
 import { git } from "../git/exec";
-import { isMerged, isUntouched } from "../merged/index";
+import { isMerged, isUntouched } from "../merged";
 import { realpath } from "../path";
-import type { Flags, WorktreeActionResult, WorktreeCleanupResult } from "../types";
 import { isCwd, isLocked, isOnBaseBranch, isSessionRunning } from "./guards";
 import { listWorktrees } from "./list";
 import {
@@ -15,7 +15,9 @@ import {
 } from "./remove";
 import { hasUncommittedChanges } from "./uncommitted";
 
-type Opts = { cwd?: string };
+interface Opts {
+  cwd?: string;
+}
 
 // worktree = 同じリポジトリの履歴を共有する、もう 1 つの作業ディレクトリ（git worktree add で作る）。
 // 一覧を取り、1 つずつ「守る → 状態を判定 → 対応する削除関数」と上から下りる
@@ -47,22 +49,42 @@ export async function cleanupWorktrees(
     try {
       // 守る理由を上から1つずつ確認。当たればその理由で残す
       if (isCwd(worktree, current)) {
-        results.push({ action: "kept", branch: worktree.branch, message: "current", path: worktree.path });
+        results.push({
+          action: "kept",
+          branch: worktree.branch,
+          message: "current",
+          path: worktree.path,
+        });
         continue;
       }
 
       if (isOnBaseBranch(worktree, base)) {
-        results.push({ action: "kept", branch: worktree.branch, message: "base branch", path: worktree.path });
+        results.push({
+          action: "kept",
+          branch: worktree.branch,
+          message: "base branch",
+          path: worktree.path,
+        });
         continue;
       }
 
       if (isLocked(worktree)) {
-        results.push({ action: "kept", branch: worktree.branch, message: "locked", path: worktree.path });
+        results.push({
+          action: "kept",
+          branch: worktree.branch,
+          message: "locked",
+          path: worktree.path,
+        });
         continue;
       }
 
       if (isSessionRunning(worktree)) {
-        results.push({ action: "kept", branch: worktree.branch, message: "session running", path: worktree.path });
+        results.push({
+          action: "kept",
+          branch: worktree.branch,
+          message: "session running",
+          path: worktree.path,
+        });
         continue;
       }
 
@@ -114,7 +136,12 @@ export async function cleanupWorktrees(
     } catch (error) {
       // 1 件の失敗で全体を止めない。たとえば壊れた ref に当たって git が throw しても、
       // その worktree を failed として記録し、残りの掃除は続ける
-      results.push({ action: "failed", branch: worktree.branch, message: String(error), path: worktree.path });
+      results.push({
+        action: "failed",
+        branch: worktree.branch,
+        message: String(error),
+        path: worktree.path,
+      });
     }
   }
 

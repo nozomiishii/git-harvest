@@ -1,9 +1,16 @@
 import { gitText } from "../git/exec";
 import { realpath } from "../path";
 
-export type WtRecord = { branch: string | undefined; locked: boolean; path: string; realpath: string };
+export interface WtRecord {
+  branch: string | undefined;
+  locked: boolean;
+  path: string;
+  realpath: string;
+}
 
-type Opts = { cwd?: string };
+interface Opts {
+  cwd?: string;
+}
 
 export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
   const out = await gitText(["worktree", "list", "--porcelain"], opts);

@@ -5,7 +5,7 @@ import pkg from "../package.json" with { type: "json" };
 import { cleanupBranches } from "./branch/cleanup";
 import { helpText } from "./flags/help";
 import { parseFlags, parseSubcommand, UsageError } from "./flags/parse";
-import { resolveBase } from "./resolve-base/index";
+import { resolveBase } from "./resolve-base";
 import { bold, dim } from "./ui/color";
 import { logo } from "./ui/logo";
 import { statusLine, summaryLine } from "./ui/status";

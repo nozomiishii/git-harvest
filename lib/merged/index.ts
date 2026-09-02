@@ -2,8 +2,13 @@ import { isAncestorMerged } from "./ancestor";
 import { isRebaseMerged } from "./rebase";
 import { isSquashMerged } from "./squash";
 
-type Opts = { cwd?: string };
-type Refs = { base: string; branch: string };
+interface Opts {
+  cwd?: string;
+}
+interface Refs {
+  base: string;
+  branch: string;
+}
 
 // 「branch が base にどう取り込まれているか」を 2 つの判定で答えるモジュール。
 //   isUntouched: 作業そのものが無い（base 本流に並んでいるだけ）
