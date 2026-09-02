@@ -1,41 +1,45 @@
 import type { BranchActionResult, WorktreeActionResult } from "../types";
-import { bold, dim, hi, useColor } from "./color";
+import { bold, dim, hi, isColorSupported } from "./color";
 import { tildify } from "./tildify";
 
 export function statusLine(
   result: BranchActionResult | WorktreeActionResult,
-  color = useColor(),
+  isColorEnabled = isColorSupported(),
 ): string {
   // worktree は path、branch は branch 名。どちらの識別子かは型で分かれる
   const name = tildify("path" in result ? result.path : result.name);
 
   switch (result.action) {
     case "failed": {
-      return `  ${hi("✗", color)}  ${name}  ${result.message}`;
+      return `  ${hi("✗", isColorEnabled)}  ${name}  ${result.message}`;
     }
     case "kept": {
       const pad = Math.max(2, 38 - name.length);
       const line = `  ·  ${name}${" ".repeat(pad)}${result.message}`;
 
-      return dim(line, color);
+      return dim(line, isColorEnabled);
     }
     case "removed": {
-      return `  ${hi("✓", color)}  ${name}`;
+      return `  ${hi("✓", isColorEnabled)}  ${name}`;
     }
     case "would-remove": {
-      return `  ${hi("→", color)}  ${name}`;
+      return `  ${hi("→", isColorEnabled)}  ${name}`;
     }
   }
 }
 
-export function summaryLine(n: number, dryRun: boolean, color = useColor()): string {
+export function summaryLine(
+  n: number,
+  isDryRun: boolean,
+  isColorEnabled = isColorSupported(),
+): string {
   if (n === 0) {
-    return dim("· Nothing to harvest. All growing.", color);
+    return dim("· Nothing to harvest. All growing.", isColorEnabled);
   }
 
-  if (dryRun) {
-    return `${hi("→", color)} ${bold(`Would harvest ${String(n)} item(s)`, color)}`;
+  if (isDryRun) {
+    return `${hi("→", isColorEnabled)} ${bold(`Would harvest ${String(n)} item(s)`, isColorEnabled)}`;
   }
 
-  return `${hi("✓", color)} ${bold(`Harvested ${String(n)} item(s)`, color)}`;
+  return `${hi("✓", isColorEnabled)} ${bold(`Harvested ${String(n)} item(s)`, isColorEnabled)}`;
 }

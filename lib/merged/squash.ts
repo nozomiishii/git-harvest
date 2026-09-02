@@ -23,9 +23,11 @@ export async function isSquashMerged({ base, branch }: Refs, opts: Opts = {}): P
   }
 
   // 「分岐点を親に持ち、branch の最新 tree を中身に持つ」仮の commit を作る。
-  // どのブランチからも参照されない孤立した commit なので、リポジトリに副作用は無い
+  // どのブランチからも参照されない孤立した commit なので、リポジトリに副作用は無い。
+  // `^{tree}` は git の revision 構文で、その commit が指す tree オブジェクトを表す。
+  // テンプレートリテラルに入れると `${tree}` の書き損じと区別が付かないので文字列連結で組む
   const squashResult = await git(
-    ["commit-tree", `${branch}^{tree}`, "-p", mergeBase, "-m", "_"],
+    ["commit-tree", branch + "^{tree}", "-p", mergeBase, "-m", "_"],
     opts,
   );
   const squash = squashResult.stdout.trim();

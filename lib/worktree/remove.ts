@@ -75,13 +75,13 @@ export async function removeFilesChanged(
 }
 
 // merged の worktree は安全（base 取り込み済み）なので常に消す。
-// enabled で切り替える余地が無いので dryRun だけを受ける
+// enabled で切り替える余地が無いので isDryRun だけを受ける
 export async function removeMerged(
   worktree: WtRecord,
-  dryRun: boolean,
+  isDryRun: boolean,
   opts: Opts,
 ): Promise<WorktreeActionResult> {
-  if (dryRun) {
+  if (isDryRun) {
     return { action: "would-remove", branch: worktree.branch, path: worktree.path };
   }
 
@@ -113,9 +113,9 @@ export async function removeUntouched(
 async function removeWorktree(
   worktree: WtRecord,
   opts: Opts,
-  force: boolean,
+  shouldForce: boolean,
 ): Promise<WorktreeActionResult> {
-  const args = force
+  const args = shouldForce
     ? ["worktree", "remove", "--force", worktree.path]
     : ["worktree", "remove", worktree.path];
   const { code, stderr } = await git(args, opts);

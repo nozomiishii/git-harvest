@@ -6,9 +6,9 @@ import { promisify } from "node:util";
 const exec = promisify(execFile);
 
 // git コマンド実行の共通ラッパー 3 種。使い分け:
-//   git()       失敗しても throw せず exit code ごと返す（失敗を自分で扱う処理用）
-//   gitText()   出力文字列が欲しい時。失敗は throw
-//   gitExitOk() 成功 / 失敗だけ知りたい時
+//   git()          失敗しても throw せず exit code ごと返す（失敗を自分で扱う処理用）
+//   gitText()      出力文字列が欲しい時。失敗は throw
+//   didGitExitOk() 成功 / 失敗だけ知りたい時
 
 // ネットワークを伴う git コマンド（set-head / remote prune）の上限時間。hook をブロックさせないための値
 export const NETWORK_TIMEOUT_MS = 5000;
@@ -16,6 +16,12 @@ export const NETWORK_TIMEOUT_MS = 5000;
 export interface GitOpts {
   cwd?: string;
   timeoutMs?: number;
+}
+
+export async function didGitExitOk(args: string[], opts: GitOpts = {}): Promise<boolean> {
+  const result = await git(args, opts);
+
+  return result.code === 0;
 }
 
 export async function git(
@@ -43,12 +49,6 @@ export async function git(
       stdout: e.stdout ?? "",
     };
   }
-}
-
-export async function gitExitOk(args: string[], opts: GitOpts = {}): Promise<boolean> {
-  const result = await git(args, opts);
-
-  return result.code === 0;
 }
 
 export async function gitText(args: string[], opts: GitOpts = {}): Promise<string> {
