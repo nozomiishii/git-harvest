@@ -37,7 +37,8 @@
     "prepare": "lefthook install --force",
     "prepublishOnly": "pnpm build",
     "prettier": "prettier --ignore-unknown --cache",
-    "test": "vitest"
+    "test": "vitest",
+    "typecheck": "tsc"
   },
   "devDependencies": {
     "@nozomiishii/commitlint-config": "2.4.0",
