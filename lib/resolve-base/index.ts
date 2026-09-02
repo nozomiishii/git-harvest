@@ -15,12 +15,16 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
   }
 
   if (opts.offline !== true) {
-    // remote set-head --auto = リモートに現在のデフォルトブランチを問い合わせて origin/HEAD を作り直す。
-    // offline でも hook をブロックしないよう、ネットワークを伴うこの操作は上限時間で打ち切る
-    await gitText(["remote", "set-head", "origin", "--auto"], {
-      ...opts,
-      timeoutMs: NETWORK_TIMEOUT_MS,
-    }).catch(() => "");
+    try {
+      // remote set-head --auto = リモートに現在のデフォルトブランチを問い合わせて origin/HEAD を作り直す。
+      // offline でも hook をブロックしないよう、ネットワークを伴うこの操作は上限時間で打ち切る
+      await gitText(["remote", "set-head", "origin", "--auto"], {
+        ...opts,
+        timeoutMs: NETWORK_TIMEOUT_MS,
+      });
+    } catch {
+      // オフライン等での失敗は許容する。作り直せなくても直後の originHead で結果を見る
+    }
     const afterRefresh = await originHead(opts);
 
     if (afterRefresh) {
@@ -33,9 +37,14 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
 
 // origin/HEAD が指す default branch 名。未設定なら ""
 async function originHead(opts: ResolveOpts): Promise<string> {
-  return gitText(["symbolic-ref", "refs/remotes/origin/HEAD"], opts)
-    .then(stripOrigin)
-    .catch(() => "");
+  try {
+    const ref = await gitText(["symbolic-ref", "refs/remotes/origin/HEAD"], opts);
+
+    return stripOrigin(ref);
+  } catch {
+    // origin/HEAD が未設定なら symbolic-ref が失敗する。呼び出し側はこれを「未解決」として扱う
+    return "";
+  }
 }
 
 function stripOrigin(ref: string): string {

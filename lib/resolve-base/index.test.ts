@@ -13,7 +13,12 @@ test("resolveBase resolves the default branch from origin/HEAD", async () => {
 test("resolveBase returns undefined when origin/HEAD cannot be determined", async () => {
   await using repo = await makeRepo();
   await repo.git("remote", "remove", "origin");
-  await repo.git("symbolic-ref", "-d", "refs/remotes/origin/HEAD").catch(() => "");
+
+  try {
+    await repo.git("symbolic-ref", "-d", "refs/remotes/origin/HEAD");
+  } catch {
+    // git のバージョンによっては remote remove が origin/HEAD ごと消す。既に無ければそれで良い
+  }
 
   const base = await resolveBase({ cwd: repo.dir, offline: true });
 

@@ -26,10 +26,10 @@ export async function removeCommittedBranch(
 // merged の branch は base 取り込み済みの残骸なので常に消す
 export async function removeMergedBranch(
   name: string,
-  dryRun: boolean,
+  isDryRun: boolean,
   opts: Opts,
 ): Promise<BranchActionResult> {
-  if (dryRun) {
+  if (isDryRun) {
     return { action: "would-remove", name };
   }
 

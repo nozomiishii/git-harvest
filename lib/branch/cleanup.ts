@@ -22,17 +22,19 @@ export async function cleanupBranches(
   opts: Opts = {},
 ): Promise<BranchCleanupResult> {
   const branches = await listLocalBranches(opts);
-  // いま checkout している branch 名。detached HEAD（どの branch にも乗っていない状態）では
-  // コマンドが失敗するので、その場合は ""（どの branch 名とも一致しない）にする
-  const currentHead = await gitText(["symbolic-ref", "--short", "HEAD"], opts).catch(() => "");
+  const currentHead = await currentBranchName(opts);
   // worktree 掃除のあとも残っている worktree が checkout 中の branch は、消すと
   // その worktree が壊れるので保護する
   const checkedOut = checkedOutBranches(worktrees);
   const results: BranchActionResult[] = [];
 
-  // base 自身は掃除対象から外す。
   // worktree 掃除と同じ理由で直列。index.lock を取り合わない / 結果の順序を保つため
-  for (const name of branches.filter((branchName) => branchName !== base)) {
+  for (const name of branches) {
+    // base 自身は掃除の基準なので、対象から外す（結果にも載せない）
+    if (name === base) {
+      continue;
+    }
+
     try {
       // 守る理由を上から順に確認し、当たればその理由で残す
       if (isCurrentHead(name, currentHead)) {
@@ -78,4 +80,14 @@ export async function cleanupBranches(
   const failures = results.filter((r) => r.action === "failed").length;
 
   return { failures, results };
+}
+
+// いま checkout している branch 名。detached HEAD（どの branch にも乗っていない状態）では
+// コマンドが失敗するので、その場合は ""（どの branch 名とも一致しない）を返す
+async function currentBranchName(opts: Opts): Promise<string> {
+  try {
+    return await gitText(["symbolic-ref", "--short", "HEAD"], opts);
+  } catch {
+    return "";
+  }
 }

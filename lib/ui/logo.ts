@@ -1,13 +1,13 @@
 import { readFileSync } from "node:fs";
-import { hi, useColor } from "./color";
+import { hi, isColorSupported } from "./color";
 
 export const logoArt = readFileSync(new URL("logo.ascii", import.meta.url), "utf-8");
 
-export function logo(color = useColor()): string {
+export function logo(isColorEnabled = isColorSupported()): string {
   const body = logoArt
     .replace(/\n+$/, "")
     .split("\n")
-    .map((line) => hi(line, color))
+    .map((line) => hi(line, isColorEnabled))
     .join("\n");
 
   return `\n${body}\n`;
