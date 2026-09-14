@@ -3,20 +3,19 @@
   "version": "0.3.5",
   "description": "Clean up branches and worktrees",
   "keywords": [
-    "git",
-    "cli",
-    "cleanup",
     "branch",
+    "cleanup",
+    "cli",
+    "git",
     "worktree"
   ],
   "homepage": "https://github.com/nozomiishii/git-harvest",
+  "license": "MIT",
+  "author": "Nozomi Ishii",
   "repository": {
     "type": "git",
     "url": "https://github.com/nozomiishii/git-harvest.git"
   },
-  "license": "MIT",
-  "author": "Nozomi Ishii",
-  "type": "module",
   "bin": {
     "git-harvest": "./dist/cli.mjs"
   },
@@ -26,17 +25,22 @@
     "README.ja.md",
     "LICENSE"
   ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsdown",
     "dev": "tsx lib/cli.ts --dry-run",
     "eslint": "eslint --max-warnings=0 --cache",
-    "format": "pnpm prettier . --check",
-    "format:fix": "pnpm prettier . --write",
+    "format": "pnpm oxfmt . --check",
+    "format:fix": "pnpm oxfmt .",
     "lint": "pnpm eslint",
     "lint:fix": "pnpm eslint --fix",
+    "oxfmt": "oxfmt",
     "prepare": "lefthook install --force",
     "prepublishOnly": "pnpm build",
-    "prettier": "prettier --ignore-unknown --cache",
     "test": "vitest",
     "typecheck": "tsc"
   },
@@ -44,12 +48,12 @@
     "@nozomiishii/commitlint-config": "2.7.0",
     "@nozomiishii/eslint-config": "2.7.0",
     "@nozomiishii/lefthook-config": "2.7.0",
-    "@nozomiishii/prettier-config": "2.7.0",
+    "@nozomiishii/oxfmt-config": "2.7.0",
     "@nozomiishii/tsconfig": "2.7.0",
     "@types/node": "24.13.4",
     "eslint": "10.10.0",
     "lefthook": "2.1.12",
-    "prettier": "3.9.6",
+    "oxfmt": "0.67.0",
     "release-please": "17.11.2",
     "tsdown": "0.23.0",
     "tsx": "4.23.13",
@@ -57,19 +61,15 @@
     "vitest": "5.0.0"
   },
   "devEngines": {
-    "runtime": {
-      "name": "node",
-      "version": "24.21.0",
-      "onFail": "download"
-    },
     "packageManager": {
       "name": "pnpm",
       "version": "12.4.1",
       "onFail": "error"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "24.21.0",
+      "onFail": "download"
     }
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
   }
 }
