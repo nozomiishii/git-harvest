@@ -45,11 +45,11 @@
     "typecheck": "tsc"
   },
   "devDependencies": {
-    "@nozomiishii/commitlint-config": "2.7.0",
-    "@nozomiishii/eslint-config": "2.7.0",
-    "@nozomiishii/lefthook-config": "2.7.0",
-    "@nozomiishii/oxfmt-config": "2.7.0",
-    "@nozomiishii/tsconfig": "2.7.0",
+    "@nozomiishii/commitlint-config": "2.7.1",
+    "@nozomiishii/eslint-config": "2.7.1",
+    "@nozomiishii/lefthook-config": "2.7.1",
+    "@nozomiishii/oxfmt-config": "2.7.1",
+    "@nozomiishii/tsconfig": "2.7.1",
     "@types/node": "24.13.5",
     "eslint": "10.10.0",
     "lefthook": "2.1.14",
