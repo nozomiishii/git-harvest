@@ -51,7 +51,7 @@
     "@nozomiishii/oxfmt-config": "2.7.0",
     "@nozomiishii/tsconfig": "2.7.0",
     "@types/node": "24.13.5",
-    "eslint": "10.10.0",
+    "eslint": "10.11.0",
     "lefthook": "2.1.14",
     "oxfmt": "0.68.0",
     "release-please": "17.11.2",
