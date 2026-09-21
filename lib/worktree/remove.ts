@@ -25,11 +25,9 @@ export async function removeCommitted(
     return { action: "kept", branch: worktree.branch, message: "committed", path: worktree.path };
   }
 
-  if (args.dryRun) {
-    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
-  }
-
-  return removeWorktree(worktree, opts, false);
+  return args.dryRun
+    ? { action: "would-remove", branch: worktree.branch, path: worktree.path }
+    : removeWorktree(worktree, opts, false);
 }
 
 // detached（branch を持たない）worktree。enabled なら消す、外せば理由付きで残す。
@@ -67,11 +65,9 @@ export async function removeFilesChanged(
     };
   }
 
-  if (args.dryRun) {
-    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
-  }
-
-  return removeWorktree(worktree, opts, true);
+  return args.dryRun
+    ? { action: "would-remove", branch: worktree.branch, path: worktree.path }
+    : removeWorktree(worktree, opts, true);
 }
 
 // merged の worktree は安全（base 取り込み済み）なので常に消す。
@@ -81,11 +77,9 @@ export async function removeMerged(
   isDryRun: boolean,
   opts: Opts,
 ): Promise<WorktreeActionResult> {
-  if (isDryRun) {
-    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
-  }
-
-  return removeWorktree(worktree, opts, false);
+  return isDryRun
+    ? { action: "would-remove", branch: worktree.branch, path: worktree.path }
+    : removeWorktree(worktree, opts, false);
 }
 
 // untouched（独自コミット無し）の worktree。enabled なら消す、外せば理由付きで残す。
@@ -99,11 +93,9 @@ export async function removeUntouched(
     return { action: "kept", branch: worktree.branch, message: "untouched", path: worktree.path };
   }
 
-  if (args.dryRun) {
-    return { action: "would-remove", branch: worktree.branch, path: worktree.path };
-  }
-
-  return removeWorktree(worktree, opts, false);
+  return args.dryRun
+    ? { action: "would-remove", branch: worktree.branch, path: worktree.path }
+    : removeWorktree(worktree, opts, false);
 }
 
 // 実際に worktree を消すだけの関数。並走している別プロセスとの競合を救済し、

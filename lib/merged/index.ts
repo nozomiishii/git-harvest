@@ -23,11 +23,7 @@ export async function isMerged(refs: Refs, opts: Opts = {}): Promise<boolean> {
     return true;
   }
 
-  if (await isSquashMerged(refs, opts)) {
-    return true;
-  }
-
-  return isRebaseMerged(refs, opts);
+  return (await isSquashMerged(refs, opts)) ? true : isRebaseMerged(refs, opts);
 }
 
 export { isUntouched } from "./untouched";

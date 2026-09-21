@@ -37,9 +37,7 @@ export function summaryLine(
     return dim("· Nothing to harvest. All growing.", isColorEnabled);
   }
 
-  if (isDryRun) {
-    return `${hi("→", isColorEnabled)} ${bold(`Would harvest ${String(n)} item(s)`, isColorEnabled)}`;
-  }
-
-  return `${hi("✓", isColorEnabled)} ${bold(`Harvested ${String(n)} item(s)`, isColorEnabled)}`;
+  return isDryRun
+    ? `${hi("→", isColorEnabled)} ${bold(`Would harvest ${String(n)} item(s)`, isColorEnabled)}`
+    : `${hi("✓", isColorEnabled)} ${bold(`Harvested ${String(n)} item(s)`, isColorEnabled)}`;
 }

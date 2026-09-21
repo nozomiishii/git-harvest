@@ -16,11 +16,7 @@ export async function removeCommittedBranch(
     return { action: "kept", message: "committed", name };
   }
 
-  if (args.dryRun) {
-    return { action: "would-remove", name };
-  }
-
-  return removeBranch(name, opts);
+  return args.dryRun ? { action: "would-remove", name } : removeBranch(name, opts);
 }
 
 // merged の branch は base 取り込み済みの残骸なので常に消す
@@ -29,11 +25,7 @@ export async function removeMergedBranch(
   isDryRun: boolean,
   opts: Opts,
 ): Promise<BranchActionResult> {
-  if (isDryRun) {
-    return { action: "would-remove", name };
-  }
-
-  return removeBranch(name, opts);
+  return isDryRun ? { action: "would-remove", name } : removeBranch(name, opts);
 }
 
 // 実際に branch を消すだけの関数。並走している別プロセスとの競合を救済し、
@@ -44,9 +36,7 @@ async function removeBranch(name: string, opts: Opts): Promise<BranchActionResul
   const { code, stderr } = await git(["branch", "-D", name], opts);
 
   // "not found" は別プロセスが先に消した後で、本来の目的（消える）は達成済みなので removed 扱い
-  if (code === 0 || stderr.includes("not found")) {
-    return { action: "removed", name };
-  }
-
-  return { action: "failed", message: `exit ${String(code)}: ${stderr.trim()}`, name };
+  return code === 0 || stderr.includes("not found")
+    ? { action: "removed", name }
+    : { action: "failed", message: `exit ${String(code)}: ${stderr.trim()}`, name };
 }

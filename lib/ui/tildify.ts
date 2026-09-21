@@ -13,9 +13,5 @@ export function tildify(p: string): string {
     return "~";
   }
 
-  if (p.startsWith(`${home}/`)) {
-    return `~${p.slice(home.length)}`;
-  }
-
-  return p;
+  return p.startsWith(`${home}/`) ? `~${p.slice(home.length)}` : p;
 }
