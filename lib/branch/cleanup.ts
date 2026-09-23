@@ -14,7 +14,19 @@ interface Opts {
   cwd?: string;
 }
 
-// ローカルブランチの一覧を取り、1 つずつ「守る → 状態を判定 → 削除」する
+/**
+ * ローカルブランチを一件ずつ保護条件とマージ状態に沿って整理する。
+ *
+ * @param base - 整理の基準になるブランチ名。
+ *
+ * @param flags - CLI から読み取った削除指定。
+ *
+ * @param worktrees - worktree 整理で残ったブランチを含む結果。
+ *
+ * @param opts - Git を実行する作業ディレクトリ。
+ *
+ * @returns 各ブランチの処理結果と失敗件数。
+ */
 export async function cleanupBranches(
   base: string,
   flags: Flags,
@@ -82,8 +94,13 @@ export async function cleanupBranches(
   return { failures, results };
 }
 
-// いま checkout している branch 名。detached HEAD（どの branch にも乗っていない状態）では
-// コマンドが失敗するので、その場合は ""（どの branch 名とも一致しない）を返す
+/**
+ * 現在 checkout 中のブランチ名を取得する。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns ブランチ名。detached HEAD なら空文字。
+ */
 async function currentBranchName(opts: Opts): Promise<string> {
   try {
     return await gitText(["symbolic-ref", "--short", "HEAD"], opts);

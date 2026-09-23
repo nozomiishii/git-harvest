@@ -1,3 +1,8 @@
+/**
+ * CLI の使用方法を表示する文章を組み立てる。
+ *
+ * @returns 使用方法の文章。
+ */
 export function helpText(): string {
   return `git-harvest cleans up worktrees and branches based on commit lifecycle stage.
 

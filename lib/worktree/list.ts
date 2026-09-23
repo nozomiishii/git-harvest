@@ -12,6 +12,13 @@ interface Opts {
   cwd?: string;
 }
 
+/**
+ * Git から worktree の一覧を取得する。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns パスとブランチなどを含む worktree の一覧。
+ */
 export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
   const out = await gitText(["worktree", "list", "--porcelain"], opts);
 
@@ -25,6 +32,13 @@ export async function listWorktrees(opts: Opts = {}): Promise<WtRecord[]> {
     .filter((rec) => rec.path !== "");
 }
 
+/**
+ * Git の worktree 一件分の出力を読み取る。
+ *
+ * @param block - worktree 一件分の Git 出力。
+ *
+ * @returns 読み取った worktree の情報。
+ */
 function parseWorktreeBlock(block: string): WtRecord {
   const lines = block.split("\n");
   const path = lines.find((l) => l.startsWith("worktree "))?.slice(9) ?? "";

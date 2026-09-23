@@ -19,8 +19,18 @@ interface Opts {
   cwd?: string;
 }
 
-// worktree = 同じリポジトリの履歴を共有する、もう 1 つの作業ディレクトリ（git worktree add で作る）。
-// 一覧を取り、1 つずつ「守る → 状態を判定 → 対応する削除関数」と上から下りる
+/**
+ * linked worktree を保護条件と状態に沿って整理する。
+ * Git の一覧から一件ずつ調べ、削除または保持を決める。
+ *
+ * @param base - 整理の基準になるブランチ名。
+ *
+ * @param flags - CLI から読み取った削除指定。
+ *
+ * @param opts - Git を実行する作業ディレクトリ。
+ *
+ * @returns 各 worktree の処理結果と失敗件数。
+ */
 export async function cleanupWorktrees(
   base: string,
   flags: Flags,

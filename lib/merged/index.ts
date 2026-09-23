@@ -15,9 +15,16 @@ interface Refs {
 //   isMerged:    通常マージ / squash / rebase のいずれかで取り込み済み
 // どちらでもなければ committed（base に未取り込みの独自コミットあり）と呼び出し側が判断する。
 
-// マージ済みかを 3 つの方式で順に試し、1 つでも当たれば取り込み済み。
-// それぞれの方式は「git コマンドが失敗 = この方式では判定できない」として false を返し、
-// 次の方式に委ねる。新しい方式を足すときも、このフォールバック規約を守ること
+/**
+ * 通常マージ、squash、rebase の順で取り込み済みか調べる。
+ * 各方式で判定できなければ次へ進む。
+ *
+ * @param refs - 基準と対象のブランチ参照。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns いずれかの方式で取り込み済みなら true。
+ */
 export async function isMerged(refs: Refs, opts: Opts = {}): Promise<boolean> {
   if (await isAncestorMerged(refs, opts)) {
     return true;

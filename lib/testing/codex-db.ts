@@ -1,5 +1,12 @@
 import { DatabaseSync } from "node:sqlite";
 
+/**
+ * テスト用の Codex state DB に thread 情報を保存する。
+ *
+ * @param dbPath - テスト用 DB の保存先。
+ *
+ * @param rows - DB に書き込む thread 情報。
+ */
 export function createCodexStateDb(
   dbPath: string,
   rows: { archived: number; cwd: string; id: string; threadSource: string }[],

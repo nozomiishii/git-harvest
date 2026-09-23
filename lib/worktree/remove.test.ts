@@ -8,6 +8,13 @@ import {
   removeUntouched,
 } from "./remove";
 
+/**
+ * テスト用の worktree 情報を作る。
+ *
+ * @param over - テスト用の既定値を上書きする情報。
+ *
+ * @returns 指定値で上書きした worktree 情報。
+ */
 function wtRecord(over: Partial<WtRecord> = {}): WtRecord {
   return { branch: "feature", locked: false, path: "/repo/wt", realpath: "/repo/wt", ...over };
 }

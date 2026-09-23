@@ -8,11 +8,21 @@ interface Refs {
   branch: string;
 }
 
-// squash マージ = branch の全 commit を 1 つに潰して base に積む方式（GitHub のデフォルト）。
-// 元の commit は base の履歴に直接は現れないので、ID では見つからない。
-// 代わりに、「branch を 1 つに潰したら何になるか」を手元で仮に作り、
-// それが base に取り込まれているかを変更内容で照合する。
-// どこかで作れなかった / 比較できなかった場合は false を返し、次の検出方式に任せる
+/**
+ * 仮の squash commit と base の変更内容を比較する。
+ * 元の commit ID が base にない場合も変更が取り込まれたか判定する。
+ * commit の作成や比較に失敗した場合は false を返す。
+ *
+ * @param root0 - 基準と対象のブランチ参照。
+ *
+ * @param root0.base - 基準ブランチの参照名。
+ *
+ * @param root0.branch - 判定するブランチの参照名。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns squash 済みと判定できれば true。
+ */
 export async function isSquashMerged({ base, branch }: Refs, opts: Opts = {}): Promise<boolean> {
   // base と branch が分岐した地点の commit を取る
   const mergeBaseResult = await git(["merge-base", base, branch], opts);
@@ -23,7 +33,7 @@ export async function isSquashMerged({ base, branch }: Refs, opts: Opts = {}): P
   }
 
   // 「分岐点を親に持ち、branch の最新 tree を中身に持つ」仮の commit を作る。
-  // どのブランチからも参照されない孤立した commit なので、リポジトリに副作用は無い。
+  // 参照は更新しないが、到達不能な commit object は Git の object DB に書き込まれる。
   // `^{tree}` は git の revision 構文で、その commit が指す tree オブジェクトを表す。
   // テンプレートリテラルに入れると `${tree}` の書き損じと区別が付かないので文字列連結で組む
   const squashResult = await git(

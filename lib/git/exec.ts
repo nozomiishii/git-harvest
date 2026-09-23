@@ -18,12 +18,30 @@ export interface GitOpts {
   timeoutMs?: number;
 }
 
+/**
+ * Git コマンドの終了状態を調べる。
+ *
+ * @param args - Git に渡す引数。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns 終了コードが 0 なら true。
+ */
 export async function didGitExitOk(args: string[], opts: GitOpts = {}): Promise<boolean> {
   const result = await git(args, opts);
 
   return result.code === 0;
 }
 
+/**
+ * Git コマンドを実行し、失敗時も終了状態と出力を返す。
+ *
+ * @param args - Git に渡す引数。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns 終了コードと標準出力・標準エラー。
+ */
 export async function git(
   args: string[],
   opts: GitOpts = {},
@@ -51,6 +69,15 @@ export async function git(
   }
 }
 
+/**
+ * Git コマンドを実行し、成功時の標準出力を返す。
+ *
+ * @param args - Git に渡す引数。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns 前後の空白を除いた標準出力。
+ */
 export async function gitText(args: string[], opts: GitOpts = {}): Promise<string> {
   const { code, stdout } = await git(args, opts);
 

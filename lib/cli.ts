@@ -11,7 +11,12 @@ import { logo } from "./ui/logo";
 import { statusLine, summaryLine } from "./ui/status";
 import { cleanupWorktrees } from "./worktree/cleanup";
 
-// 実行の流れ: subcommand 判定 → フラグ解釈 → base branch 解決 → worktree 掃除 → branch 掃除 → 集計表示
+/**
+ * CLI の引数を処理し、基準ブランチを解決して worktree とブランチを整理する。
+ * 最後に結果を表示する。
+ *
+ * @param argv - CLI に渡された引数。
+ */
 export async function main(argv: string[]): Promise<void> {
   const sub = parseSubcommand(argv);
 
@@ -75,7 +80,11 @@ export async function main(argv: string[]): Promise<void> {
   process.exitCode = wt.failures + br.failures > 0 ? 2 : 0;
 }
 
-// このファイルが node のエントリとして直接実行された時だけ true（import 時は false）
+/**
+ * このファイルが直接実行されたか調べる。
+ *
+ * @returns 直接実行された場合は true。
+ */
 function isEntrypoint(): boolean {
   const entry = process.argv[1];
 
@@ -90,7 +99,14 @@ function isEntrypoint(): boolean {
   }
 }
 
-// UsageError は usage 表示 + exit code 1 に変換する（成功時は Flags、失敗時は undefined）
+/**
+ * CLI 引数を解釈し、使用方法の誤りを表示する。
+ * UsageError を終了コード 1 に変換する。
+ *
+ * @param argv - 解釈する CLI 引数。
+ *
+ * @returns 解釈したフラグ。失敗時は undefined。
+ */
 function readFlags(argv: string[]): Flags | undefined {
   try {
     return parseFlags(argv);
