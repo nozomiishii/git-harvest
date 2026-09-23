@@ -8,10 +8,20 @@ interface Refs {
   branch: string;
 }
 
-// rebase / cherry-pick で base に取り込まれた branch を検出する。
-// この 2 つは元の commit ID を捨てて新しい ID で base に積み直すので、ID 比較では検出できない。
-// git log --cherry-pick は ID でなく「変更内容」で照合するので、
-// branch 側の commit が中身として base に入っていれば「取り込み済み」と判定できる
+/**
+ * 変更内容で rebase や cherry-pick による取り込みを調べる。
+ * commit ID が変わるため git log --cherry-pick で差分を照合する。
+ *
+ * @param root0 - 基準と対象のブランチ参照。
+ *
+ * @param root0.base - 基準ブランチの参照名。
+ *
+ * @param root0.branch - 判定するブランチの参照名。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns 未取り込みの変更がなければ true。
+ */
 export async function isRebaseMerged({ base, branch }: Refs, opts: Opts = {}): Promise<boolean> {
   const result = await git(
     ["log", "--cherry-pick", "--right-only", "--no-merges", "--oneline", `${base}...${branch}`],

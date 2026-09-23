@@ -1,7 +1,13 @@
 import { homedir } from "node:os";
 
-// home directory を "~" に短縮する表示用ユーティリティ。
-// 完全な相対パス計算ではない（path.relative() とは別物）
+/**
+ * 表示用パスのホームディレクトリを ~ に短縮する。
+ * ホームディレクトリの外では元のパスを返す。
+ *
+ * @param p - 表示するパス。
+ *
+ * @returns 短縮した表示用パス。
+ */
 export function tildify(p: string): string {
   const home = homedir();
 

@@ -6,7 +6,11 @@ import { makeRepo } from "../testing/repo";
 import { cleanupWorktrees } from "../worktree/cleanup";
 import { cleanupBranches } from "./cleanup";
 
-// worktree 掃除で何も生き残らなかった状態（保護対象の branch なし）
+/**
+ * 保護対象のブランチを含まないテスト用の結果を作る。
+ *
+ * @returns ブランチ情報が空の worktree 掃除結果。
+ */
 function noWorktrees(): WorktreeCleanupResult {
   return { failures: 0, mainBranch: undefined, results: [] };
 }

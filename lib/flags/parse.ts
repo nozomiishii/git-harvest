@@ -23,6 +23,11 @@ const PRESETS: Record<string, readonly string[]> = {
   "--yolo": ["--files-changed", "--committed", "--untouched", "--detached"],
 };
 
+/**
+ * 既定の CLI フラグを作る。
+ *
+ * @returns 削除対象の追加指定がないフラグ。
+ */
 export function defaultFlags(): Flags {
   return {
     committed: [],
@@ -33,7 +38,14 @@ export function defaultFlags(): Flags {
   };
 }
 
-// argv を Flags へ変換する。各フィールドは args から 1 回ずつ求めるだけで、書き換えはしない
+/**
+ * CLI 引数から各フラグを読み取る。
+ * 各項目は引数から一度ずつ求め、途中で書き換えない。
+ *
+ * @param argv - 解釈する CLI 引数。
+ *
+ * @returns 解釈したフラグ。
+ */
 export function parseFlags(argv: string[]): Flags {
   // --yolo などの preset は先に個別フラグへ展開する
   const args = argv.flatMap((arg) => PRESETS[arg] ?? [arg]);
@@ -48,6 +60,13 @@ export function parseFlags(argv: string[]): Flags {
   };
 }
 
+/**
+ * CLI 引数から優先指定のサブコマンドを探す。
+ *
+ * @param argv - サブコマンドを探す CLI 引数。
+ *
+ * @returns 見つかったサブコマンド。なければ undefined。
+ */
 export function parseSubcommand(argv: string[]): Subcommand | undefined {
   for (const arg of argv) {
     if (arg === "logo") {
@@ -66,7 +85,12 @@ export function parseSubcommand(argv: string[]): Subcommand | undefined {
   return undefined;
 }
 
-// 既知フラグ以外が混ざっていれば弾く（= の前のフラグ名で判定）
+/**
+ * 未対応の CLI フラグがあれば UsageError を投げる。
+ * 値付きフラグは = より前の名前で照合する。
+ *
+ * @param args - 確認する CLI 引数。
+ */
 function rejectUnknown(args: string[]): void {
   for (const arg of args) {
     const eq = arg.indexOf("=");
@@ -78,8 +102,19 @@ function rejectUnknown(args: string[]): void {
   }
 }
 
-// 指定フラグ（--committed / --files-changed）が対象にする scope を args から集める。
-// 値無しは allowed 全部、値ありはカンマ区切り。allowed 外の scope は弾き、重複は除く
+/**
+ * 指定フラグの対象 scope を重複なしで集める。
+ * 値が無ければ allowed 全体、値があればカンマ区切りで読む。
+ * allowed 外の scope は UsageError にする。
+ *
+ * @param args - フラグを展開した CLI 引数。
+ *
+ * @param flag - 対象 scope を集めるフラグ名。
+ *
+ * @param allowed - 指定できる scope の一覧。
+ *
+ * @returns 指定された scope の一覧。
+ */
 function targetScopes(args: string[], flag: string, allowed: readonly Scope[]): Scope[] {
   const scopes = new Set<Scope>();
 

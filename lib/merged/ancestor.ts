@@ -8,9 +8,20 @@ interface Refs {
   branch: string;
 }
 
-// 通常マージ / fast-forward を検出する。
-// branch の先頭が base の歴史を辿ると現れる位置にあれば、branch の commit は
-// すべて base に取り込まれている。git merge-base --is-ancestor がこの判定そのもの
+/**
+ * merge-base --is-ancestor で通常マージや fast-forward を判定する。
+ * ブランチの先頭が base の祖先なら変更は取り込み済み。
+ *
+ * @param root0 - 基準と対象のブランチ参照。
+ *
+ * @param root0.base - 基準ブランチの参照名。
+ *
+ * @param root0.branch - 判定するブランチの参照名。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns 祖先なら true。
+ */
 export async function isAncestorMerged({ base, branch }: Refs, opts: Opts = {}): Promise<boolean> {
   return didGitExitOk(["merge-base", "--is-ancestor", branch, base], opts);
 }

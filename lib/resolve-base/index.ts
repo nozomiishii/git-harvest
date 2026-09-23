@@ -5,8 +5,13 @@ interface ResolveOpts {
   offline?: boolean;
 }
 
-// base = 掃除の基準になるデフォルトブランチ（main 等）。
-// origin/HEAD という「リモートのデフォルトブランチを指すポインタ」から解決する
+/**
+ * リモートのデフォルトを指す origin/HEAD から基準ブランチ名を解決する。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns 基準ブランチ名。解決できなければ undefined。
+ */
 export async function resolveBase(opts: ResolveOpts = {}): Promise<string | undefined> {
   const existing = await originHead(opts);
 
@@ -35,7 +40,13 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
   return undefined;
 }
 
-// origin/HEAD が指す default branch 名。未設定なら ""
+/**
+ * origin/HEAD が指すブランチ名を読む。
+ *
+ * @param opts - Git を実行する作業ディレクトリなどの設定。
+ *
+ * @returns ブランチ名。未設定なら空文字。
+ */
 async function originHead(opts: ResolveOpts): Promise<string> {
   try {
     const ref = await gitText(["symbolic-ref", "refs/remotes/origin/HEAD"], opts);
@@ -47,6 +58,13 @@ async function originHead(opts: ResolveOpts): Promise<string> {
   }
 }
 
+/**
+ * リモート参照から origin の接頭辞を除く。
+ *
+ * @param ref - リモートブランチの参照名。
+ *
+ * @returns origin の接頭辞を除いた参照名。
+ */
 function stripOrigin(ref: string): string {
   return ref.replace(/^refs\/remotes\/origin\//, "");
 }

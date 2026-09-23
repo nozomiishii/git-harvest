@@ -2,6 +2,15 @@ import type { BranchActionResult, WorktreeActionResult } from "../types";
 import { bold, dim, hi, isColorSupported } from "./color";
 import { tildify } from "./tildify";
 
+/**
+ * worktree またはブランチの処理結果を一行に整形する。
+ *
+ * @param result - 表示するブランチまたは worktree の処理結果。
+ *
+ * @param isColorEnabled - ANSI の装飾を付けるかどうか。
+ *
+ * @returns 処理結果を表す表示行。
+ */
 export function statusLine(
   result: BranchActionResult | WorktreeActionResult,
   isColorEnabled = isColorSupported(),
@@ -28,6 +37,17 @@ export function statusLine(
   }
 }
 
+/**
+ * 削除件数のまとめを一行に整形する。
+ *
+ * @param n - 削除した項目または削除予定の項目数。
+ *
+ * @param isDryRun - 削除せず予定だけ返す指定。
+ *
+ * @param isColorEnabled - ANSI の装飾を付けるかどうか。
+ *
+ * @returns 削除件数と dry-run 状態を示す表示行。
+ */
 export function summaryLine(
   n: number,
   isDryRun: boolean,
