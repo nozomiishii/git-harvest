@@ -53,17 +53,17 @@
     "@types/node": "24.13.6",
     "eslint": "10.11.0",
     "lefthook": "2.1.14",
-    "oxfmt": "0.68.0",
+    "oxfmt": "0.70.0",
     "release-please": "17.11.2",
     "tsdown": "0.23.0",
-    "tsx": "4.23.13",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "vitest": "5.0.0"
   },
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "12.5.1",
+      "version": "12.6.0",
       "onFail": "download"
     },
     "runtime": {
