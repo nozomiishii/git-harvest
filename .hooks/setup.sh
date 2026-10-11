@@ -4,4 +4,5 @@ set -uo pipefail
 # SessionStart hook の stdout がエージェントの context に入るのを防ぐ
 exec >&2
 
-pnpm install
+mise install
+mise exec -- pnpm install
