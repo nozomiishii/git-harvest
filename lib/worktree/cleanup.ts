@@ -20,17 +20,17 @@ interface Opts {
 }
 
 /**
- * linked worktree を保護条件と状態に沿って整理する。
- * Git の一覧から一件ずつ調べ、削除または保持を決める。
- *
- * @param base - 整理の基準になるブランチ名。
- *
- * @param flags - CLI から読み取った削除指定。
- *
- * @param opts - Git を実行する作業ディレクトリ。
- *
- * @returns 各 worktree の処理結果と失敗件数。
- */
+linked worktree を保護条件と状態に沿って整理する。
+Git の一覧から一件ずつ調べ、削除または保持を決める。
+
+@param base - 整理の基準になるブランチ名。
+
+@param flags - CLI から読み取った削除指定。
+
+@param opts - Git を実行する作業ディレクトリ。
+
+@returns 各 worktree の処理結果と失敗件数。
+*/
 export async function cleanupWorktrees(
   base: string,
   flags: Flags,

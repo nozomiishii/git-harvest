@@ -7,10 +7,10 @@ import { cleanupWorktrees } from "../worktree/cleanup";
 import { cleanupBranches } from "./cleanup";
 
 /**
- * 保護対象のブランチを含まないテスト用の結果を作る。
- *
- * @returns ブランチ情報が空の worktree 掃除結果。
- */
+保護対象のブランチを含まないテスト用の結果を作る。
+
+@returns ブランチ情報が空の worktree 掃除結果。
+*/
 function noWorktrees(): WorktreeCleanupResult {
   return { failures: 0, mainBranch: undefined, results: [] };
 }

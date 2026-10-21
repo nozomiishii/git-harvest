@@ -16,15 +16,15 @@ interface Refs {
 // どちらでもなければ committed（base に未取り込みの独自コミットあり）と呼び出し側が判断する。
 
 /**
- * 通常マージ、squash、rebase の順で取り込み済みか調べる。
- * 各方式で判定できなければ次へ進む。
- *
- * @param refs - 基準と対象のブランチ参照。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns いずれかの方式で取り込み済みなら true。
- */
+通常マージ、squash、rebase の順で取り込み済みか調べる。
+各方式で判定できなければ次へ進む。
+
+@param refs - 基準と対象のブランチ参照。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns いずれかの方式で取り込み済みなら true。
+*/
 export async function isMerged(refs: Refs, opts: Opts = {}): Promise<boolean> {
   if (await isAncestorMerged(refs, opts)) {
     return true;

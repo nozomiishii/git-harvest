@@ -16,11 +16,11 @@ export interface Repo {
 }
 
 /**
- * Git のテスト用リポジトリを作る。
- * await using のスコープ終了時に asyncDispose で削除する。
- *
- * @returns asyncDispose を持つテスト用リポジトリ。
- */
+Git のテスト用リポジトリを作る。
+await using のスコープ終了時に asyncDispose で削除する。
+
+@returns asyncDispose を持つテスト用リポジトリ。
+*/
 export async function makeRepo(): Promise<Repo> {
   const dir = mkdtempSync(path.join(tmpdir(), "git-harvest-test-"));
   // 各 git 呼び出しに一意なタイムスタンプを付与し、cherry-pick が同一 SHA になるのを防ぐ

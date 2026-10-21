@@ -6,12 +6,12 @@ interface ResolveOpts {
 }
 
 /**
- * リモートのデフォルトを指す origin/HEAD から基準ブランチ名を解決する。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns 基準ブランチ名。解決できなければ undefined。
- */
+リモートのデフォルトを指す origin/HEAD から基準ブランチ名を解決する。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns 基準ブランチ名。解決できなければ undefined。
+*/
 export async function resolveBase(opts: ResolveOpts = {}): Promise<string | undefined> {
   const existing = await originHead(opts);
 
@@ -41,12 +41,12 @@ export async function resolveBase(opts: ResolveOpts = {}): Promise<string | unde
 }
 
 /**
- * origin/HEAD が指すブランチ名を読む。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns ブランチ名。未設定なら空文字。
- */
+origin/HEAD が指すブランチ名を読む。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns ブランチ名。未設定なら空文字。
+*/
 async function originHead(opts: ResolveOpts): Promise<string> {
   try {
     const ref = await gitText(["symbolic-ref", "refs/remotes/origin/HEAD"], opts);
@@ -59,12 +59,12 @@ async function originHead(opts: ResolveOpts): Promise<string> {
 }
 
 /**
- * リモート参照から origin の接頭辞を除く。
- *
- * @param ref - リモートブランチの参照名。
- *
- * @returns origin の接頭辞を除いた参照名。
- */
+リモート参照から origin の接頭辞を除く。
+
+@param ref - リモートブランチの参照名。
+
+@returns origin の接頭辞を除いた参照名。
+*/
 function stripOrigin(ref: string): string {
   return ref.replace(/^refs\/remotes\/origin\//, "");
 }

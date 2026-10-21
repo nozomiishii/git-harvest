@@ -16,17 +16,17 @@ interface RemoveArgs {
 }
 
 /**
- * 未マージの worktree を指定フラグに応じて削除または保持する。
- * 有効時は強制削除せず、無効時は理由を添えて残す。
- *
- * @param worktree - 削除または保持する worktree。
- *
- * @param args - 削除を有効にするかと dry-run の指定。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns 削除または保持の結果。
- */
+未マージの worktree を指定フラグに応じて削除または保持する。
+有効時は強制削除せず、無効時は理由を添えて残す。
+
+@param worktree - 削除または保持する worktree。
+
+@param args - 削除を有効にするかと dry-run の指定。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns 削除または保持の結果。
+*/
 export async function removeCommitted(
   worktree: WtRecord,
   args: RemoveArgs,
@@ -44,17 +44,17 @@ export async function removeCommitted(
 }
 
 /**
- * detached worktree を指定フラグに応じて削除または保持する。
- * 未コミット変更があれば強制削除する。ブランチ参照がなく復元できない変更もある。
- *
- * @param worktree - 削除または保持する worktree。
- *
- * @param args - 削除を有効にするかと dry-run の指定。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns 削除または保持の結果。
- */
+detached worktree を指定フラグに応じて削除または保持する。
+未コミット変更があれば強制削除する。ブランチ参照がなく復元できない変更もある。
+
+@param worktree - 削除または保持する worktree。
+
+@param args - 削除を有効にするかと dry-run の指定。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns 削除または保持の結果。
+*/
 export async function removeDetached(
   worktree: WtRecord,
   args: RemoveArgs,
@@ -73,17 +73,17 @@ export async function removeDetached(
 }
 
 /**
- * 未コミット変更がある worktree を指定フラグに応じて削除または保持する。
- * 有効時は未コミット変更ごと強制削除する。
- *
- * @param worktree - 削除または保持する worktree。
- *
- * @param args - 削除を有効にするかと dry-run の指定。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns 削除または保持の結果。
- */
+未コミット変更がある worktree を指定フラグに応じて削除または保持する。
+有効時は未コミット変更ごと強制削除する。
+
+@param worktree - 削除または保持する worktree。
+
+@param args - 削除を有効にするかと dry-run の指定。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns 削除または保持の結果。
+*/
 export async function removeFilesChanged(
   worktree: WtRecord,
   args: RemoveArgs,
@@ -106,17 +106,17 @@ export async function removeFilesChanged(
 }
 
 /**
- * 取り込み済みの worktree を削除対象にする。
- * 有効化フラグは持たず、dry-run だけを確認する。
- *
- * @param worktree - 削除または保持する worktree。
- *
- * @param isDryRun - 削除せず予定だけ返す指定。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns 削除または削除予定の結果。
- */
+取り込み済みの worktree を削除対象にする。
+有効化フラグは持たず、dry-run だけを確認する。
+
+@param worktree - 削除または保持する worktree。
+
+@param isDryRun - 削除せず予定だけ返す指定。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns 削除または削除予定の結果。
+*/
 export async function removeMerged(
   worktree: WtRecord,
   isDryRun: boolean,
@@ -130,17 +130,17 @@ export async function removeMerged(
 }
 
 /**
- * 独自コミットのない worktree を指定フラグに応じて削除または保持する。
- * 呼び出し元が未コミット変更のない状態を確認しているため強制削除しない。
- *
- * @param worktree - 削除または保持する worktree。
- *
- * @param args - 削除を有効にするかと dry-run の指定。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns 削除または保持の結果。
- */
+独自コミットのない worktree を指定フラグに応じて削除または保持する。
+呼び出し元が未コミット変更のない状態を確認しているため強制削除しない。
+
+@param worktree - 削除または保持する worktree。
+
+@param args - 削除を有効にするかと dry-run の指定。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns 削除または保持の結果。
+*/
 export async function removeUntouched(
   worktree: WtRecord,
   args: RemoveArgs,
@@ -158,18 +158,18 @@ export async function removeUntouched(
 }
 
 /**
- * Git で worktree を削除し、競合と失敗を結果に変換する。
- * 呼び出し元が未コミット変更を強制削除してよいか決めてから渡す。
- * 先に別プロセスが削除した場合も成功として扱う。
- *
- * @param worktree - 削除する worktree。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @param shouldForce - 未コミット変更も含めて強制削除する指定。
- *
- * @returns worktree 削除の結果。
- */
+Git で worktree を削除し、競合と失敗を結果に変換する。
+呼び出し元が未コミット変更を強制削除してよいか決めてから渡す。
+先に別プロセスが削除した場合も成功として扱う。
+
+@param worktree - 削除する worktree。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@param shouldForce - 未コミット変更も含めて強制削除する指定。
+
+@returns worktree 削除の結果。
+*/
 async function removeWorktree(
   worktree: WtRecord,
   opts: Opts,

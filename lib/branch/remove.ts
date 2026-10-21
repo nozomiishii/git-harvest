@@ -6,21 +6,21 @@ interface Opts {
 }
 
 /**
- * 未マージのブランチを指定フラグに応じて削除または保持する。
- * dryRun と enabled を取り違えないようオブジェクトで受け取る。
- *
- * @param name - 対象のブランチ名。
- *
- * @param args - 削除を有効にするかと dry-run の指定。
- *
- * @param args.dryRun - 削除せず予定だけ返す指定。
- *
- * @param args.enabled - この状態の対象を削除する指定。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns 削除または保持の結果。
- */
+未マージのブランチを指定フラグに応じて削除または保持する。
+dryRun と enabled を取り違えないようオブジェクトで受け取る。
+
+@param name - 対象のブランチ名。
+
+@param args - 削除を有効にするかと dry-run の指定。
+
+@param args.dryRun - 削除せず予定だけ返す指定。
+
+@param args.enabled - この状態の対象を削除する指定。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns 削除または保持の結果。
+*/
 export async function removeCommittedBranch(
   name: string,
   args: { dryRun: boolean; enabled: boolean },
@@ -38,16 +38,16 @@ export async function removeCommittedBranch(
 }
 
 /**
- * 取り込み済みのブランチを削除対象にする。
- *
- * @param name - 対象のブランチ名。
- *
- * @param isDryRun - 削除せず予定だけ返す指定。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns 削除または削除予定の結果。
- */
+取り込み済みのブランチを削除対象にする。
+
+@param name - 対象のブランチ名。
+
+@param isDryRun - 削除せず予定だけ返す指定。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns 削除または削除予定の結果。
+*/
 export async function removeMergedBranch(
   name: string,
   isDryRun: boolean,
@@ -61,17 +61,17 @@ export async function removeMergedBranch(
 }
 
 /**
- * Git でブランチを削除し、競合と失敗を結果に変換する。
- * 呼び出し元が削除対象と判断したブランチを branch -D で消す。
- * 取り込み済みのほか、--committed=branch で許可された未マージのブランチも対象になる。
- * 先に別プロセスが削除した場合も成功として扱う。
- *
- * @param name - 対象のブランチ名。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns ブランチ削除の結果。
- */
+Git でブランチを削除し、競合と失敗を結果に変換する。
+呼び出し元が削除対象と判断したブランチを branch -D で消す。
+取り込み済みのほか、--committed=branch で許可された未マージのブランチも対象になる。
+先に別プロセスが削除した場合も成功として扱う。
+
+@param name - 対象のブランチ名。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns ブランチ削除の結果。
+*/
 async function removeBranch(name: string, opts: Opts): Promise<BranchActionResult> {
   const { code, stderr } = await git(["branch", "-D", name], opts);
 
