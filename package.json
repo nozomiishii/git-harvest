@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@nozomiishii/commitlint-config": "2.7.2",
-    "@nozomiishii/eslint-config": "2.7.2",
+    "@nozomiishii/eslint-config": "2.8.0",
     "@nozomiishii/lefthook-config": "2.7.2",
     "@nozomiishii/oxfmt-config": "2.7.2",
     "@nozomiishii/tsconfig": "2.7.2",

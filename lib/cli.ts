@@ -12,11 +12,11 @@ import { statusLine, summaryLine } from "./ui/status";
 import { cleanupWorktrees } from "./worktree/cleanup";
 
 /**
- * CLI の引数を処理し、基準ブランチを解決して worktree とブランチを整理する。
- * 最後に結果を表示する。
- *
- * @param argv - CLI に渡された引数。
- */
+CLI の引数を処理し、基準ブランチを解決して worktree とブランチを整理する。
+最後に結果を表示する。
+
+@param argv - CLI に渡された引数。
+*/
 export async function main(argv: string[]): Promise<void> {
   const sub = parseSubcommand(argv);
 
@@ -81,10 +81,10 @@ export async function main(argv: string[]): Promise<void> {
 }
 
 /**
- * このファイルが直接実行されたか調べる。
- *
- * @returns 直接実行された場合は true。
- */
+このファイルが直接実行されたか調べる。
+
+@returns 直接実行された場合は true。
+*/
 function isEntrypoint(): boolean {
   const entry = process.argv[1];
 
@@ -100,13 +100,13 @@ function isEntrypoint(): boolean {
 }
 
 /**
- * CLI 引数を解釈し、使用方法の誤りを表示する。
- * UsageError を終了コード 1 に変換する。
- *
- * @param argv - 解釈する CLI 引数。
- *
- * @returns 解釈したフラグ。失敗時は undefined。
- */
+CLI 引数を解釈し、使用方法の誤りを表示する。
+UsageError を終了コード 1 に変換する。
+
+@param argv - 解釈する CLI 引数。
+
+@returns 解釈したフラグ。失敗時は undefined。
+*/
 function readFlags(argv: string[]): Flags | undefined {
   try {
     return parseFlags(argv);

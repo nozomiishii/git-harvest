@@ -24,10 +24,10 @@ const PRESETS: Record<string, readonly string[]> = {
 };
 
 /**
- * 既定の CLI フラグを作る。
- *
- * @returns 削除対象の追加指定がないフラグ。
- */
+既定の CLI フラグを作る。
+
+@returns 削除対象の追加指定がないフラグ。
+*/
 export function defaultFlags(): Flags {
   return {
     committed: [],
@@ -39,13 +39,13 @@ export function defaultFlags(): Flags {
 }
 
 /**
- * CLI 引数から各フラグを読み取る。
- * 各項目は引数から一度ずつ求め、途中で書き換えない。
- *
- * @param argv - 解釈する CLI 引数。
- *
- * @returns 解釈したフラグ。
- */
+CLI 引数から各フラグを読み取る。
+各項目は引数から一度ずつ求め、途中で書き換えない。
+
+@param argv - 解釈する CLI 引数。
+
+@returns 解釈したフラグ。
+*/
 export function parseFlags(argv: string[]): Flags {
   // --yolo などの preset は先に個別フラグへ展開する
   const args = argv.flatMap((arg) => PRESETS[arg] ?? [arg]);
@@ -61,12 +61,12 @@ export function parseFlags(argv: string[]): Flags {
 }
 
 /**
- * CLI 引数から優先指定のサブコマンドを探す。
- *
- * @param argv - サブコマンドを探す CLI 引数。
- *
- * @returns 見つかったサブコマンド。なければ undefined。
- */
+CLI 引数から優先指定のサブコマンドを探す。
+
+@param argv - サブコマンドを探す CLI 引数。
+
+@returns 見つかったサブコマンド。なければ undefined。
+*/
 export function parseSubcommand(argv: string[]): Subcommand | undefined {
   for (const arg of argv) {
     if (arg === "logo") {
@@ -86,11 +86,11 @@ export function parseSubcommand(argv: string[]): Subcommand | undefined {
 }
 
 /**
- * 未対応の CLI フラグがあれば UsageError を投げる。
- * 値付きフラグは = より前の名前で照合する。
- *
- * @param args - 確認する CLI 引数。
- */
+未対応の CLI フラグがあれば UsageError を投げる。
+値付きフラグは = より前の名前で照合する。
+
+@param args - 確認する CLI 引数。
+*/
 function rejectUnknown(args: string[]): void {
   for (const arg of args) {
     const eq = arg.indexOf("=");
@@ -103,18 +103,18 @@ function rejectUnknown(args: string[]): void {
 }
 
 /**
- * 指定フラグの対象 scope を重複なしで集める。
- * 値が無ければ allowed 全体、値があればカンマ区切りで読む。
- * allowed 外の scope は UsageError にする。
- *
- * @param args - フラグを展開した CLI 引数。
- *
- * @param flag - 対象 scope を集めるフラグ名。
- *
- * @param allowed - 指定できる scope の一覧。
- *
- * @returns 指定された scope の一覧。
- */
+指定フラグの対象 scope を重複なしで集める。
+値が無ければ allowed 全体、値があればカンマ区切りで読む。
+allowed 外の scope は UsageError にする。
+
+@param args - フラグを展開した CLI 引数。
+
+@param flag - 対象 scope を集めるフラグ名。
+
+@param allowed - 指定できる scope の一覧。
+
+@returns 指定された scope の一覧。
+*/
 function targetScopes(args: string[], flag: string, allowed: readonly Scope[]): Scope[] {
   const scopes = new Set<Scope>();
 

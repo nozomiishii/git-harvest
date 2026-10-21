@@ -5,14 +5,14 @@ interface Opts {
 }
 
 /**
- * ローカルブランチ名を列挙する。
- * refs/heads/ の ref だけを読み、同名 tag や detached HEAD の表示を除く。
- * lstrip=2 で refs/heads/ を取り除いて名前だけ返す。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns ローカルブランチ名の一覧。
- */
+ローカルブランチ名を列挙する。
+refs/heads/ の ref だけを読み、同名 tag や detached HEAD の表示を除く。
+lstrip=2 で refs/heads/ を取り除いて名前だけ返す。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns ローカルブランチ名の一覧。
+*/
 export async function listLocalBranches(opts: Opts = {}): Promise<string[]> {
   const out = await gitText(["for-each-ref", "refs/heads", "--format=%(refname:lstrip=2)"], opts);
 

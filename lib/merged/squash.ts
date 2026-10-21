@@ -9,20 +9,20 @@ interface Refs {
 }
 
 /**
- * 仮の squash commit と base の変更内容を比較する。
- * 元の commit ID が base にない場合も変更が取り込まれたか判定する。
- * commit の作成や比較に失敗した場合は false を返す。
- *
- * @param root0 - 基準と対象のブランチ参照。
- *
- * @param root0.base - 基準ブランチの参照名。
- *
- * @param root0.branch - 判定するブランチの参照名。
- *
- * @param opts - Git を実行する作業ディレクトリなどの設定。
- *
- * @returns squash 済みと判定できれば true。
- */
+仮の squash commit と base の変更内容を比較する。
+元の commit ID が base にない場合も変更が取り込まれたか判定する。
+commit の作成や比較に失敗した場合は false を返す。
+
+@param root0 - 基準と対象のブランチ参照。
+
+@param root0.base - 基準ブランチの参照名。
+
+@param root0.branch - 判定するブランチの参照名。
+
+@param opts - Git を実行する作業ディレクトリなどの設定。
+
+@returns squash 済みと判定できれば true。
+*/
 export async function isSquashMerged({ base, branch }: Refs, opts: Opts = {}): Promise<boolean> {
   // base と branch が分岐した地点の commit を取る
   const mergeBaseResult = await git(["merge-base", base, branch], opts);
