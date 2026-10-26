@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.3.7](https://github.com/nozomiishii/git-harvest/compare/v0.3.6...v0.3.7) (2026-10-26)
+
+
+### Miscellaneous
+
+* lock file maintenance ([#443](https://github.com/nozomiishii/git-harvest/issues/443)) ([1ded26f](https://github.com/nozomiishii/git-harvest/commit/1ded26f5b6eeb7d6dd1af9862f3fb82bae7738df))
+* rename the release GitHub App to nozomiishii-ci ([#435](https://github.com/nozomiishii/git-harvest/issues/435)) ([91c3aee](https://github.com/nozomiishii/git-harvest/commit/91c3aeed1a62e942b4969b99c45ba751eee56428))
+* update @nozomiishii/eslint-config to 2.8.0 ([#434](https://github.com/nozomiishii/git-harvest/issues/434)) ([c421c2f](https://github.com/nozomiishii/git-harvest/commit/c421c2fc3da7f3c8046dd88fbec27938193624b2))
+* update 1password/op docker tag to v2.41.0 ([#427](https://github.com/nozomiishii/git-harvest/issues/427)) ([6b42795](https://github.com/nozomiishii/git-harvest/commit/6b42795cfd5e4e3852ab30723391adb0141d36d5))
+* update 1password/op docker tag to v2.41.1 ([#437](https://github.com/nozomiishii/git-harvest/issues/437)) ([54f608a](https://github.com/nozomiishii/git-harvest/commit/54f608a2c935f8b06fffd4e683e1372c70bd5708))
+* update actions/create-github-app-token action to v3.3.0 ([#428](https://github.com/nozomiishii/git-harvest/issues/428)) ([c7274e4](https://github.com/nozomiishii/git-harvest/commit/c7274e47f2b762fec109f4235370b87d6ac99e9e))
+* update dependency eslint to v10.13.0 ([#439](https://github.com/nozomiishii/git-harvest/issues/439)) ([dcf722c](https://github.com/nozomiishii/git-harvest/commit/dcf722c3d0dfc96ec9520c57ba466a48ce785c3b))
+* update dependency lefthook to v2.2.2 ([#423](https://github.com/nozomiishii/git-harvest/issues/423)) ([a46b8e8](https://github.com/nozomiishii/git-harvest/commit/a46b8e81aa0a3e55d333de6937ffb23ea1e3f875))
+* update dependency oxfmt to v0.73.0 ([#429](https://github.com/nozomiishii/git-harvest/issues/429)) ([f55f27f](https://github.com/nozomiishii/git-harvest/commit/f55f27fa9c6fcb2b64555824606f0fcd48fbcbed))
+* update dependency oxfmt to v0.74.0 ([#440](https://github.com/nozomiishii/git-harvest/issues/440)) ([2126a0e](https://github.com/nozomiishii/git-harvest/commit/2126a0e95a4a4754e071d5d9ba18bac087ac514e))
+* update dependency tsdown to v0.23.1 ([#424](https://github.com/nozomiishii/git-harvest/issues/424)) ([31bd412](https://github.com/nozomiishii/git-harvest/commit/31bd4125926fd194271b5c64d417e4ab34e98e1a))
+* update dependency vitest to v5.0.5 ([#425](https://github.com/nozomiishii/git-harvest/issues/425)) ([9103038](https://github.com/nozomiishii/git-harvest/commit/9103038e2cce4c396aa04aa9638760b0526d1db4))
+* update jdx/mise-action action to v5.1.2 ([#426](https://github.com/nozomiishii/git-harvest/issues/426)) ([efaac79](https://github.com/nozomiishii/git-harvest/commit/efaac79f0b530ef8cd4ca77b1d56109500158d02))
+* update jdx/mise-action action to v5.2.2 ([#441](https://github.com/nozomiishii/git-harvest/issues/441)) ([7dcfa35](https://github.com/nozomiishii/git-harvest/commit/7dcfa353441480948d787567e309c7a441982a17))
+* update node.js to v24.22.0 ([#430](https://github.com/nozomiishii/git-harvest/issues/430)) ([5cdaaca](https://github.com/nozomiishii/git-harvest/commit/5cdaacae575dd37fd3574518c45de4912f34fac3))
+* update node.js to v24.22.1 ([#438](https://github.com/nozomiishii/git-harvest/issues/438)) ([0ba5d6f](https://github.com/nozomiishii/git-harvest/commit/0ba5d6fa0d66837353da9d6e5f917d88818a4f6e))
+* update nozomiishii to v2.8.0 ([#433](https://github.com/nozomiishii/git-harvest/issues/433)) ([99bab4f](https://github.com/nozomiishii/git-harvest/commit/99bab4fcccb6810b38b3418cdadad971d64cc319))
+* update nozomiishii to v2.8.1 ([#436](https://github.com/nozomiishii/git-harvest/issues/436)) ([e6856b1](https://github.com/nozomiishii/git-harvest/commit/e6856b15fd9dca79b93bc3ba8efbc6ee591b976c))
+* update pnpm to v12.14.0 ([#432](https://github.com/nozomiishii/git-harvest/issues/432)) ([4d4941b](https://github.com/nozomiishii/git-harvest/commit/4d4941bd0d5c3b3b5537c459a6994dde25dc8ca0))
+* update pnpm to v12.15.0 ([#442](https://github.com/nozomiishii/git-harvest/issues/442)) ([baef751](https://github.com/nozomiishii/git-harvest/commit/baef751329e3a4eb1eff8aaf275fe2017e388a33))
+
 ## [0.3.6](https://github.com/nozomiishii/git-harvest/compare/v0.3.5...v0.3.6) (2026-10-13)
 
 
