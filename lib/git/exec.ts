@@ -1,4 +1,4 @@
-import type { ExecFileException } from "node:child_process";
+import type { ExecException } from "node:child_process";
 import { execFile } from "node:child_process";
 import { env } from "node:process";
 import { promisify } from "node:util";
@@ -59,7 +59,7 @@ export async function git(
 
     return { code: 0, stderr, stdout };
   } catch (error) {
-    const e = error as ExecFileException & { stdout?: string };
+    const e = error as ExecException & { stderr?: string; stdout?: string };
 
     return {
       code: typeof e.code === "number" ? e.code : 1,
