@@ -69,7 +69,7 @@ git harvest --committed
 git harvest --yolo
 ```
 
-`--committed` は scope で対象を絞れます (`=worktree` / `=claude-worktree` / `=codex-worktree` / `=branch`)。`--files-changed` は worktree scope のみ (`=worktree` / `=claude-worktree` / `=codex-worktree`)。詳しくは scope セクション参照。
+`--committed` は scope で対象を絞れます (`=worktree` / `=claude-worktree` / `=codex-worktree` / `=antigravity-worktree` / `=grok-worktree` / `=branch`)。`--files-changed` は worktree scope のみ (`=worktree` / `=claude-worktree` / `=codex-worktree` / `=antigravity-worktree` / `=grok-worktree`)。詳しくは scope セクション参照。
 
 ## 自動化 (任意)
 
@@ -119,6 +119,8 @@ branch はこの順に状態が進みます:
 | `worktree` | 通常パスの worktree |
 | `claude-worktree` | `.claude/worktrees/` 配下の worktree |
 | `codex-worktree` | `$CODEX_HOME/worktrees` 配下の worktree |
+| `antigravity-worktree` | `~/.gemini/antigravity/worktrees` 配下の worktree |
+| `grok-worktree` | `$GROK_HOME/worktrees` 配下の worktree |
 | `branch` | ブランチ |
 
 閾値は scope ごとに保持されます。`--committed` は全 scope、`--committed=claude-worktree` はその scope だけに効きます。複数指定は comma 区切り (`--committed=worktree,branch`) か、フラグの繰り返しです。
@@ -215,4 +217,16 @@ git-harvest は実行中の [Claude Code](https://claude.ai/code) セッショ�
 Codex app が管理する worktree は `$CODEX_HOME/worktrees` (通常は `~/.codex/worktrees`) 配下に作られます。その worktree は `codex-worktree` scope として扱われ、通常の worktree と同じステージ閾値で判定されます。`--committed=codex-worktree` のように scope 指定で Codex worktree だけ削除対象にもできます。
 
 Codex のスレッド管理 DB (`$CODEX_HOME/state_*.sqlite`) で active（未アーカイブ）な user thread の cwd がこの worktree 配下の場合、`session running` として保護します。DB が無い・読めない場合は通常のステージ判定に戻ります。
+
+### Antigravity の worktrees
+
+Antigravity が管理する worktree は `~/.gemini/antigravity/worktrees` 配下に作られます。その worktree は `antigravity-worktree` scope として扱われ、通常の worktree と同じステージ閾値で判定されます。`--committed=antigravity-worktree` のように scope 指定で Antigravity worktree だけ削除対象にもできます。
+
+Antigravity の会話 DB (`~/.gemini/antigravity/conversation_summaries.db`) に未アーカイブかつ未終了の root 会話があり、その workspace (`workspace_uris`) がこの worktree 配下の場合、`session running` として保護します。アーカイブ状態は `~/.gemini/antigravity/annotations/<conversation-id>.pbtxt` で判定します。DB が無い・読めない場合は通常のステージ判定に戻ります。
+
+### Grok Build の worktrees
+
+Grok Build が管理する worktree は `$GROK_HOME/worktrees` (通常は `~/.grok/worktrees`) 配下に作られます。その worktree は `grok-worktree` scope として扱われ、通常の worktree と同じステージ閾値で判定されます。`--committed=grok-worktree` のように scope 指定で Grok Build worktree だけ削除対象にもできます。
+
+実行中セッションのレジストリ (`$GROK_HOME/active_sessions.json`) で `cwd` がこの worktree 配下にあり、`kill -0 pid` で生存確認できた場合、`session running` として保護します。ファイルが無い・読めない場合は通常のステージ判定に戻ります。
 

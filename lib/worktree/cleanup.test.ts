@@ -1,12 +1,23 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test, vi } from "vitest";
 import type { Flags } from "../types";
 import { defaultFlags } from "../flags/parse";
+import { createAntigravityState } from "../testing/antigravity-db";
 import { createCodexStateDb } from "../testing/codex-db";
 import { makeRepo } from "../testing/repo";
 import { cleanupWorktrees } from "./cleanup";
+
+/**
+実環境のセッション・DB に干渉しないよう、4 エージェントすべての参照先を存在しないパスへ隔離する。
+*/
+function isolateAgentEnvs(): void {
+  vi.stubEnv("GIT_HARVEST_CLAUDE_SESSIONS_DIR", "/nonexistent/claude-sessions");
+  vi.stubEnv("GIT_HARVEST_CODEX_STATE_DB", "/nonexistent/state_5.sqlite");
+  vi.stubEnv("GIT_HARVEST_ANTIGRAVITY_HOME", "/nonexistent/antigravity");
+  vi.stubEnv("GIT_HARVEST_GROK_ACTIVE_SESSIONS_FILE", "/nonexistent/active_sessions.json");
+}
 
 // locked worktree はどのフラグでも守る（merged でも message=locked で kept）
 test("cleanupWorktrees keeps a locked worktree even under aggressive flags", async () => {
@@ -206,5 +217,67 @@ test("cleanupWorktrees keeps the worktree containing cwd even from a subdirector
     expect(result.results.some((r) => r.action === "kept" && r.message === "current")).toBe(true);
   } finally {
     rmSync(wtPath, { force: true, recursive: true });
+  }
+});
+
+test("cleanupWorktrees は未アーカイブの Antigravity 会話がある worktree を session running で保護する", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+  const agyHome = mkdtempSync(path.join(tmpdir(), "gh-agy-home-"));
+  createAntigravityState(agyHome, [{ archived: false, id: "conv-1", workspacePaths: [wtPath] }]);
+  isolateAgentEnvs();
+  vi.stubEnv("GIT_HARVEST_ANTIGRAVITY_HOME", agyHome);
+
+  try {
+    const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+
+    expect(result.results).toContainEqual({
+      action: "kept",
+      branch: "done",
+      message: "session running",
+      path: realpathSync(wtPath),
+    });
+  } finally {
+    vi.unstubAllEnvs();
+    rmSync(wtPath, { force: true, recursive: true });
+    rmSync(agyHome, { force: true, recursive: true });
+  }
+});
+
+test("cleanupWorktrees は実行中の Grok Build セッションがある worktree を session running で保護する", async () => {
+  await using repo = await makeRepo();
+  await repo.git("switch", "-c", "done");
+  await repo.commit("done work");
+  await repo.git("switch", "main");
+  await repo.git("merge", "--no-ff", "done", "-m", "merge done");
+  const wtPath = `${repo.dir}-done`;
+  await repo.git("worktree", "add", wtPath, "done");
+  const grokHome = mkdtempSync(path.join(tmpdir(), "gh-grok-home-"));
+  writeFileSync(
+    path.join(grokHome, "active_sessions.json"),
+    JSON.stringify([{ cwd: wtPath, pid: process.pid, session_id: "s1" }]),
+  );
+  isolateAgentEnvs();
+  vi.stubEnv("GIT_HARVEST_GROK_ACTIVE_SESSIONS_FILE", "");
+  vi.stubEnv("GROK_HOME", grokHome);
+
+  try {
+    const result = await cleanupWorktrees("main", defaultFlags(), { cwd: repo.dir });
+
+    expect(result.results).toContainEqual({
+      action: "kept",
+      branch: "done",
+      message: "session running",
+      path: realpathSync(wtPath),
+    });
+  } finally {
+    vi.unstubAllEnvs();
+    rmSync(wtPath, { force: true, recursive: true });
+    rmSync(grokHome, { force: true, recursive: true });
   }
 });

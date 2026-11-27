@@ -21,12 +21,24 @@ test("--committed=codex-worktree targets only the codex scope", () => {
   expect(parseFlags(["--committed=codex-worktree"]).committed).toStrictEqual(["codex-worktree"]);
 });
 
+test("--committed=antigravity-worktree は antigravity-worktree だけを対象にする", () => {
+  expect(parseFlags(["--committed=antigravity-worktree"]).committed).toStrictEqual([
+    "antigravity-worktree",
+  ]);
+});
+
+test("--committed=grok-worktree は grok-worktree だけを対象にする", () => {
+  expect(parseFlags(["--committed=grok-worktree"]).committed).toStrictEqual(["grok-worktree"]);
+});
+
 // 値無し --committed は branch を含む全 scope を対象にする
 test("a bare --committed targets every scope including branch", () => {
   expect(parseFlags(["--committed"]).committed).toStrictEqual([
     "worktree",
     "claude-worktree",
     "codex-worktree",
+    "antigravity-worktree",
+    "grok-worktree",
     "branch",
   ]);
 });
@@ -35,7 +47,13 @@ test("a bare --committed targets every scope including branch", () => {
 test("a bare --files-changed targets worktree scopes but not branch", () => {
   const flags = parseFlags(["--files-changed"]);
 
-  expect(flags.filesChanged).toStrictEqual(["worktree", "claude-worktree", "codex-worktree"]);
+  expect(flags.filesChanged).toStrictEqual([
+    "worktree",
+    "claude-worktree",
+    "codex-worktree",
+    "antigravity-worktree",
+    "grok-worktree",
+  ]);
   expect(flags.committed).toStrictEqual([]);
 });
 
@@ -78,9 +96,17 @@ test("--yolo targets every scope and enables both toggles", () => {
     "worktree",
     "claude-worktree",
     "codex-worktree",
+    "antigravity-worktree",
+    "grok-worktree",
     "branch",
   ]);
-  expect(flags.filesChanged).toStrictEqual(["worktree", "claude-worktree", "codex-worktree"]);
+  expect(flags.filesChanged).toStrictEqual([
+    "worktree",
+    "claude-worktree",
+    "codex-worktree",
+    "antigravity-worktree",
+    "grok-worktree",
+  ]);
   expect(flags.untouched).toBe(true);
   expect(flags.detached).toBe(true);
 });
