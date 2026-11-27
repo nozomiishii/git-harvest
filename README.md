@@ -69,7 +69,7 @@ Or delete everything:
 git harvest --yolo
 ```
 
-`--committed` accepts an optional scope (`=worktree`, `=claude-worktree`, `=codex-worktree`, `=branch`). `--files-changed` accepts worktree scopes only (`=worktree`, `=claude-worktree`, `=codex-worktree`). See [Scopes](#scopes-narrowing-the-target) for details.
+`--committed` accepts an optional scope (`=worktree`, `=claude-worktree`, `=codex-worktree`, `=antigravity-worktree`, `=grok-worktree`, `=branch`). `--files-changed` accepts worktree scopes only (`=worktree`, `=claude-worktree`, `=codex-worktree`, `=antigravity-worktree`, `=grok-worktree`). See [Scopes](#scopes-narrowing-the-target) for details.
 
 ## Automate (optional)
 
@@ -118,6 +118,8 @@ The default deletes `merged` only — the most conservative choice, safe even in
 | `worktree` | worktrees on a normal path |
 | `claude-worktree` | worktrees under `.claude/worktrees/` |
 | `codex-worktree` | worktrees under `$CODEX_HOME/worktrees` (usually `~/.codex/worktrees`) |
+| `antigravity-worktree` | worktrees under `~/.gemini/antigravity/worktrees` |
+| `grok-worktree` | worktrees under `$GROK_HOME/worktrees` (usually `~/.grok/worktrees`) |
 | `branch` | branches |
 
 Thresholds are kept per scope. `--committed` affects every scope; `--committed=claude-worktree` affects only that scope. Combine with commas (`--committed=worktree,branch`) or by repeating the flag.
@@ -214,3 +216,15 @@ A session is considered running when a matching local process is alive (`~/.clau
 Codex creates app-managed worktrees under `$CODEX_HOME/worktrees` (usually `~/.codex/worktrees`). Those worktrees are treated as the `codex-worktree` scope and judged by the same stage thresholds as normal worktrees. Use a scope, e.g. `--committed=codex-worktree`, to target Codex worktrees only.
 
 When the Codex thread database (`$CODEX_HOME/state_*.sqlite`) has an active (non-archived) user thread whose cwd falls inside a worktree, git-harvest keeps that worktree as `session running`. When the database is missing or unreadable, the check is skipped and normal stage classification applies.
+
+### Antigravity worktrees
+
+Antigravity creates managed worktrees under `~/.gemini/antigravity/worktrees`. Those worktrees are treated as the `antigravity-worktree` scope and judged by the same stage thresholds as normal worktrees. Use a scope, e.g. `--committed=antigravity-worktree`, to target Antigravity worktrees only.
+
+When the Antigravity conversation database (`~/.gemini/antigravity/conversation_summaries.db`) has an active (non-archived, non-killed) root conversation whose workspace (`workspace_uris`) falls inside a worktree, git-harvest keeps that worktree as `session running`. Archival status is read from `~/.gemini/antigravity/annotations/<conversation-id>.pbtxt`. When the database is missing or unreadable, the check is skipped and normal stage classification applies.
+
+### Grok Build worktrees
+
+Grok Build creates managed worktrees under `$GROK_HOME/worktrees` (usually `~/.grok/worktrees`). Those worktrees are treated as the `grok-worktree` scope and judged by the same stage thresholds as normal worktrees. Use a scope, e.g. `--committed=grok-worktree`, to target Grok Build worktrees only.
+
+When the active session registry (`$GROK_HOME/active_sessions.json`) has an entry whose `cwd` falls inside a worktree and whose `pid` is alive (`kill -0 pid`), git-harvest keeps that worktree as `session running`. When the file is missing or unreadable, the check is skipped and normal stage classification applies.

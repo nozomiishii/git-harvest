@@ -45,12 +45,12 @@ export function isOnBaseBranch(worktree: WtRecord, base: string): boolean {
 }
 
 /**
-worktree に保護対象の Claude Code session または Codex user thread があるか調べる。
-Codex user thread は未アーカイブなら待機中も対象になる。
+worktree に保護対象の実行中セッションまたは未アーカイブの会話があるか調べる。
+Codex user thread と Antigravity root 会話は未アーカイブなら待機中も対象になる。
 
 @param worktree - 対象の worktree。
 
-@returns 保護対象の session または thread があれば true。
+@returns 保護対象の session または会話があれば true。
 */
 export function isSessionRunning(worktree: WtRecord): boolean {
   return hasRunningAgentSession(worktree.path);
