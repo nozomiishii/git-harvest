@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.8](https://github.com/nozomiishii/git-harvest/compare/v0.3.7...v0.3.8) (2026-11-28)
+
+
+### Miscellaneous
+
+* update nozomiishii/workflows action to v4.5.2 ([#474](https://github.com/nozomiishii/git-harvest/issues/474)) ([2d0149f](https://github.com/nozomiishii/git-harvest/commit/2d0149f83f8a94144dab301c01b97e17f96c499d))
+
 ## [0.3.7](https://github.com/nozomiishii/git-harvest/compare/v0.3.6...v0.3.7) (2026-11-27)
 
 
